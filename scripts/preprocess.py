@@ -19,13 +19,11 @@ def analyze_stroke_data(csv_filepath):
     df['velocity'] = np.where(df['dt'] > 0, df['distance'] / df['dt'], 0)
     
     # Calculate "Writing Duration" 
-    # Hint: Sum the 'dt' column, but ONLY for rows where 'touching' == 1
-    
+    # Sum of the 'dt' column, but ONLY for rows where 'touching' == 1
     writing_duration = df['dt'].where(df['touching'] == 1, 0).sum()
 
-
-    #  Calculate "In-Air Pen Duration" (The pause time biomarker)
-    #  Sum the 'dt' column, but ONLY for rows where 'touching' == 0
+    # Calculate "In-Air Pen Duration" (The pause time biomarker)
+    # Sum of the 'dt' column, but ONLY for rows where 'touching' == 0
     in_air_duration = df['dt'].where(df['touching'] == 0, 0).sum()
     
     # TODO 3: Print the results!
