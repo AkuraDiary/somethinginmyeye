@@ -31,8 +31,8 @@
 </head>
 
 <body>
-    <h2>Handwriting Data Collector (And Secretly an Analyzer)</h2>
-    <button id="analyzeBtn" style="background-color: #4CAF50; color: white;">Analyze Live</button>
+    <h2>Handwriting Data Collector (And not so Secretly an Analyzer)</h2>
+    <button id="analyzeBtn" style="background-color: #4CAF50; color: white;">Analyze Handwriting</button>
     <h3 id="resultText"></h3>
 
     <div class="controls">
@@ -163,10 +163,19 @@
         });
         document.getElementById('analyzeBtn').addEventListener('click', async () => {
             const resultText = document.getElementById('resultText');
+
+            // Safeguard
+            if (strokeData.length === 0) {
+                resultText.style.color = "orange";
+                resultText.innerText = "⚠️ Please draw something on the canvas first!";
+                return;
+            }
+            // --------------------------
+
+            resultText.style.color = "black";
             resultText.innerText = "🧠 Analyzing kinematics...";
 
             try {
-                // Send the drawing data to our new Python API
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -176,7 +185,6 @@
                 const result = await response.json();
                 const confidence = (result.probability * 100).toFixed(1);
 
-                // Update the screen with the AI's diagnosis
                 if (result.is_dyslexic) {
                     resultText.style.color = "red";
                     resultText.innerText = `⚠️ Atypical Pattern Detected (${confidence}% confidence)`;
@@ -185,6 +193,7 @@
                     resultText.innerText = `✅ Normal Pattern (${(100 - confidence).toFixed(1)}% confidence)`;
                 }
             } catch (error) {
+                resultText.style.color = "red";
                 resultText.innerText = "❌ Error connecting to AI server.";
             }
         });

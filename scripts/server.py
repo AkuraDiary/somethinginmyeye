@@ -11,7 +11,7 @@ from preprocess import analyze_stroke_data
 app = Flask(__name__, static_folder='../data_collector')
 
 print("🧠 Loading AI model...")
-model = tf.keras.models.load_model("../models/elkinematic.keras")
+model = tf.keras.models.load_model("../models/selkinematic.keras")
 MAX_TIMESTEPS = 500
 FEATURES = 3
 
