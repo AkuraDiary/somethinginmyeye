@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <!-- touch-action: none prevents the tablet from scrolling when you draw -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Handwriting Data Collector</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        canvas {
+            border: 2px solid #333;
+            touch-action: none;
+            background-color: #fafafa;
+        }
+
+        .controls {
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h2>Handwriting Data Collector</h2>
+    <!-- The canvas where you will write -->
+    <canvas id="drawCanvas" width="800" height="400"></canvas>
+
+    <div class="controls">
+        <button id="downloadBtn">Download CSV</button>
+        <button id="clearBtn">Clear Canvas</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        // This array will hold the time-series data
+        let strokeData = [];
+
+        function recordPoint(e, isTouching) {
+            // Extract the data from the PointerEvent 'e'
+            // Useful properties: 
+            // e.timeStamp (milliseconds)
+            // e.offsetX, e.offsetY (coordinates)
+            // e.pressure (0.0 to 1.0 - works with Apple Pencil/Stylus)
+            // Push an object or array representing [time, x, y, pressure, isTouching] into strokeData
+            // Save the time, X, Y, pressure, and whether the pen is touching the screen
+            strokeData.push({
+                time: e.timeStamp,
+                x: e.offsetX,
+                y: e.offsetY,
+                pressure: e.pressure || 0.5, // Fallback to 0.5 if mouse is used instead of a stylus
+                touching: isTouching
+            });
+        }
+
+        // --- Event Listeners ---
+        canvas.addEventListener('pointerdown', (e) => {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+            recordPoint(e, 1);
+        });
+
+        canvas.addEventListener('pointermove', (e) => {
+            // Check if isDrawing is true. 
+            // If so, draw a line to the new (e.offsetX, e.offsetY) using ctx.lineTo() and ctx.stroke().
+            // Then, call recordPoint(e, 1).
+            if (isDrawing) {
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+                recordPoint(e, 1);
+            }
+        });
+
+        canvas.addEventListener('pointerup', (e) => {
+            isDrawing = false;
+            recordPoint(e, 0); // Pen lifted
+        });
+
+        canvas.addEventListener('pointerout', (e) => {
+            if (isDrawing) {
+                isDrawing = false;
+                recordPoint(e, 0); // Pen left the canvas
+            }
+        });
+
+        // --- Controls ---
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            // Convert the 'strokeData' array into a CSV string.
+
+            const headers = Object.keys(strokeData).join(',');
+            const rows = strokeData.map(obj => Object.values(obj).join(','));
+            const csvContent = [headers, ...rows].join('\n');
+
+            // Create a Blob, generate an Object URL, and trigger a download.
+            // (e.g., creating an invisible <a> tag, setting href to the blob URL, and calling click())
+            const csvBlob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(csvBlob);
+
+            // Create an invisible anchor tag to trigger the download
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = 'stroke-data.csv'; // Specified filename for the user
+
+            // Trigger the click and clean up memory
+            document.body.appendChild(a);
+            a.click();
+
+            // Immediately release the URL reference to prevent memory leaks
+            URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            strokeData = [];
+        });
+    </script>
+</body>
+
+</html>
