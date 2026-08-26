@@ -32,6 +32,16 @@
 
 <body>
     <h2>Handwriting Data Collector</h2>
+    <div class="controls">
+        <label for="modeSelect">Mode:</label>
+        <select id="modeSelect">
+            <option value="normal">Normal</option>
+            <option value="dyslexia">Dyslexia</option>
+        </select>
+
+        <label for="labelInput">Prefix/Label:</label>
+        <input type="text" id="labelInput" placeholder="e.g., test_1" />
+    </div>
     <!-- The canvas where you will write -->
     <canvas id="drawCanvas" width="800" height="400"></canvas>
 
@@ -98,29 +108,28 @@
 
         // --- Controls ---
         document.getElementById('downloadBtn').addEventListener('click', () => {
-            // Convert the 'strokeData' array into a CSV string.
+            const mode = document.getElementById('modeSelect').value;
+            const prefix = document.getElementById('labelInput').value || 'sample';
 
-            const headers = Object.keys(strokeData).join(',');
-            const rows = strokeData.map(obj => Object.values(obj).join(','));
-            const csvContent = [headers, ...rows].join('\n');
+            // Generate the smart filename
+            const filename = `${mode}_${prefix}_${Date.now()}.csv`;
 
-            // Create a Blob, generate an Object URL, and trigger a download.
-            // (e.g., creating an invisible <a> tag, setting href to the blob URL, and calling click())
-            const csvBlob = new Blob([csvContent], { type: 'text/csv' });
-            const url = URL.createObjectURL(csvBlob);
+            // Build the CSV String (Removed the label column!)
+            let csvContent = "time,x,y,pressure,touching\n";
 
-            // Create an invisible anchor tag to trigger the download
+            strokeData.forEach(p => {
+                csvContent += `${p.time},${p.x},${p.y},${p.pressure},${p.touching}\n`;
+            });
+
+            // Trigger the download
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+
             const a = document.createElement('a');
-            a.style.display = 'none';
             a.href = url;
-            a.download = 'stroke-data.csv'; // Specified filename for the user
-
-            // Trigger the click and clean up memory
+            a.download = filename;
             document.body.appendChild(a);
             a.click();
-
-            // Immediately release the URL reference to prevent memory leaks
-            URL.revokeObjectURL(url);
             document.body.removeChild(a);
         });
 
@@ -130,5 +139,6 @@
         });
     </script>
 </body>
+
 
 </html>
