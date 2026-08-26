@@ -31,7 +31,10 @@
 </head>
 
 <body>
-    <h2>Handwriting Data Collector</h2>
+    <h2>Handwriting Data Collector (And Secretly an Analyzer)</h2>
+    <button id="analyzeBtn" style="background-color: #4CAF50; color: white;">Analyze Live</button>
+    <h3 id="resultText"></h3>
+
     <div class="controls">
         <label for="modeSelect">Mode:</label>
         <select id="modeSelect">
@@ -157,6 +160,33 @@
         document.getElementById('clearBtn').addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             strokeData = [];
+        });
+        document.getElementById('analyzeBtn').addEventListener('click', async () => {
+            const resultText = document.getElementById('resultText');
+            resultText.innerText = "🧠 Analyzing kinematics...";
+
+            try {
+                // Send the drawing data to our new Python API
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(strokeData)
+                });
+
+                const result = await response.json();
+                const confidence = (result.probability * 100).toFixed(1);
+
+                // Update the screen with the AI's diagnosis
+                if (result.is_dyslexic) {
+                    resultText.style.color = "red";
+                    resultText.innerText = `⚠️ Atypical Pattern Detected (${confidence}% confidence)`;
+                } else {
+                    resultText.style.color = "green";
+                    resultText.innerText = `✅ Normal Pattern (${(100 - confidence).toFixed(1)}% confidence)`;
+                }
+            } catch (error) {
+                resultText.innerText = "❌ Error connecting to AI server.";
+            }
         });
     </script>
 </body>
