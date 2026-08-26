@@ -187,7 +187,7 @@
 
                 if (result.is_dyslexic) {
                     resultText.style.color = "red";
-                    resultText.innerText = `⚠️ Atypical Pattern Detected (${confidence}% confidence)`;
+                    resultText.innerText = `⚠️ Dyslexic Pattern Detected (${confidence}% confidence)`;
                 } else {
                     resultText.style.color = "green";
                     resultText.innerText = `✅ Normal Pattern (${(100 - confidence).toFixed(1)}% confidence)`;
