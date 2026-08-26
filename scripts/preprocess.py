@@ -12,10 +12,10 @@ def analyze_stroke_data(csv_filepath):
     # 3. Calculate distance between points (Delta Distance using Pythagorean theorem)
     df['dx'] = df['x'].diff().fillna(0)
     df['dy'] = df['y'].diff().fillna(0)
-    df['distance'] = np.sqrt(df['dx']**2 + df['dy']**2)
     
     # 4. Calculate Velocity (Distance / Time)
     # np.where prevents division-by-zero errors if two events fire at the exact same millisecond
+    df['distance'] = np.sqrt(df['dx']**2 + df['dy']**2) 
     df['velocity'] = np.where(df['dt'] > 0, df['distance'] / df['dt'], 0)
     
     # Calculate "Writing Duration" 
