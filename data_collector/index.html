@@ -46,6 +46,7 @@
     <canvas id="drawCanvas" width="800" height="400"></canvas>
 
     <div class="controls">
+        <button id="downloadImgBtn">Download Image</button>
         <button id="downloadBtn">Download CSV</button>
         <button id="clearBtn">Clear Canvas</button>
     </div>
@@ -53,6 +54,8 @@
     <script>
         const canvas = document.getElementById('drawCanvas');
         const ctx = canvas.getContext('2d');
+        ctx.lineWidth = 4;       // Makes the line 4 pixels thick
+        ctx.lineCap = 'round';   // Makes the ends of the strokes round and smooth
         let isDrawing = false;
 
         // This array will hold the time-series data
@@ -88,6 +91,7 @@
             // If so, draw a line to the new (e.offsetX, e.offsetY) using ctx.lineTo() and ctx.stroke().
             // Then, call recordPoint(e, 1).
             if (isDrawing) {
+                ctx.lineWidth = e.pressure * 10;// just to make visual difference
                 ctx.lineTo(e.offsetX, e.offsetY);
                 ctx.stroke();
                 recordPoint(e, 1);
@@ -107,12 +111,29 @@
         });
 
         // --- Controls ---
+        document.getElementById('downloadImgBtn').addEventListener('click', () => {
+            // Grab the same naming prefix you used for the CSV
+            const mode = document.getElementById('modeSelect').value;
+            const prefix = document.getElementById('labelInput').value || 'sample';
+            const filename = `${mode}_${prefix}.png`;
+
+            // Convert the canvas to a PNG image URL
+            const dataURL = canvas.toDataURL("image/png");
+
+            // Trigger download
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
         document.getElementById('downloadBtn').addEventListener('click', () => {
             const mode = document.getElementById('modeSelect').value;
             const prefix = document.getElementById('labelInput').value || 'sample';
 
             // Generate the smart filename
-            const filename = `${mode}_${prefix}_${Date.now()}.csv`;
+            const filename = `${mode}_${prefix}.csv`;
 
             // Build the CSV String (Removed the label column!)
             let csvContent = "time,x,y,pressure,touching\n";
