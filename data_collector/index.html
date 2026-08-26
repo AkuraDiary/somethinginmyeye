@@ -91,7 +91,7 @@
             // If so, draw a line to the new (e.offsetX, e.offsetY) using ctx.lineTo() and ctx.stroke().
             // Then, call recordPoint(e, 1).
             if (isDrawing) {
-                ctx.lineWidth = e.pressure * 10;// just to make visual difference
+                ctx.lineWidth = e.pressure * 5;// just to make visual difference
                 ctx.lineTo(e.offsetX, e.offsetY);
                 ctx.stroke();
                 recordPoint(e, 1);
