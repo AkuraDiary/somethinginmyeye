@@ -18,7 +18,10 @@ app = Flask(__name__, static_folder='../data_collector')
 # FEATURES = 3
 
 # Automatically create a dataset folder if it doesn't exist
-os.makedirs("../datasets", exist_ok=True)
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+#Go up one folder (to somethinginmyeye) and create 'datasets'
+DATASETS_DIR = os.path.join(SCRIPT_DIR, '..', 'datasets')
+os.makedirs(DATASETS_DIR, exist_ok=True)
 
 @app.route('/save_data', methods=['POST'])
 def save_data():
@@ -34,16 +37,23 @@ def save_data():
     
     # 1. Save the CSV
     if stroke_data:
-        df = pd.DataFrame(stroke_data)
-        csv_path = os.path.join("../datasets", f"{base_filename}.csv")
-        df.to_csv(csv_path, index=False)
+        import csv
+        csv_path = os.path.join(DATASETS_DIR, f"{base_filename}.csv")
+        
+        # Get headers from the first stroke point
+        if len(stroke_data) > 0:
+            keys = stroke_data[0].keys()
+            with open(csv_path, 'w', newline='') as output_file:
+                dict_writer = csv.DictWriter(output_file, fieldnames=keys)
+                dict_writer.writeheader()
+                dict_writer.writerows(stroke_data)
     
     # 2. Save the PNG
     if image_dataURL:
         # Strip off the "data:image/png;base64," header
         header, encoded = image_dataURL.split(",", 1)
         img_data = base64.b64decode(encoded)
-        png_path = os.path.join("../datasets", f"{base_filename}.png")
+        png_path = os.path.join(DATASETS_DIR, f"{base_filename}.png")
         
         with open(png_path, "wb") as f:
             f.write(img_data)
