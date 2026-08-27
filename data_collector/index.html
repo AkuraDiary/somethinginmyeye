@@ -10,22 +10,59 @@
         body {
             font-family: Arial, sans-serif;
             text-align: center;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 20px;
         }
 
         canvas {
-            border: 2px solid #333;
+            border: 3px solid #ddd;
+            border-radius: 12px;
             touch-action: none;
-            background-color: #fafafa;
+            background-color: #ffffff;
+            margin-top: 10px;
+            max-width: 100%;
         }
 
         .controls {
             margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             font-size: 16px;
             cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            background-color: #e0e0e0;
+            color: #333;
+            font-weight: bold;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        input[type="text"], select {
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        #downloadBtn {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        #clearBtn {
+            background-color: #f44336;
+            color: white;
         }
 
         .panduan {
@@ -34,7 +71,7 @@
             border-radius: 8px;
             padding: 15px;
             margin: 15px auto;
-            max-width: 600px;
+            max-width: 700px;
             text-align: left;
             font-size: 15px;
             color: #333;
@@ -47,12 +84,10 @@
 
         ol li {
             margin-bottom: 12px;
-            /* Adjust this value to change the distance */
         }
 
         ol li:last-child {
             margin-bottom: 0;
-            /* Prevents extra spacing below the entire list */
         }
     </style>
 </head>
