@@ -127,3 +127,21 @@ Because our V2 model reads the physics of the pen (not the spelling of the word)
     1. **High Latency:** Wait 2 full seconds before touching the screen.
     2. **Micro-Stutter:** Drag the pen incredibly slowly around curves.
     3. **In-Air Pause:** Completely lift the pen in the middle of a word for 1 second.
+
+---
+
+## 16. Dataset Validation & Best Practices
+
+### User-Independent Evaluation (The Train/Test Split)
+When building the first version of the dataset, it is absolutely critical to split the dataset by **Annotators (People)**, not just randomly shuffling the files.
+* **The Trap:** If Seta's writing is in the `train` folder, and Seta's writing is also in the `test` folder, the AI will cheat. It won't learn the pattern of "Dyslexia," it will just memorize Seta's personal handwriting style.
+* **The Solution:** The `test` folder must contain data from people the AI has **never seen before**. If Seta and Stevan are the `train` subjects, the `test` subjects must be completely different people. This proves the AI generalizes to the real world.
+
+### Why Not Cohen's Kappa?
+In machine learning, **Cohen's Kappa** is used to measure *Inter-Rater Reliability*. This is used when humans have to subjectively guess the label (e.g., three doctors looking at the same X-Ray and trying to agree if it's cancer). 
+In our case, the label is objective ground truth (the child either has a clinical diagnosis of Dyslexia or they don't). The annotators aren't guessing the label, they are just producing the physical data. Therefore, Cohen's Kappa is not applicable. 
+* To validate a dataset like this, we rely on rigid data collection protocols (everyone writes A-Z for 5 rounds) and statistical tests like the **T-Test** or **Mann-Whitney U Test** to prove there is a mathematically significant difference in the physics (latency, speed) between the two groups.
+
+### Classification vs. Regression
+* **Classification (Our Case):** We are separating the data into discrete, distinct "buckets" or labels (`Normal` vs `Dyslexia`). Even though the AI outputs a probability (e.g., "85% Dyslexic"), it uses that math purely to drop the sample into the correct bucket. We evaluate this using metrics like *Accuracy*, *Precision*, and *Recall*.
+* **Regression:** We would only use Regression if we wanted the AI to predict a highly specific, continuous clinical score (e.g., predicting that a child will score exactly "73.5 points" on a standard reading severity index).
