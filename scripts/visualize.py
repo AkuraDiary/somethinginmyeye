@@ -5,13 +5,20 @@ import pandas as pd
 
 def main():
   # 1. Read the CSV file
-  file_path = "../datasets/normal_A.csv"
+  file_path = "../datasets/normal_sample.csv"
   df = pd.read_csv(file_path)
 
   # Normalize 'touching' to boolean
   df["touching"] = df["touching"].astype(bool)
 
-  # 2. Derive instantaneous velocity from coordinates and time
+  # 2. Extract initial latency from row 0
+  initial_latency = df["latency"].iloc[0]
+  
+  # Set the marker exactly at the beginning of the recorded data 
+  # (assuming the recording starts exactly when the latency period ends)
+  latency_timestamp = df["time"].iloc[0]
+
+  # 3. Derive instantaneous velocity
   df["dt"] = df["time"].diff().fillna(0)
   df["dx"] = df["x"].diff().fillna(0)
   df["dy"] = df["y"].diff().fillna(0)
@@ -19,14 +26,13 @@ def main():
       df["dt"] > 0, np.sqrt(df["dx"] ** 2 + df["dy"] ** 2) / df["dt"], 0
   )
 
-  # 3. Set up the visualization grid
+  # 4. Set up the visualization grid
   fig = plt.figure(figsize=(15, 8))
   gs = fig.add_gridspec(2, 2, width_ratios=[1.3, 1])
 
   # --- Panel 1: 2D Spatial Trajectory ---
   ax_traj = fig.add_subplot(gs[:, 0])
 
-  # Plot continuous path including in-air movements (pen lifts)
   ax_traj.plot(
       df["x"],
       df["y"],
@@ -37,10 +43,9 @@ def main():
       zorder=1,
   )
 
-  # Filter on-surface points (touching == True)
+  # Filter points where the pen is touching the surface
   on_surface = df[df["touching"]]
 
-  # Scale point sizes dynamically based on pressure
   min_p, max_p = df["pressure"].min(), df["pressure"].max()
   if max_p > min_p:
     point_sizes = (
@@ -49,7 +54,6 @@ def main():
   else:
     point_sizes = 30
 
-  # Scatter plot colored by time progression
   scatter = ax_traj.scatter(
       on_surface["x"],
       on_surface["y"],
@@ -68,7 +72,7 @@ def main():
   ax_traj.set_title("Handwriting Trajectory & Temporal Sequence", fontsize=12)
   ax_traj.set_xlabel("X Coordinate")
   ax_traj.set_ylabel("Y Coordinate")
-  ax_traj.invert_yaxis()  # Invert to match screen coordinate origin (top-left)
+  ax_traj.invert_yaxis()
   ax_traj.grid(True, linestyle="--", alpha=0.5)
   ax_traj.legend(loc="upper right")
 
@@ -90,7 +94,20 @@ def main():
       alpha=0.25,
       label="Pen Touching Surface",
   )
-  ax_press.set_title("Pen Pressure & Contact vs. Time", fontsize=12)
+
+  # Draw a vertical marker for initial latency at the start of the graph
+  ax_press.axvline(
+      x=latency_timestamp,
+      color="crimson",
+      linestyle="--",
+      linewidth=1.2,
+      label=f"First Touch (Latency: {initial_latency:.3f}s)",
+  )
+
+  ax_press.set_title(
+      f"Pen Pressure vs. Time (Initial Latency = {initial_latency:.3f} s)",
+      fontsize=12,
+  )
   ax_press.set_ylabel("Pressure")
   ax_press.grid(True, linestyle="--", alpha=0.5)
   ax_press.legend(loc="upper right")
@@ -104,6 +121,16 @@ def main():
       linewidth=1.2,
       label="Instantaneous Speed",
   )
+  
+  # Draw the vertical marker on the speed graph as well
+  ax_speed.axvline(
+      x=latency_timestamp,
+      color="crimson",
+      linestyle="--",
+      linewidth=1.2,
+      label=f"First Touch (Latency: {initial_latency:.3f}s)",
+  )
+  
   ax_speed.set_title("Writing Speed vs. Time", fontsize=12)
   ax_speed.set_xlabel("Time (s)")
   ax_speed.set_ylabel("Speed (units/s)")
