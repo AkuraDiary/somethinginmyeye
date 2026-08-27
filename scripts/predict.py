@@ -53,16 +53,14 @@ def predict_sample(csv_filepath):
     print(" 🔍 AI SCREENING RESULT")
     print("="*45)
     print("Global Score : ", global_score)
-    print("Confidence : ", confidence)
-    # if prediction > 0.5:
-    #     print(f" ⚠️ A typical/Dyslexic Pattern Detected")
-    #     print(f"    Probability: {confidence:.1f}%")
-    #     print("    Indicators: High in-air pausing, irregular velocity.")
-    # else:
-    #     print(f" Normal Handwriting Pattern")
-    #     print(f"    Probability: {100 - confidence:.1f}%")
-    #     print("    Indicators: Fluid motion, standard writing duration.")
-    # print("="*45 + "\n")
+    # print("Confidence : ", confidence)
+    if global_score > 0.5:
+        print(f"A typical/Dyslexic Pattern Detected")
+        print(f"Probability: {confidence:.1f}%")
+    else:
+        print(f"Normal Handwriting Pattern")
+        print(f"Probability: {100 - confidence:.1f}%")
+    print("="*45 + "\n")
 
 if __name__ == "__main__":
     # This lets you pass the file path directly in the terminal
