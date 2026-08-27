@@ -2,11 +2,13 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, MaxPooling1D, GlobalAveragePooling1D, Dense, Dropout
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Conv1D, MaxPooling1D, GlobalAveragePooling1D, Dense, Dropout, Concatenate
+from tensorflow.keras.layers import Input, Conv1D, MaxPooling1D, GlobalAveragePooling1D, Dense, Dropout, Concatenate, RepeatVector, TimeDistributed
 import os
 import pandas as pd
 import numpy as np
-from tensorflow.keras.layers import Input # Fixes that warning!
+from tensorflow.keras.layers import Input 
+
+
 
 # project's own preprocessing engine
 from preprocess import analyze_stroke_data
@@ -53,7 +55,8 @@ def load_and_pad_data(data_dir):
             
         sequences.append(stroke_data)
         latencies.append(latency_val)
-        labels.append(label)
+        # labels.append(label)
+        labels.append(np.full((MAX_TIMESTEPS, 1), label))
         
     return np.array(sequences), np.array(latencies), np.array(labels)
 
@@ -85,6 +88,35 @@ def build_dual_input_model():
     # Build the final model specifying both inputs
     model = Model(inputs=[sequence_input, latency_input], outputs=final_output)
     
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    return model
+
+
+def build_heatmap_model():
+    # --- BRANCH A (Sequence) ---
+    sequence_input = Input(shape=(MAX_TIMESTEPS, FEATURES), name="kinematics")
+    
+    # padding='same' ensures the sequence stays exactly 500 steps long
+    x = Conv1D(32, 3, activation='relu', padding='same')(sequence_input)
+    x = Conv1D(64, 3, activation='relu', padding='same')(x)
+    # Notice: We deleted the Pooling layers! The shape remains (500, 64)
+    
+    # --- BRANCH B (Latency) ---
+    latency_input = Input(shape=(1,), name="latency")
+    
+    # Stretch the 1 single latency number into 500 copies
+    repeated_latency = RepeatVector(MAX_TIMESTEPS)(latency_input) 
+    
+    # --- MERGE ---
+    merged = Concatenate()([x, repeated_latency]) # Now both are 500 long!
+    
+    # --- TIME-DISTRIBUTED LOGIC ---
+    # Apply the logic to every single millisecond independently
+    y = TimeDistributed(Dense(64, activation='relu'))(merged)
+    y = Dropout(0.5)(y)
+    final_output = TimeDistributed(Dense(1, activation='sigmoid'))(y)
+    
+    model = Model(inputs=[sequence_input, latency_input], outputs=final_output)
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
     return model
 
@@ -127,8 +159,8 @@ def build_model():
 
 if __name__ == "__main__":
     # model = build_model()
-    model = build_dual_input_model()
-    
+    model = build_heatmap_model()
+    model.summary()
     print("Loading data...")
     # Point this to your data collector folder
     X_seq, X_lat, y = load_and_pad_data("../datasets/") 
@@ -139,6 +171,6 @@ if __name__ == "__main__":
     
     # history = model.fit(x_train, y_train, epochs=20, validation_split=0.2)
     history = model.fit(X_seq, X_lat, y, epochs=20, validation_split=0.2)
-    model.summary()
+    
     print("Saving the model...")
     model.save("../models/elkinematic-with-lat.keras")

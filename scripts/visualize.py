@@ -5,7 +5,7 @@ import pandas as pd
 
 def main():
   # 1. Read the CSV file
-  file_path = "../datasets/dyslexia_A.csv"
+  file_path = "../datasets/normal_A.csv"
   df = pd.read_csv(file_path)
 
   # Normalize 'touching' to boolean
