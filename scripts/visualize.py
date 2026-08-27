@@ -5,7 +5,7 @@ import pandas as pd
 
 def main():
   # 1. Read the CSV file
-  file_path = "../sample/normal_sample.csv"
+  file_path = "../sample/normal_E.csv"
   df = pd.read_csv(file_path)
 
   # Normalize 'touching' to boolean
@@ -67,7 +67,7 @@ def main():
   )
 
   cbar = fig.colorbar(scatter, ax=ax_traj, orientation="horizontal", pad=0.08)
-  cbar.set_label("Time Progression (s)")
+  cbar.set_label("Time Progression (ms)")
 
   ax_traj.set_title("Handwriting Trajectory & Temporal Sequence", fontsize=12)
   ax_traj.set_xlabel("X Coordinate")
@@ -101,11 +101,11 @@ def main():
       color="crimson",
       linestyle="--",
       linewidth=1.2,
-      label=f"First Touch (Latency: {initial_latency:.3f} ms)",
+      label=f"First Touch (Latency: {initial_latency:.0f} ms)",
   )
 
   ax_press.set_title(
-      f"Pen Pressure vs. Time (Initial Latency = {initial_latency:.3f} ms)",
+      f"Pen Pressure vs. Time (Initial Latency = {initial_latency:.0f} ms)",
       fontsize=12,
   )
   ax_press.set_ylabel("Pressure")
@@ -128,12 +128,12 @@ def main():
       color="crimson",
       linestyle="--",
       linewidth=1.2,
-      label=f"First Touch (Latency: {initial_latency:.3f}s)",
+      label=f"First Touch (Latency: {initial_latency:.0f} ms)",
   )
   
   ax_speed.set_title("Writing Speed vs. Time", fontsize=12)
-  ax_speed.set_xlabel("Time (s)")
-  ax_speed.set_ylabel("Speed (units/s)")
+  ax_speed.set_xlabel("Time (ms)")
+  ax_speed.set_ylabel("Speed (units/ms)")
   ax_speed.grid(True, linestyle="--", alpha=0.5)
   ax_speed.legend(loc="upper right")
 
