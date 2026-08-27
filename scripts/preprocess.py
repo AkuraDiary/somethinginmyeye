@@ -2,38 +2,34 @@ import pandas as pd
 import numpy as np
 
 
+# Converts the raw CSV dataframe into the Golden 8 Features array
 def analyze_stroke_data(csv_filepath):
     # 1. Load the data
     df = pd.read_csv(csv_filepath)
     
-    # 2. Calculate time differences between rows (Delta Time / dt)
-    df['dt'] = df['time'].diff().fillna(0)
+    # Safety checks for old files
+    if "touching" not in df.columns: df["touching"] = True
     
-    # 3. Calculate distance between points (Delta Distance using Pythagorean theorem)
-    df['dx'] = df['x'].diff().fillna(0)
-    df['dy'] = df['y'].diff().fillna(0)
+    for col in ["tiltX", "tiltY", "latency"]:
+        if col not in df.columns: df[col] = 0
     
-    # 4. Calculate Velocity (Distance / Time)
-    # np.where prevents division-by-zero errors if two events fire at the exact same millisecond
-    df['distance'] = np.sqrt(df['dx']**2 + df['dy']**2) 
-    df['velocity'] = np.where(df['dt'] > 0, df['distance'] / df['dt'], 0)
+    # Calculate the physics features
+    df["dt"] = df["time"].diff().fillna(1)
+    df.loc[df["dt"] == 0, "dt"] = 1
     
-    # Calculate "Writing Duration" 
-    # Sum of the 'dt' column, but ONLY for rows where 'touching' == 1
-    writing_duration = df['dt'].where(df['touching'] == 1, 0).sum()
-
-    # Calculate "In-Air Pen Duration" (The pause time biomarker)
-    # Sum of the 'dt' column, but ONLY for rows where 'touching' == 0
-    in_air_duration = df['dt'].where(df['touching'] == 0, 0).sum()
+    df["delta_x"] = df["x"].diff().fillna(0)
+    df["delta_y"] = df["y"].diff().fillna(0)
+    df["distance"] = np.sqrt(df["delta_x"]**2 + df["delta_y"]**2)
+    df["velocity"] = df["distance"] / df["dt"]
+    df["acceleration"] = df["velocity"].diff().fillna(0) / df["dt"]
+    df["jerk"] = df["acceleration"].diff().fillna(0) / df["dt"]
     
-    # TODO 3: Print the results!
-    print(f"--- Analysis for: {csv_filepath} ---")
-    print(f"Total Writing Duration : {writing_duration} ms")
-    print(f"Total In-Air Pauses    : {in_air_duration} ms")
-    print(f"Average Pen Velocity   : {df['velocity'].mean():.2f} px/ms")
-    print("-" * 40)
+    # Extract EXACTLY our Golden 8 array
+    golden_df = df[["delta_x", "delta_y", "pressure", "tiltX", "tiltY", "velocity", "acceleration", "jerk", 'latency']]
     
-    return df
+    # Fill any weird math errors (like dividing by zero) with 0
+    golden_df = golden_df.fillna(0)
+    return golden_df
 
 if __name__ == "__main__":
     # Point this to a CSV file you downloaded from your web app!
