@@ -130,3 +130,24 @@ This document compiles the key insights, architectures, and methodologies extrac
 
 * **Insight A (The Universal Motor Degeneration Link):** Based on Paper #15, we can infer that our dysgraphia screener has potential applications far beyond pediatric education. Because the breakdown of sensorimotor integration in the Basal Ganglia produces the same kinematic footprint (micrographia, pressure instability) in both a dysgraphic 8-year-old and a 60-year-old developing Parkinson's, our V2 Heatmap architecture could technically double as an early-warning screener for neurodegenerative diseases.
 * **Insight B (The Pure Kinematic Illusion):** Paper #13 proves that we cannot rely solely on "speed" and "acceleration" to diagnose a child. A child might write fast but have terrible spatial control. This reinforces the absolute necessity of our Multimodal approach (Hypotheses B & D), ensuring we grade the physical shape of the letters (Spatial) just as heavily as the rhythm of the pen (Temporal).
+
+## Phase 3 Research (Late 2026 Journals)
+We reviewed three recent, cutting-edge papers exploring multidimensional screening and dual-stream architectures:
+
+### 16. Severity-Aware Dysgraphia Classification via Fusion (Khedr et al., 2026)
+* **Core Concept:** Moves away from binary (Dysgraphia vs Normal) to multi-class severity grading (Typically Developing, Grade 1, Grade 2).
+* **Key Innovation:** Used "Early Fusion", where 133 online kinematic features were combined with 1,024 offline visual embeddings from DenseNet-121 *before* the classifier, rather than late fusion (voting at the end).
+* **Takeaway:** Early fusion works, but extracting over 1,000 features for 113 samples caused severe overfitting (highest F1 score was only 0.57). This validates our strategy of keeping our feature count extremely tight (The Golden 8) to prevent memory overload.
+
+### 17. Multi-Dimensional Parameters for Clinical Diagnosis (Sindhu & Kavitha, 2026)
+* **Core Concept:** Proves that dysgraphia is not a single disorder, but has three distinct subtypes: Motor, Spatial, and Dyslexic. 
+* **Key Innovation:** Defined the exact kinematic/spatial signatures for each subtype:
+  * *Motor Dysgraphia:* Slowest stroke velocity, highest pen pressure, extreme jaggedness.
+  * *Spatial Dysgraphia:* Normal velocity/pressure, but huge deviation in alignment and spacing variance.
+  * *Dyslexic Dysgraphia:* Normal motor and spatial scores; the primary failure is cognitive/spelling.
+* **Takeaway:** By visualizing our Golden 8 features (like Velocity vs Delta X/Y), we can not only detect Dysgraphia, but actually tell the user *which subtype* they have.
+
+### 18. A Dual-Stream CNN and Trajectory-Transformer Model (Pamungkas et al., 2026)
+* **Core Concept:** Successfully implemented the "Two-Headed Network" we hypothesized in our Phase 5 roadmap.
+* **Key Innovation:** Used a CNN for the visual trace and a Transformer for the trajectory. The ablation study revealed a massive insight: The Trajectory-Transformer model *failed catastrophically* when running completely on its own without visual data.
+* **Takeaway:** This proves that raw kinematics (speed/pressure) lose their context without spatial data. This absolutely validates our decision to inject `Delta_X` and `Delta_Y` (Spatial data) into our Golden 8 array, bridging the gap so our LSTM doesn't fail like their Transformer did.
