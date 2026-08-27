@@ -1,17 +1,21 @@
 # 📝 Daftar Tugas (Task List)
 
-File ini digunakan untuk mencatat rencana perbaikan, pembaruan, dan tugas-tugas yang akan dikerjakan selanjutnya pada project ini.
+File ini digunakan untuk mencatat rencana perbaikan, pembaruan, dan tugas-tugas yang akan dikerjakan secara berurutan dari yang paling mendesak (Prioritas Tinggi) hingga masa depan (Prioritas Rendah).
 
-## 🛠️ UI & Pengumpulan Data (index.html)
-- [ ] **Restrukturisasi Form Pengumpulan Data:** Modifikasi form input di `index.html` agar lebih terstruktur untuk protokol eksperimen 5 ronde. Tambahkan elemen-elemen berikut:
-  - Dropdown **Nama Subject / Anotator** (misal: Seta, Stevan, dsb)
-  - Dropdown **Huruf yang Ditulis** (A - Z)
-  - Dropdown **Ronde** (1 - 5)
-  - *Goal:* Agar format penamaan file otomatis tersimpan rapi menjadi `[Mode]_[Nama]_[Huruf]_Ronde[X]_[Timestamp]` untuk mempermudah validasi *User-Independent*.
+## 🟢 Prioritas Tinggi (Immediate / Actionable)
 
-## 🧠 Dataset & Machine Learning
-- [ ] **Pengumpulan Data:** Kumpulkan dataset sesuai dengan protokol (5 ronde A-Z per orang). Pastikan subjek untuk folder `train` berbeda secara fisik dengan subjek di folder `test`.
-- [ ] **Validasi Statistik:** Lakukan uji beda (misal: T-Test atau Mann-Whitney U Test) pada fitur kinematics untuk melihat signifikansi perbedaan antara kelas Normal dan Dyslexia (Tidak menggunakan Cohen's Kappa).
+- [ ] **Pengumpulan Data (Data Collection):** Kumpulkan dataset sesuai dengan protokol 5 ronde per orang menggunakan web app yang sudah live. Target: 200 sampel (100 Normal, 100 Dyslexic-Acted).
+- [ ] **Restrukturisasi Form Pengumpulan Data:** Modifikasi form input di `index.html` agar lebih terstruktur (Dropdown Nama, Huruf, Ronde) sehingga format nama file otomatis menjadi `[Mode]_[Nama]_[Huruf]_Ronde[X]_[Timestamp]`.
+- [ ] **Perekaman Metrik "Latency":** Tambahkan tombol "Start" di UI. Hitung waktu (delta) antara klik "Start" dengan sentuhan pen pertama (`pointerdown`). Kirim angka ini ke Flask sebagai fitur Latency.
 
----
-*Tambahkan tugas baru di atas jika ada rencana lain.*
+## 🟡 Prioritas Menengah (Next ML Upgrades)
+
+- [ ] **Upgrade ke Bidirectional LSTM:** Setelah 200 data terkumpul, ganti layer `Conv1D` di Jupyter Notebook dengan layer `Bidirectional(LSTM)` agar AI memiliki "ingatan" jangka panjang terhadap ritme menulis user.
+- [ ] **Implementasi Time-Distributed Heatmap:** Pastikan output layer menggunakan `TimeDistributed(Dense(1))` agar AI memberikan probabilitas error per milidetik.
+- [ ] **Validasi Statistik:** Lakukan uji beda (misal: T-Test atau Mann-Whitney U Test) pada fitur kinematics untuk melihat signifikansi perbedaan antara kelas Normal dan Dyslexia.
+
+## 🔴 Prioritas Rendah / Masa Depan (Complex / Misc)
+
+- [ ] **Arsitektur Dual-Stream (Two-Headed Network):** Gabungkan model LSTM (membaca ritme/CSV) dengan model 2D-CNN (membaca bentuk spasial/PNG) menjadi satu AI holistik.
+- [ ] **OOD Autoencoder (The Bouncer):** Buat sistem filter untuk menolak gambar coret-coretan (scribbles) sebelum masuk ke AI utama.
+- [ ] **Semantic Analysis (Hindari Transformer Auto-correct):** Implementasi OCR di masa depan dengan peringatan keras: jangan gunakan Transformer standar yang memiliki fitur auto-correct ejaan.

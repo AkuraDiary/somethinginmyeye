@@ -145,3 +145,27 @@ In our case, the label is objective ground truth (the child either has a clinica
 ### Classification vs. Regression
 * **Classification (Our Case):** We are separating the data into discrete, distinct "buckets" or labels (`Normal` vs `Dyslexia`). Even though the AI outputs a probability (e.g., "85% Dyslexic"), it uses that math purely to drop the sample into the correct bucket. We evaluate this using metrics like *Accuracy*, *Precision*, and *Recall*.
 * **Regression:** We would only use Regression if we wanted the AI to predict a highly specific, continuous clinical score (e.g., predicting that a child will score exactly "73.5 points" on a standard reading severity index).
+
+## 6. The Architecture Dilemma: CNN vs. LSTM vs. Transformers
+As we scale the AI, choosing the right architecture is critical. Here is what we learned from 2026 research:
+* **1D-CNN (Our Baseline):** Great for "local" reflexes. It catches sudden micro-stutters perfectly and is incredibly fast. However, it suffers from a limited "Receptive Field" (amnesia) and cannot remember the user's baseline speed from the beginning of the sentence.
+* **Bidirectional LSTM (The Immediate Upgrade):** LSTMs are the industry standard for time-series data because they have a "memory cell". A Bidirectional LSTM reads the 500-timestep sequence forwards and backwards. This allows the AI to calculate long-term context (e.g., "The user is writing 50% slower now than they were 5 seconds ago").
+* **Transformers (The Danger Zone):** While Transformers (Self-Attention) dominate modern AI, they are fundamentally incompatible with our current phase for two reasons:
+  1. *Resource Hungry:* They require massive compute (our server only has 1GB RAM) and massive datasets (10,000+ samples). Feeding a Transformer our 200 samples would result in catastrophic overfitting.
+  2. *The Auto-Correct Flaw:* Transformer-based Vision/OCR models (like TrOCR) are so heavily optimized for reading comprehension that they silently auto-correct spelling mistakes. If a dyslexic child writes "wen", the Transformer outputs "when". This literally erases the diagnostic data we need.
+
+## 7. The Spatial vs. Temporal Dominance
+We learned that pure kinematics (raw speed and raw acceleration) are actually very weak indicators of dysgraphia. The AI cares overwhelmingly about:
+* **Spatial Data:** The physical length/width of the strokes, erratic baseline drifting, and letter crowding.
+* **Temporal Data:** How long the pen hovers in the air (pauses).
+This destroys the old-school teacher mentality of "You are writing too slow." A child can scribble very fast (normal speed metrics), but the spatial dimensions of their letters will be completely chaotic. This validates our plan to eventually build a **Dual-Stream Network** that looks at both the CSV (Time) and the PNG (Space).
+
+## 8. Demystifying Data Science Jargon
+As we reviewed more advanced 2026 literature, we encountered several heavy data science terms. Here is how they translate to our project:
+* **Feature Extraction vs. Feature Selection:** 
+  * *Extraction* (Established): Using physics math to create new meaning out of raw data (e.g., turning raw X, Y coordinates into "Velocity" and "Acceleration").
+  * *Selection* (Established): Throwing 150 features at an AI causes it to panic and "overfit". Selection is the mathematical process of deleting the useless features and keeping only the "Golden" indicators (like stroke length and pause duration).
+* **Dual-Stream Network / Multimodal Fusion:** (Established). Imagine interrogating two witnesses. One is blind with great hearing (1D-CNN reading the CSV rhythm). One is deaf with great eyesight (2D-CNN reading the PNG image). If you ask them separately, they might be wrong. A Dual-Stream network asks them simultaneously and "fuses" their answers to solve the crime.
+* **Hill Climbing & Local Optima:** (Established). An old AI search algorithm. Imagine trying to find the tallest mountain peak in pitch-black fog. You just keep stepping "up". The flaw is getting trapped on a tiny hill next to Mount Everest because every step from the tiny hill goes "down" (*Local Optima*). 
+* **Fisher-Based Supervised Hill Climbing:** (Novel/Made Up). The authors of Paper #13 invented this specific software loop. They used the old Hill Climbing algorithm, but added an SVM (Support Vector Machine) as a "supervisor" to pull the AI off the tiny hills and force it to keep searching for the true peak.
+* **Reading Research Equations:** When reading papers, equations for Velocity/Jerk are established Isaac Newton physics. Equations for REINFORCE or SVMs are established 1990s math. But equations describing thresholds and loops (like $S_{best}$) are the authors mathematically defining the novel software loop they just coded.

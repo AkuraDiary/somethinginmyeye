@@ -1,60 +1,46 @@
-# Dyslexia Handwriting Kinematics Evaluator (V1 MVP Completed)
+# Dyslexia Handwriting Kinematics Evaluator
 
 Building an intelligent, lightweight system to evaluate writing processes for dyslexic patterns using spatiotemporal handwriting data (kinematics).
 
 ## Academic Foundations
-1. **Online vs. Offline Data:** Extracting temporal and kinematic features is significantly more effective at capturing cognitive and motor deficits than analyzing static images.
+1. **Online vs. Offline Data:** Extracting temporal and kinematic features is significantly more effective at capturing cognitive and motor deficits than analyzing static images alone.
 2. **Key Biomarkers:** Dyslexic and dysgraphic patterns manifest strongly in the *pauses* and *fluency* of writing. Critical features: In-air pen duration, Writing duration, Peaks of speed.
 3. **Prompt Complexity:** Narrative/expository prompts (generating ideas) trigger the cognitive load necessary to reveal dyslexia, unlike simple copying tasks.
-
-## MVP Implementation Status: [COMPLETED]
-
-### Phase 1: Data Collection Engine ✅
-- **Web-based Data Collector:** Built an HTML5 Canvas application capturing pointer events.
-- **Features Extracted:** `[Timestamp, X, Y, Stylus Pressure, Pen-down State]`.
-- **UI Upgrades:** Added image (PNG) export and Data Labeling toggles.
-
-### Phase 2: Data Preprocessing ✅
-- **Kinematic Feature Engineering:** Extracted Velocity (Δdistance/Δtime) and calculated In-Air Pauses vs Writing Duration.
-- **Sequence Padding:** Standardized time-series arrays to `MAX_TIMESTEPS = 500`.
-
-### Phase 3: Model Architecture & Deployment ✅
-- **Core Model:** Built a highly lightweight 1D-CNN (~10,000 parameters) in Keras/TensorFlow.
-- **Live Inference:** Deployed a Flask API to receive live canvas data and return instantaneous predictions.
+4. **Spatial & Temporal Dominance:** Modern research proves pure kinematics (speed/acceleration) are weak indicators. Spatial (stroke lengths) and Temporal (pauses) are the most dominant.
+5. **Multimodal Early Fusion:** Combining Kinematic data (Rhythm) and Visual data (Messiness) drastically improves grading over single modalities.
 
 ---
 
-## Future Improvement Plan (V2 Architecture)
+## Roadmap & Implementation Plan (Ascending Order)
+*Ordered from immediate/actionable to distant/complex.*
 
-As we look to scale this prototype into a production-grade diagnostic tool, the following advanced architectural upgrades have been identified:
+### Phase 1: Data Collection & Deployment [✅ COMPLETED]
+- Built HTML5 Canvas application capturing pointer events.
+- Extracted Kinematic Features (Velocity, Pauses).
+- Sequence Padding to `MAX_TIMESTEPS = 500`.
+- Deployed a Flask API data collector to shared hosting.
 
-### 1. Explainable AI: Letter-Level Anomaly Highlighting (The "Heatmap")
-- **Concept:** Sentences are practically infinite, so the AI will not classify the words; it will evaluate the *physics* over time to pinpoint the exact location of cognitive hesitation.
-- **Execution Option A (Time-Distributed):** Remove the `GlobalAveragePooling1D` (Time-Squasher) layer. Wrap the final output in a `TimeDistributed(Dense(1))` layer so the model outputs a probability for *every single millisecond*.
-- **Execution Option B (Autoencoder):** Train an RNN Autoencoder purely on neurotypical data. Measure the "Reconstruction Error" on new samples to find the exact millisecond the rhythm broke.
-- **UI Integration:** Map the specific milliseconds with high probabilities (or high errors) back to their X,Y coordinates to draw a glowing red heatmap around the exact letter/stroke where the user struggled.
+### Phase 2: Live Data Acquisition [🟢 IN PROGRESS]
+- **Real-World Gathering:** Use the deployed Web App to collect 200 samples (100 Normal, 100 Dyslexic-Acted).
+- **Latency Metric:** Calculate the delta between the "Start" prompt and the very first `pointerdown` event to measure cognitive spelling load.
 
-### 2. Multi-Modal "Two-Headed" Network
-- **Concept:** Combine Kinematic (Temporal) and Visual (Spatial) AI into one model.
+### Phase 3: The LSTM Sequence Upgrade [🔜 NEXT UP]
+- **Concept:** The current 1D-CNN has "amnesia" and only looks at 1-2 seconds of data at a time. It forgets the baseline writing speed of the user.
+- **Execution:** Swap the `Conv1D` layers for `Bidirectional(LSTM)` layers. 
+- **Why:** LSTMs are the industry standard for time-series data. A Bidirectional LSTM reads the handwriting forwards and backwards, allowing the AI to understand long-term context and detect if a child's rhythm degrades over time.
+
+### Phase 4: Explainable AI & Heatmaps [🟢 IN PROGRESS]
+- **Concept:** Pinpoint the exact physical location of cognitive hesitation instead of a generic "Yes/No" diagnosis.
+- **Execution (Done):** You already implemented the `TimeDistributed(Dense(1))` layer in your Jupyter Notebook so the model outputs a probability for *every single millisecond*.
+- **UI Integration (Pending):** Map the high-probability milliseconds back to their X,Y coordinates to draw a glowing heatmap around the specific letter/stroke where the user hesitated.
+
+### Phase 5: The Dual-Stream Vision Upgrade [🚀 FUTURE]
+- **Concept:** Build a "Two-Headed Network" (Multimodal Early Fusion) to evaluate both Rhythm (Temporal) and Messiness (Spatial).
 - **Execution:** 
-  - *Branch A:* 1D-CNN processes the CSV sequence for hesitations/speed.
-  - *Branch B:* Lightweight 2D-CNN processes the saved Canvas PNG for letter reversals (e.g., 'b' vs 'd') and spatial layout.
-  - *Merge:* Concatenate both branches in Keras to make a final holistic prediction.
+  - *Stream 1 (Temporal):* The Bidirectional LSTM processes the 500-timestep CSV.
+  - *Stream 2 (Spatial):* A lightweight 2D-CNN (like MobileNet) processes the saved Canvas PNG for letter reversals (e.g., 'b' vs 'd') and spatial layout.
+  - *Merge:* Concatenate both streams in Keras before the final Dense layer.
 
-### 3. Noise Filtering & OOD Detection (The "Bouncer")
-- **Concept:** Children are unpredictable and may draw scribbles, incomplete letters, or pictures on the canvas. A binary classifier will incorrectly attempt to diagnose these doodles as dyslexia.
-- **Execution:** Implement an Out-of-Distribution (OOD) rejection step before the final diagnosis. 
-  - *Option A (The Garbage Class):* Upgrade the current CNN to a 3-class system (`Normal`, `Dyslexia`, `Scribble/Noise`) and train it on mock doodles.
-  - *Option B (The Bouncer):* Use the Autoencoder's Reconstruction Error to immediately reject non-handwriting inputs.
-
-## Immediate Action Items ("Closest Things We Can Go")
-
-If you want to start building toward V2 immediately, these are the two closest, most accessible steps:
-
-**1. Latency Metric Integration (UI Upgrade)**
-Research shows the delay *before* starting to write is a massive cognitive indicator.
-- *Action:* Add a "Start" button to the UI. Calculate the delta between the "Start" click and the very first `pointerdown` event. Pass this "Latency" number to the Flask API to include in the ML evaluation.
-
-**2. Real-World Data Gathering (Data Science)**
-Transition from mock training data to a real dataset.
-- *Action:* Use the deployed Web App to collect 50+ samples from neurotypical individuals and individuals with dyslexia. Crucially, ask them an expository question (e.g., *"Write about your ideal trip"*) to force cognitive load, rather than just having them copy a word.
+### Phase 6: Semantic Analysis & Autoencoders [🌌 MISC / DISTANT]
+- **OOD Detection (The Bouncer):** Use an Autoencoder to reject random scribbles/noise before running the main AI.
+- **Semantic OCR:** Eventually extract the text to grade vocabulary. *Warning:* Must avoid off-the-shelf Transformers (like TrOCR) because they silently "auto-correct" spelling mistakes, which destroys dyslexic diagnostic data.
