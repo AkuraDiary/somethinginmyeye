@@ -33,7 +33,7 @@ def save_data():
     
     # Generate ONE universal timestamp for both files
     timestamp = int(time.time())
-    base_filename = f"{mode}_{prefix}_{timestamp}"
+    base_filename = f"{prefix}_{timestamp}"
     
     # 1. Save the CSV
     if stroke_data:
