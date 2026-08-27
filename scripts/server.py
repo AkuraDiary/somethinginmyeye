@@ -13,7 +13,7 @@ from preprocess import analyze_stroke_data
 app = Flask(__name__, static_folder='../data_collector')
 
 print("🧠 Loading AI model...")
-model = tf.keras.models.load_model("../models/elkinematic.keras")
+model = tf.keras.models.load_model("../models/elkinematicV2.keras")
 MAX_TIMESTEPS = 500
 FEATURES = 3
 
@@ -60,7 +60,6 @@ def analyze_live():
     # 1. Receive the stroke data directly from the browser
     stroke_data = request.json
     
-    print(f"⏱️ New drawing received! Cognitive Latency: {latency} ms")
     df = pd.DataFrame(stroke_data)
     
     # 2. Save it to a temporary file so we can reuse your exact preprocess logic
@@ -71,7 +70,7 @@ def analyze_live():
     processed_df = analyze_stroke_data(temp_file)
     latency_val = processed_df['latency'].iloc[0] # latency feature
     model_input = processed_df[['velocity', 'pressure', 'touching']].values # sequence features
-    
+    print(f"⏱️ New drawing received! Cognitive Latency: {latency_val} ms")
     # 4. Pad/Truncate
     if len(model_input) > MAX_TIMESTEPS:
         model_input = model_input[:MAX_TIMESTEPS]
@@ -79,17 +78,21 @@ def analyze_live():
         padding = np.zeros((MAX_TIMESTEPS - len(model_input), FEATURES))
         model_input = np.vstack((model_input, padding))
         
-    # 5. Predict!
-    # prediction = model.predict(np.array([model_input]))[0][0]
-    prediction = model.predict([np.array([model_input]), np.array([latency_val])])[0][0]
-            
-    # Clean up the temp file
+     # 1. Make the prediction
+    prediction = model.predict([np.array([model_input]), np.array([latency_val])])
+    
+    # 2. prediction is shape (1, 500, 1). Flatten it to a list of 500 floats!
+    heatmap_array = prediction[0].flatten().tolist()
+    
+    # 3. Calculate an overall "Global Score" for the text readout (e.g., the average anomaly score)
+    global_score = sum(heatmap_array) / len(heatmap_array)
+    
     os.remove(temp_file)
     
-    # 6. Send the result back to the browser
     return jsonify({
-        "probability": float(prediction),
-        "is_dyslexic": bool(prediction > 0.5)
+        "probability": float(global_score),
+        "is_dyslexic": bool(global_score > 0.5),
+        "heatmap": heatmap_array  # <--- Send the 500 scores to the UI!
     })
 
 if __name__ == '__main__':

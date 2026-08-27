@@ -151,6 +151,14 @@
 
         // Change the button text in your HTML to "Save to Server" if you want!
         document.getElementById('downloadBtn').addEventListener('click', async () => {
+             const resultText = document.getElementById('resultText');
+
+             if (strokeData.length === 0) {
+                resultText.style.color = "orange";
+                resultText.innerText = "⚠️ Please draw something on the canvas first!";
+                return;
+            }
+            
             const mode = document.getElementById('modeSelect').value;
             const prefix = document.getElementById('labelInput').value || 'sample';
             
@@ -273,8 +281,30 @@
                     body: JSON.stringify(strokesWithLatency) // Send the unified array
                 });
 
+                
                 const result = await response.json();
                 const confidence = (result.probability * 100).toFixed(1);
+
+                                // --- THE HEATMAP MAGIC ---
+                if (result.heatmap && result.heatmap.length > 0) {
+                    result.heatmap.forEach((prob, index) => {
+                        // Make sure we don't try to draw past the actual recorded strokes
+                        if (index < strokeData.length) {
+                            
+                            // If the AI is >80% confident that this exact millisecond is anomalous
+                            if (prob > 0.80) { 
+                                const point = strokeData[index];
+                                
+                                // Draw a glowing red circle at this exact X,Y coordinate!
+                                ctx.beginPath();
+                                ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
+                                ctx.fillStyle = "rgba(255, 0, 0, 0.1)"; // 10% opaque red
+                                ctx.fill();
+                            }
+                        }
+                    });
+                }
+                // -------------------------
 
                 if (result.is_dyslexic) {
                     resultText.style.color = "red";
