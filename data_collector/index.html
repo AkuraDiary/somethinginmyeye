@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <!-- touch-action: none prevents the tablet from scrolling when you draw -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Handwriting Data Collector</title>
+    <title>Kinematic Handwriting Data Collector</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -27,12 +27,56 @@
             font-size: 16px;
             cursor: pointer;
         }
+
+        .panduan {
+            background-color: #e9f7ef;
+            border: 1px solid #d4efdf;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px auto;
+            max-width: 600px;
+            text-align: left;
+            font-size: 15px;
+            color: #333;
+        }
+
+        .panduan h4 {
+            margin-top: 0;
+            color: #27ae60;
+        }
+
+        ol li {
+            margin-bottom: 12px;
+            /* Adjust this value to change the distance */
+        }
+
+        ol li:last-child {
+            margin-bottom: 0;
+            /* Prevents extra spacing below the entire list */
+        }
     </style>
 </head>
 
 <body>
-    <h2>Handwriting Data Collector (And a part-timer Analyzer)</h2>
-    <button id="analyzeBtn" style="background-color: #4CAF50; color: white;">Analyze Handwriting</button>
+    <h2>Kinematic Handwriting Data Collector (And a part-timer Analyzer)</h2>
+
+    <div class="panduan">
+        <h4>📖 Panduan Penggunaan Pengumpulan Data:</h4>
+        <ol>
+            <li>Pilih <strong>Mode (klasifikasi)</strong> (Normal/Dyslexia) dan isikan <strong>Label</strong> sesuai dengan data yang
+                akan dikumpulkan.</li>
+            <li>Klik tombol <strong>Start Writing</strong>. sebelum anda mulai menulis untuk menghitung waktu jeda
+                kognitif (cognitive latency) .</li>
+            <li><strong>Tuliskan huruf</strong> pada area kanvas di bawah (disarankan menggunakan stylus/pen tablet).
+                Kanvas akan mengumpulkan data terkait dengan : arah coretan, kecepatan, tekanan, & jeda antara coretan
+            </li>
+            <li>Jika tulisan dirasa sudah selesai, klik <strong>Save Sample (In Server)</strong>. Aplikasi akan secara
+                otomatis menyimpan data tulisan dan data kinematic di server</li>
+            <li>Gunakan tombol <strong>Clear Canvas</strong> untuk membersihkan layar dan mengulang tulisan.</li>
+        </ol>
+    </div>
+
+    <button id="analyzeBtn" style="display: none; background-color: #4CAF50; color: white;">Analyze Handwriting</button>
     <h3 id="resultText"></h3>
 
     <div id="promptArea" style="margin-bottom: 10px; padding: 15px; background-color: #f0f0f0; border-radius: 8px;">
@@ -72,7 +116,7 @@
         let latencyMs = 0;
         let hasStartedWriting = false;
 
-        function clearCanvas(){
+        function clearCanvas() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             strokeData = [];
         }
@@ -89,7 +133,7 @@
         // This array will hold the time-series data
         let strokeData = [];
 
-        
+
         function recordPoint(e, isTouching) {
             // Extract the data from the PointerEvent 'e'
             // Useful properties: 
@@ -151,25 +195,25 @@
 
         // Change the button text in your HTML to "Save to Server" if you want!
         document.getElementById('downloadBtn').addEventListener('click', async () => {
-             const resultText = document.getElementById('resultText');
+            const resultText = document.getElementById('resultText');
 
-             if (strokeData.length === 0) {
+            if (strokeData.length === 0) {
                 resultText.style.color = "orange";
                 resultText.innerText = "⚠️ Please draw something on the canvas first!";
                 return;
             }
-            
+
             const mode = document.getElementById('modeSelect').value;
             const prefix = document.getElementById('labelInput').value || 'sample';
-            
+
             // 1. Grab the Image
             const imageBase64 = canvas.toDataURL("image/png");
-            
+
             // 2. Grab the CSV data (and inject latency)
             const strokesWithLatency = strokeData.map(point => {
                 return { ...point, latency: latencyMs };
             });
-            
+
             // 3. Package them together
             const payload = {
                 mode: mode,
@@ -177,7 +221,7 @@
                 strokes: strokesWithLatency,
                 image: imageBase64
             };
-            
+
             // 4. Send to Python!
             try {
                 const response = await fetch('/save_data', {
@@ -185,16 +229,16 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                
+
                 const result = await response.json();
-                
+
                 // Show a quick popup so you know it worked
-                alert(result.message); 
-                
+                alert(result.message);
+
                 // Optionally clear the canvas to get ready for the next sample
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 strokeData = [];
-                
+
             } catch (error) {
                 alert("❌ Error saving data to server.");
             }
@@ -281,20 +325,20 @@
                     body: JSON.stringify(strokesWithLatency) // Send the unified array
                 });
 
-                
+
                 const result = await response.json();
                 const confidence = (result.probability * 100).toFixed(1);
 
-                                // --- THE HEATMAP MAGIC ---
+                // --- THE HEATMAP MAGIC ---
                 if (result.heatmap && result.heatmap.length > 0) {
                     result.heatmap.forEach((prob, index) => {
                         // Make sure we don't try to draw past the actual recorded strokes
                         if (index < strokeData.length) {
-                            
+
                             // If the AI is >80% confident that this exact millisecond is anomalous
-                            if (prob > 0.80) { 
+                            if (prob > 0.80) {
                                 const point = strokeData[index];
-                                
+
                                 // Draw a glowing red circle at this exact X,Y coordinate!
                                 ctx.beginPath();
                                 ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
