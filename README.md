@@ -45,3 +45,20 @@ A machine learning project designed to detect handwriting patterns related to dy
 - Real-time stroke capturing (X/Y, pressure, timestamp).
 - Cognitive latency measurement.
 - Live inference with a visual heatmap overlay highlighting unusual kinematic patterns.
+
+## 🥪 Lessons Learned
+- **Kinematic Markers Are Powerful:** We found that analyzing *how* someone writes (velocity, in-air pauses, pressure variations) is highly indicative of underlying cognitive processes compared to just looking at the final image.
+- **Cognitive Latency Matters:** Introducing the initial delay before writing starts as a secondary input feature helped the model better gauge cognitive load.
+- **Multimodal AI Architecture:** Combining sequential time-series data (strokes) with static data (latency) required a dual-input model design, allowing us to leverage both `Conv1D` and standard Dense layers effectively.
+
+## 🍎 Academic Context
+This project is built upon the foundation of several research papers stored in the `academic_resources/` folder. Key takeaways include:
+- Dyslexia often manifests in the motor-execution phases during handwriting.
+- Machine learning, particularly Convolutional Neural Networks (CNNs), can accurately classify dysgraphic and dyslexic traces from typical ones by focusing on spatio-temporal features.
+- Visualizing AI decisions through heatmaps helps map the exact moments and strokes where anomalous patterns occur.
+
+## 🍕 Further Plans
+- **Dataset Expansion:** Collect more diverse handwriting samples to improve model robustness and generalization.
+- **Advanced Preprocessing:** Implement smoothing algorithms to handle noisy touchscreen digitizer data.
+- **Enhanced UI/UX:** Build a more engaging interface for data collection to make the process feel more natural.
+- **Wider Deployment:** Containerize the Flask backend for easier deployment on cloud platforms.

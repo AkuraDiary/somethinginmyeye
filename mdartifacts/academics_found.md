@@ -1,0 +1,90 @@
+# Academic Findings: Dyslexia & Handwriting Kinematics
+
+This document compiles the key insights, architectures, and methodologies extracted from the academic journals provided, serving as the theoretical foundation for our intelligent system.
+
+---
+
+## 1. Dynamics of Sentence Handwriting in Dyslexia: The Impact of Frequency and Consistency
+**Citation:** Suárez-Coalla P., Afonso O., Martínez-García C., and Cuetos F. (2020). *Frontiers in Psychology, 11:319*.
+
+### Key Findings:
+* **Serial vs. Parallel Processing:** Typical writers process spelling and motor execution in parallel (thinking ahead while writing). Dyslexic children experience a cognitive bottleneck, forcing them to process *serially* (stopping to think, then writing).
+* **Crucial Biomarkers:** The spelling deficit in dyslexia heavily impacts the *dynamics* of handwriting. 
+  * **In-air pen duration (Pauses):** Dyslexic children pause significantly longer between words and syllables, especially when dealing with low-frequency or orthographically inconsistent words.
+  * **Peaks of speed:** Dyslexic writers exhibit more "peaks of speed" in their velocity profiles, indicating dysfluency and micro-stuttering in their graphomotor execution.
+  * **Writing Duration:** The actual time spent with the pen on the paper is also longer for dyslexic children compared to their peers.
+
+---
+
+## 2. Deep Learning for Dyslexia Detection: A Comprehensive CNN Approach
+**Citation:** Aldehim G., Rashid M., Alluhaidan A.S., Sakri S., and Basheer S. (2024). *Journal of Disability Research, 3:1-8*.
+
+### Key Findings:
+* **Minute Visual Variations:** Even in static images, individuals with dyslexia show minute differences in letter spacing, uniformity, and overall organization compared to normal handwriting.
+* **Model Efficacy:** A Convolutional Neural Network (CNN) is highly capable of detecting these minute differences. The authors achieved a 96.4% testing accuracy using a CNN with multiple convolutional, max-pooling, and dropout layers.
+* **Data Augmentation is Vital:** Because large datasets are hard to find, the authors heavily utilized data augmentation (rotation, shear, and translation) to artificially expand their dataset and teach the model to generalize across different handwriting orientations.
+* **Performance:** Lightweight models can execute predictions incredibly fast (4.3 seconds for testing), proving that everyday hardware is sufficient for real-time applications.
+
+---
+
+## 3. Unravelling handwriting images: deep neural models for dyslexia, dysgraphia, and other learning disabilities detections
+**Citation:** Al Abadleh A.H., Al-Shqeerat K.H.A., Shaikh M.A., and Wahab Sait A.R. (2025). *PeerJ Computer Science, 11:e3296*.
+
+### Key Findings:
+* **The "Online" vs "Offline" Consensus:** The review explicitly confirms that "Tablet-based models... are ideal for analyzing children's handwriting, capturing dynamic features such as stroke pressure, writing fluency, and pen velocity." It notes that offline models (scanned images) suffer due to a lack of temporal resolution.
+* **Architectural Shifts:** While basic CNNs are used for spatial features (like edge sharpness and loop closure), the field is moving towards **Sequence Models (LSTMs)** and **Hybrid models (CNN-LSTM)** to extract temporal dependencies and pseudo-kinematic features from the writing process.
+* **Current Challenges in the Field:**
+  * **Dataset Bias:** Most datasets are biased toward specific demographics or Latin scripts. 
+  * **Interpretability (Black Box Problem):** Many AI models provide a diagnosis without explaining *why*. Systems need to be explainable so educators can provide targeted interventions.
+  * **Computational Limits:** Many existing models require heavy cloud infrastructure, emphasizing the need for the lightweight, edge-capable architectures we are designing.
+
+---
+
+## 4. Handwriting Anomalies through Recurrent Neural Networks and Geometric Pattern Analysis
+**Citation:** Alevizos V., et al. (2024). *Proc. of the 5th ICECCE*.
+### Key Findings / Improvements for us:
+* **RNN-Autoencoders:** Instead of just classifying, the authors used an RNN-Autoencoder to compress and reconstruct the handwriting. This is excellent for "Anomaly Detection" (finding bizarre stroke patterns) rather than standard classification.
+* **Geometric Anomalies:** Identifies specific structural flags such as *baseline deviations* (drifting off the horizontal line) and *inconsistent stroke thickness*. 
+
+## 5. Handwriting fluency, latency, and kinematic in Portuguese writing system
+**Citation:** Germano G.D., and Capellini S.A. (2023). *Frontiers in Psychology, 13:1063021*.
+### Key Findings / Improvements for us:
+* **The "Latency" Metric:** The study defines "Latency" as the exact time between when a word is presented to the student and when their pen first touches the paper. Crucially, they found that when *typical* students are given difficult/irregular words, their latency spikes due to the cognitive load of retrieving the spelling. (Coupled with Paper #1, this confirms latency will be significantly higher in dyslexic users).
+* **The "Gaze" Metric:** Writers frequently pause to look away from the paper/tablet to check the reference word when they are uncertain. This correlates with our "In-Air Pause" metric, proving it is a direct measurement of spelling uncertainty.
+
+## 6. Characteristics of written compositions of Spanish children with dyslexia
+**Citation:** Afonso O., et al. (2022). *Reading and Writing, 35:2473–2496*.
+### Key Findings / Improvements for us:
+* **Lexical Diversity:** Dyslexic children actively avoid complex words because they are hard to spell, resulting in lower "lexical diversity".
+* **Future Expansion:** This proves that eventually integrating an OCR (Optical Character Recognition) module to read *what* the user wrote (Phase 4 Semantic Analysis) will be a massive upgrade to our system, allowing us to grade sentence complexity alongside kinematics.
+
+## 7. AI-Enhanced Child Handwriting Analysis: A Framework for Early Screening
+**Citation:** Rangasrinivasan S., et al. (2025). *SN Computer Science, 6:399*.
+### Key Findings / Improvements for us:
+* **Prompt Complexity is Key:** Most datasets use "copying tasks," which do not trigger the cognitive load needed to reveal dyslexia. The authors strongly recommend using *narrative and expository prompts* (asking the user to invent a sentence) rather than just copying a word.
+
+## 8. Analyzing handwriting legibility through hand kinematics
+**Citation:** Babushkin V., et al. (2025). *Frontiers in Artificial Intelligence, 8:1426455*.
+### Key Findings:
+* **TCNs and Self-Attention:** For processing kinematic time-series data, Temporal Convolutional Networks (TCNs) augmented with Self-Attention layers outperform standard LSTMs by preventing information leakage and capturing long-range dependencies.
+* **Top Biomarkers for Legibility:** Pressure variability, pen slant (azimuth, altitude), and absolute hand speed are the most prominent features in evaluating handwriting legibility algorithmically.
+
+## 9. Advanced Computational Techniques for Dysgraphia Prediction
+**Citation:** Weraduwa S., et al. (2024). *Journal of Desk Research Review and Analysis, 2:216-234*.
+### Key Findings:
+* **Linguistic Diversity Gap:** The review highlights that most ML handwriting models focus solely on Latin scripts, presenting a critical need for systems capable of operating on non-Latin or cross-linguistic data.
+* **Multimodal Necessity:** Recommends that future diagnostic tools integrate cognitive, motor, and language assessments, rather than relying on a single data type.
+
+## 10. Hybrid Feature Extraction-based Learning Disabilities Identification
+**Citation:** Al Abadleh A.H., et al. (2025). *Journal of Disability Research, 4:1-11*.
+### Key Findings:
+* **Image-Based Vision Models:** Employs a hybrid model using EfficientNet-B7 (to capture fine, local stroke details) and SWIN Transformers (to capture global spatial writing flow and irregularities). 
+
+---
+
+# Hypotheses & Synthesized Inferences (V2 / V3 Architecture)
+*The following are architectural hypotheses and system design inferences synthesized by combining multiple concrete findings from the papers above. These serve as our R&D roadmap until proven in our own dataset.*
+
+* **Hypothesis A (The Latency-Dyslexia Correlation):** By combining Paper #5's finding that "latency measures spelling cognitive load" with Paper #1's finding that "dyslexic children have severe spelling cognitive bottlenecks," we infer that measuring Latency in our app will yield a direct, highly-weighted biomarker for Dyslexia classification.
+* **Hypothesis B (The Ultimate "Two-Headed" Architecture):** Combining Paper #3 and #10 (Vision models capturing spatial irregularities) with Paper #4 and #8 (Temporal models capturing kinematic stutters), we hypothesize that a Multi-Modal Neural Network—where one branch processes the raw sequence via Conv1D/TCN and the other processes the Canvas PNG via a Vision Transformer/CNN—will achieve near-perfect classification, outperforming any single-modality model.
+* **Hypothesis C (The "Bouncer" Noise Filter):** Based on the limitations of binary classifiers and the RNN-Autoencoder anomaly detection from Paper #4, we hypothesize that deploying an Autoencoder prior to the main diagnostic model will successfully filter out "Out-of-Distribution" data (e.g., unpredictable child scribbles), maintaining the integrity of the clinical evaluation.
