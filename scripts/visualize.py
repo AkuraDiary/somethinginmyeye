@@ -79,7 +79,7 @@ def main():
     if segments:
         accel_max = np.percentile(np.abs(accel_vals), 95) + 1e-5
         norm = TwoSlopeNorm(vmin=-accel_max, vcenter=0, vmax=accel_max)
-        lc = LineCollection(segments, cmap='coolwarm', norm=norm, linewidths=3.5, zorder=2)
+        lc = LineCollection(segments, cmap='coolwarm', norm=norm, linewidths=3.5, zorder=4)
         lc.set_array(np.array(accel_vals))
         ax_traj.add_collection(lc)
         cbar_line = fig.colorbar(lc, ax=ax_traj, pad=0.02)
@@ -111,7 +111,7 @@ def main():
     # THE RED LATENCY LINE
     ax_dyn.axvline(x=initial_latency, color="crimson", linestyle="--", linewidth=2, label="First Touch")
     
-    ax_dyn.set_title(f"Pen Dynamics (Latency: {initial_latency:.0f} ms)", fontsize=12, fontweight='bold')
+    ax_dyn.set_title("Pen Dynamics & Hardware Sensors", fontsize=12, fontweight='bold')
     ax_dyn.set_ylabel("Normalized Range (0 to 1)")
     ax_dyn.grid(True, linestyle="--", alpha=0.5)
     ax_dyn.legend(loc="upper right", fontsize=9)
@@ -132,8 +132,12 @@ def main():
     ax_kin.grid(True, linestyle="--", alpha=0.5)
     ax_kin.legend(loc="upper right", fontsize=9)
 
-    plt.suptitle("Dysgraphia Clinical Dashboard", fontsize=16, fontweight='bold')
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.suptitle(
+        "Dysgraphia Clinical Dashboard\n"
+        f"Subject initiated the first touch {initial_latency:.0f} ms after the given prompt started.", 
+        fontsize=16, fontweight='bold'
+    )
+    plt.tight_layout(rect=[0, 0.03, 1, 0.92]) # slight adjustment for the 2-line title
     plt.show()
 
 if __name__ == "__main__":
