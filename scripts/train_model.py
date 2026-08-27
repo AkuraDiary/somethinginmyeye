@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv1D, MaxPooling1D, GlobalAveragePooling1D, Dense, Dropout
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Conv1D, MaxPooling1D, GlobalAveragePooling1D, Dense, Dropout, Concatenate
 import os
 import pandas as pd
 import numpy as np
@@ -16,6 +18,7 @@ FEATURES = 3         # We'll feed it 3 features: [velocity, pressure, touching]
 
 def load_and_pad_data(data_dir):
     sequences = []
+    latencies = []
     labels = []
     
     for filename in os.listdir(data_dir):
@@ -26,9 +29,16 @@ def load_and_pad_data(data_dir):
         label = 1 if filename.startswith("dyslexia") else 0
         filepath = os.path.join(data_dir, filename)
         
+       
         # Reusing the analyze stroke 
         # This automatically loads the CSV and calculates the velocity/distances.
         df = analyze_stroke_data(filepath)
+        
+        if 'latency' in df.columns:
+            latency_val = df['latency'].iloc[0]
+        else:
+            latency_val = 0
+            
         
         # Extract just the features we want
         stroke_data = df[['velocity', 'pressure', 'touching']].values
@@ -42,10 +52,43 @@ def load_and_pad_data(data_dir):
             stroke_data = np.vstack((stroke_data, padding))
             
         sequences.append(stroke_data)
+        latencies.append(latency_val)
         labels.append(label)
         
-    return np.array(sequences), np.array(labels)
+    return np.array(sequences), np.array(latencies), np.array(labels)
 
+# new multimodal model
+def build_dual_input_model():
+    #  BRANCH A: Kinematic Sequence group
+    # Input shape: (500, 3)
+    sequence_input = Input(shape=(MAX_TIMESTEPS, FEATURES), name="kinematics")
+    
+    x = Conv1D(filters=32, kernel_size=3, activation='relu')(sequence_input)
+    x = MaxPooling1D(pool_size=2)(x)
+    x = Conv1D(filters=64, kernel_size=3, activation='relu')(x)
+    x = GlobalAveragePooling1D()(x) 
+    # 'x' is now a flat summary of the handwriting rhythm
+    
+    #  BRANCH B: The Latency Number 
+    # Input shape: (1,) because it's just a single number!
+    latency_input = Input(shape=(1,), name="latency")
+    
+    # Merge the two branches
+    # We glue the flat sequence summary and the latency number together
+    merged = Concatenate()([x, latency_input])
+    
+    # --- THE LOGIC (Dense Layers) ---
+    y = Dense(64, activation='relu')(merged)
+    y = Dropout(0.5)(y)
+    final_output = Dense(1, activation='sigmoid')(y)
+    
+    # Build the final model specifying both inputs
+    model = Model(inputs=[sequence_input, latency_input], outputs=final_output)
+    
+    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+    return model
+
+#  Old mmodel with sequential Conv1D
 def build_model():
     model = Sequential()
     # Add a Conv1D layer. 
@@ -83,20 +126,19 @@ def build_model():
     return model
 
 if __name__ == "__main__":
-    model = build_model()
+    # model = build_model()
+    model = build_dual_input_model()
     
     print("Loading data...")
     # Point this to your data collector folder
-    X, y = load_and_pad_data("../datasets/") 
+    X_seq, X_lat, y = load_and_pad_data("../datasets/") 
     
-    print(f"Data loaded! Shape of X: {X.shape}, Shape of y: {y.shape}")
+    print(f"Data loaded! \nShape of X_seq (timeseries sequence) : {X_seq.shape} \nShape of X_lat (latency) :{X_lat.shape} \nShape of y (labels) : {y.shape}")
     
     print("Starting training...")
-    x_train = tf.convert_to_tensor(X)
-    y_train = tf.convert_to_tensor(y)
     
     # history = model.fit(x_train, y_train, epochs=20, validation_split=0.2)
-    history = model.fit(X, y, epochs=20, validation_split=0.2)
+    history = model.fit(X_seq, X_lat, y, epochs=20, validation_split=0.2)
     model.summary()
     print("Saving the model...")
-    model.save("../models/elkinematic.keras")
+    model.save("../models/elkinematic-with-lat.keras")

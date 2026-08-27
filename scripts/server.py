@@ -23,15 +23,18 @@ def serve_html():
 def analyze_live():
     # 1. Receive the stroke data directly from the browser
     stroke_data = request.json
+    
+    print(f"⏱️ New drawing received! Cognitive Latency: {latency} ms")
     df = pd.DataFrame(stroke_data)
     
     # 2. Save it to a temporary file so we can reuse your exact preprocess logic
     temp_file = "temp_live_sample.csv"
     df.to_csv(temp_file, index=False)
     
-    # 3. Extract the biomarkers
+    # 3. Extract the biomarkers (Preprocess)
     processed_df = analyze_stroke_data(temp_file)
-    model_input = processed_df[['velocity', 'pressure', 'touching']].values
+    latency_val = processed_df['latency'].iloc[0] # latency feature
+    model_input = processed_df[['velocity', 'pressure', 'touching']].values # sequence features
     
     # 4. Pad/Truncate
     if len(model_input) > MAX_TIMESTEPS:
@@ -41,8 +44,9 @@ def analyze_live():
         model_input = np.vstack((model_input, padding))
         
     # 5. Predict!
-    prediction = model.predict(np.array([model_input]))[0][0]
-    
+    # prediction = model.predict(np.array([model_input]))[0][0]
+    prediction = model.predict([np.array([model_input]), np.array([latency_val])])[0][0]
+            
     # Clean up the temp file
     os.remove(temp_file)
     

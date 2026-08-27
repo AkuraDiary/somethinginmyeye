@@ -35,6 +35,13 @@
     <button id="analyzeBtn" style="background-color: #4CAF50; color: white;">Analyze Handwriting</button>
     <h3 id="resultText"></h3>
 
+    <div id="promptArea" style="margin-bottom: 10px; padding: 15px; background-color: #f0f0f0; border-radius: 8px;">
+        <h3>Prompt: Tulis Huruf A - Z</h3>
+        <button id="startTimerBtn" style="background-color: #007bff; color: white; padding: 10px;">Start
+            Writing</button>
+        <span id="latencyDisplay" style="margin-left: 15px; font-weight: bold;">Latency: Waiting to start...</span>
+    </div>
+
     <div class="controls">
         <label for="modeSelect">Mode:</label>
         <select id="modeSelect">
@@ -42,7 +49,7 @@
             <option value="dyslexia">Dyslexia</option>
         </select>
 
-        <label for="labelInput">Prefix/Label:</label>
+        <label for="labelInput">Label:</label>
         <input type="text" id="labelInput" placeholder="e.g., test_1" />
     </div>
     <!-- The canvas where you will write -->
@@ -60,6 +67,20 @@
         ctx.lineWidth = 4;       // Makes the line 4 pixels thick
         ctx.lineCap = 'round';   // Makes the ends of the strokes round and smooth
         let isDrawing = false;
+        let promptStartTime = 0;
+        let latencyMs = 0;
+        let hasStartedWriting = false;
+
+        // When the user clicks Start, the timer begins!
+        document.getElementById('startTimerBtn').addEventListener('click', () => {
+            promptStartTime = Date.now();
+            hasStartedWriting = false;
+            document.getElementById('latencyDisplay').innerText = "Latency: Timing cognitive delay...";
+
+            // Clear the canvas for a fresh start
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            strokeData = [];
+        });
 
         // This array will hold the time-series data
         let strokeData = [];
@@ -83,6 +104,14 @@
 
         // --- Event Listeners ---
         canvas.addEventListener('pointerdown', (e) => {
+
+            // latency calculation
+            if (promptStartTime > 0 && !hasStartedWriting) {
+                latencyMs = Date.now() - promptStartTime;
+                hasStartedWriting = true;
+                document.getElementById('latencyDisplay').innerText = `Latency: ${latencyMs} ms`;
+            }
+
             isDrawing = true;
             ctx.beginPath();
             ctx.moveTo(e.offsetX, e.offsetY);
@@ -139,11 +168,12 @@
             const filename = `${mode}_${prefix}.csv`;
 
             // Build the CSV String (Removed the label column!)
-            let csvContent = "time,x,y,pressure,touching\n";
+            let csvContent = "time,x,y,pressure,touching,latency\n";
 
-            strokeData.forEach(p => {
-                csvContent += `${p.time},${p.x},${p.y},${p.pressure},${p.touching}\n`;
+            strokeData.forEach(point => {
+                csvContent += `${point.time},${point.x},${point.y},${point.pressure},${point.touching},${latencyMs}\n`;
             });
+
 
             // Trigger the download
             const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -176,10 +206,21 @@
             resultText.innerText = "🧠 Analyzing kinematics...";
 
             try {
+                // Package the data together
+                const strokesWithLatency = strokeData.map(point => {
+                    return {
+                        time: point.time,
+                        x: point.x,
+                        y: point.y,
+                        pressure: point.pressure,
+                        touching: point.touching,
+                        latency: latencyMs // injected latency into the data instead of sending it as separate payload
+                    };
+                });
                 const response = await fetch('/analyze', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(strokeData)
+                    body: JSON.stringify(strokesWithLatency) // Send the unified array
                 });
 
                 const result = await response.json();
@@ -197,6 +238,8 @@
                 resultText.innerText = "❌ Error connecting to AI server.";
             }
         });
+
+
     </script>
 </body>
 
