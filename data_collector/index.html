@@ -31,12 +31,12 @@
 </head>
 
 <body>
-    <h2>Handwriting Data Collector (And not so Secretly an Analyzer)</h2>
+    <h2>Handwriting Data Collector (And a part-timer Analyzer)</h2>
     <button id="analyzeBtn" style="background-color: #4CAF50; color: white;">Analyze Handwriting</button>
     <h3 id="resultText"></h3>
 
     <div id="promptArea" style="margin-bottom: 10px; padding: 15px; background-color: #f0f0f0; border-radius: 8px;">
-        <h3>Prompt: Tulis Huruf A - Z</h3>
+        <h3>Prompt: Tulis huruf antara A - Z atau a - z (individual)</h3>
         <button id="startTimerBtn" style="background-color: #007bff; color: white; padding: 10px;">Start
             Writing</button>
         <span id="latencyDisplay" style="margin-left: 15px; font-weight: bold;">Latency: Waiting to start...</span>
@@ -56,8 +56,9 @@
     <canvas id="drawCanvas" width="800" height="400"></canvas>
 
     <div class="controls">
-        <button id="downloadImgBtn">Download Image</button>
-        <button id="downloadBtn">Download CSV</button>
+        <!-- <button id="downloadImgBtn">Download Image</button> -->
+        <!-- <button id="downloadBtn">Download CSV</button> -->
+        <button id="downloadBtn">Save Sample (In Server)</button>
         <button id="clearBtn">Clear Canvas</button>
     </div>
 
@@ -147,52 +148,98 @@
         });
 
         // --- Controls ---
-        document.getElementById('downloadImgBtn').addEventListener('click', () => {
-            // Grab the same naming prefix you used for the CSV
+
+        // Change the button text in your HTML to "Save to Server" if you want!
+        document.getElementById('downloadBtn').addEventListener('click', async () => {
             const mode = document.getElementById('modeSelect').value;
             const prefix = document.getElementById('labelInput').value || 'sample';
-            const filename = `${mode}_${prefix}.png`;
-
-            // Convert the canvas to a PNG image URL
-            const dataURL = canvas.toDataURL("image/png");
-
-            // Trigger download
-            const a = document.createElement('a');
-            a.href = dataURL;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-        });
-        document.getElementById('downloadBtn').addEventListener('click', () => {
-            const mode = document.getElementById('modeSelect').value;
-            const prefix = document.getElementById('labelInput').value || 'sample';
-
-            // Generate the smart filename
-            const filename = `${mode}_${prefix}.csv`;
-
-            // Build the CSV String (Removed the label column!)
-            let csvContent = "time,x,y,pressure,touching,latency\n";
-
-            strokeData.forEach(point => {
-                csvContent += `${point.time},${point.x},${point.y},${point.pressure},${point.touching},${latencyMs}\n`;
+            
+            // 1. Grab the Image
+            const imageBase64 = canvas.toDataURL("image/png");
+            
+            // 2. Grab the CSV data (and inject latency)
+            const strokesWithLatency = strokeData.map(point => {
+                return { ...point, latency: latencyMs };
             });
-
-
-            // Trigger the download
-            const blob = new Blob([csvContent], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            
+            // 3. Package them together
+            const payload = {
+                mode: mode,
+                prefix: prefix,
+                strokes: strokesWithLatency,
+                image: imageBase64
+            };
+            
+            // 4. Send to Python!
+            try {
+                const response = await fetch('/save_data', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const result = await response.json();
+                
+                // Show a quick popup so you know it worked
+                alert(result.message); 
+                
+                // Optionally clear the canvas to get ready for the next sample
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                strokeData = [];
+                
+            } catch (error) {
+                alert("❌ Error saving data to server.");
+            }
         });
+
+        // document.getElementById('downloadImgBtn').addEventListener('click', () => {
+        //     // Grab the same naming prefix you used for the CSV
+        //     const mode = document.getElementById('modeSelect').value;
+        //     const prefix = document.getElementById('labelInput').value || 'sample';
+        //     const filename = `${mode}_${prefix}.png`;
+
+        //     // Convert the canvas to a PNG image URL
+        //     const dataURL = canvas.toDataURL("image/png");
+
+        //     // Trigger download
+        //     const a = document.createElement('a');
+        //     a.href = dataURL;
+        //     a.download = filename;
+        //     document.body.appendChild(a);
+        //     a.click();
+        //     document.body.removeChild(a);
+        // });
+        // document.getElementById('downloadBtn').addEventListener('click', () => {
+        //     const mode = document.getElementById('modeSelect').value;
+        //     const prefix = document.getElementById('labelInput').value || 'sample';
+
+        //     // Generate the smart filename
+        //     const filename = `${mode}_${prefix}.csv`;
+
+        //     // Build the CSV String (Removed the label column!)
+        //     let csvContent = "time,x,y,pressure,touching,latency\n";
+
+        //     strokeData.forEach(point => {
+        //         csvContent += `${point.time},${point.x},${point.y},${point.pressure},${point.touching},${latencyMs}\n`;
+        //     });
+
+
+        //     // Trigger the download
+        //     const blob = new Blob([csvContent], { type: 'text/csv' });
+        //     const url = URL.createObjectURL(blob);
+
+        //     const a = document.createElement('a');
+        //     a.href = url;
+        //     a.download = filename;
+        //     document.body.appendChild(a);
+        //     a.click();
+        //     document.body.removeChild(a);
+        // });
 
         document.getElementById('clearBtn').addEventListener('click', () => {
-            clearCanvas();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            strokeData = [];
+            // clearCanvas();
         });
         document.getElementById('analyzeBtn').addEventListener('click', async () => {
             const resultText = document.getElementById('resultText');

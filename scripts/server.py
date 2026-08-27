@@ -2,7 +2,9 @@ from flask import Flask, request, jsonify
 import pandas as pd
 import numpy as np
 import tensorflow as tf
+import time
 import os
+import base64
 
 # Import your existing preprocessing engine!
 from preprocess import analyze_stroke_data
@@ -14,6 +16,40 @@ print("🧠 Loading AI model...")
 model = tf.keras.models.load_model("../models/elkinematic.keras")
 MAX_TIMESTEPS = 500
 FEATURES = 3
+
+# Automatically create a dataset folder if it doesn't exist
+os.makedirs("../datasets", exist_ok=True)
+
+@app.route('/save_data', methods=['POST'])
+def save_data():
+    data = request.json
+    mode = data.get('mode', 'normal')
+    prefix = data.get('prefix', 'sample')
+    stroke_data = data.get('strokes', [])
+    image_dataURL = data.get('image', '')
+    
+    # Generate ONE universal timestamp for both files
+    timestamp = int(time.time())
+    base_filename = f"{mode}_{prefix}_{timestamp}"
+    
+    # 1. Save the CSV
+    if stroke_data:
+        df = pd.DataFrame(stroke_data)
+        csv_path = os.path.join("../datasets", f"{base_filename}.csv")
+        df.to_csv(csv_path, index=False)
+    
+    # 2. Save the PNG
+    if image_dataURL:
+        # Strip off the "data:image/png;base64," header
+        header, encoded = image_dataURL.split(",", 1)
+        img_data = base64.b64decode(encoded)
+        png_path = os.path.join("../datasets", f"{base_filename}.png")
+        
+        with open(png_path, "wb") as f:
+            f.write(img_data)
+            
+    print(f"💾 Saved {base_filename} to server!")
+    return jsonify({"message": f"Successfully saved sample! Thank You For Your Contribution ❤️ !!!"})
 
 @app.route('/')
 def serve_html():
