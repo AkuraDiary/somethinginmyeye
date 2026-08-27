@@ -1,29 +1,36 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.colors import TwoSlopeNorm
+from matplotlib.collections import LineCollection
 
 def main():
-    # 1. Read the CSV file
     file_path = "../sample/sample_normal.csv"
-    
     try:
         df = pd.read_csv(file_path)
     except FileNotFoundError:
         print(f"⚠️ Error: Could not find {file_path}. Please update the file_path in the script.")
         return
 
+    # Ensure backward compatibility
     if "touching" in df.columns:
         df["touching"] = df["touching"].astype(bool)
     else:
         df["touching"] = True
 
-    if "tiltX" not in df.columns: df["tiltX"] = 0
-    if "tiltY" not in df.columns: df["tiltY"] = 0
-    if "latency" not in df.columns: df["latency"] = 0
+    for col in ["tiltX", "tiltY", "latency"]:
+        if col not in df.columns: 
+            df[col] = 0
 
     initial_latency = df["latency"].iloc[0]
-    latency_timestamp = df["time"].iloc[0]
 
+    # FIX ISSUE 2: LATENCY RED LINE RESTORED
+    # Set time=0 to the exact moment they clicked "Start". 
+    # The first physical touch happens at `time = initial_latency`
+    prompt_start_time = df["time"].iloc[0] - initial_latency
+    df["time"] = df["time"] - prompt_start_time
+
+    # Derive Features
     df["dt"] = df["time"].diff().fillna(1)
     df.loc[df["dt"] == 0, "dt"] = 1
     
@@ -35,72 +42,97 @@ def main():
     df["acceleration"] = df["velocity"].diff().fillna(0) / df["dt"]
     df["jerk"] = df["acceleration"].diff().fillna(0) / df["dt"]
 
-    # 4. Set up the Dashboard Layout
-    fig = plt.figure(figsize=(18, 12))
-    gs = fig.add_gridspec(4, 2, width_ratios=[1.2, 1])
+    df["vel_norm"] = df["velocity"] / (df["velocity"].abs().max() + 1e-5)
+    df["acc_norm"] = df["acceleration"] / (df["acceleration"].abs().max() + 1e-5)
+    df["jerk_norm"] = df["jerk"] / (df["jerk"].abs().max() + 1e-5)
+
+    # --- RESTORED 3-PANEL LAYOUT (Un-squished) ---
+    fig = plt.figure(figsize=(16, 8))
+    gs = fig.add_gridspec(2, 2, width_ratios=[1.2, 1])
 
     on_surface = df[df["touching"]]
+    
+    # Pressure size scaling
     min_p, max_p = df["pressure"].min(), df["pressure"].max()
-    point_sizes = 15 + 120 * (on_surface["pressure"] - min_p) / (max_p - min_p + 0.001)
+    if max_p - min_p < 1e-5:
+        point_sizes = np.full(len(on_surface), 50)
+    else:
+        point_sizes = 10 + 290 * ((on_surface["pressure"] - min_p) / (max_p - min_p))**2
 
-    # --- Panel 1A: Trajectory by TIME (Top Left) ---
-    ax_time = fig.add_subplot(gs[0:2, 0])
-    ax_time.plot(df["x"], df["y"], color="lightgray", linestyle=":", linewidth=1.2, zorder=1)
-    sc_time = ax_time.scatter(
+    # 1. BIG GRAPH: Spatial Map (Merged Time Dots + Accel Line)
+    ax_traj = fig.add_subplot(gs[:, 0])
+    
+    # 1A. Background Dotted line for In-Air hovers
+    ax_traj.plot(df["x"], df["y"], color="lightgray", linestyle=":", linewidth=1.5, zorder=1, label="In-Air Path")
+
+    # 1B. The Momentum Line (Colored by Accel/Decel)
+    # We only draw the line connecting points that are physically touching the screen
+    touching_mask = df["touching"].values
+    segments, accel_vals = [], []
+    xs, ys, accs = df["x"].values, df["y"].values, df["acceleration"].values
+    
+    for i in range(len(df) - 1):
+        if touching_mask[i] and touching_mask[i+1]:
+            segments.append([(xs[i], ys[i]), (xs[i+1], ys[i+1])])
+            accel_vals.append(accs[i+1])
+            
+    if segments:
+        accel_max = np.percentile(np.abs(accel_vals), 95) + 1e-5
+        norm = TwoSlopeNorm(vmin=-accel_max, vcenter=0, vmax=accel_max)
+        lc = LineCollection(segments, cmap='coolwarm', norm=norm, linewidths=3.5, zorder=2)
+        lc.set_array(np.array(accel_vals))
+        ax_traj.add_collection(lc)
+        cbar_line = fig.colorbar(lc, ax=ax_traj, pad=0.02)
+        cbar_line.set_label("Line Momentum: Blue (Decel) to Red (Accel)")
+
+    # 1C. The Dots (Colored by Time, Sized by Pressure)
+    # Added a white edge to the dots so they don't get lost in the colored line!
+    sc1 = ax_traj.scatter(
         on_surface["x"], on_surface["y"],
-        c=on_surface["time"], s=point_sizes, cmap="viridis",
-        alpha=0.85, edgecolors="none", zorder=2
+        c=on_surface["time"], cmap="viridis", s=point_sizes,
+        edgecolors="white", linewidths=0.5, zorder=3
     )
-    cbar_time = fig.colorbar(sc_time, ax=ax_time, orientation="horizontal", pad=0.02)
-    cbar_time.set_label("Time Progression (ms)")
-    ax_time.set_title("Trajectory (Color = Time progression)", fontsize=12, fontweight='bold')
-    ax_time.invert_yaxis()
-    ax_time.grid(True, linestyle="--", alpha=0.5)
+    cbar_dots = fig.colorbar(sc1, ax=ax_traj, pad=0.08, orientation="horizontal")
+    cbar_dots.set_label("Dot Time: Progression (ms)")
+    
+    ax_traj.set_title("Merged Spatial Map (Line=Momentum, Dots=Time/Pressure)", fontsize=14, fontweight='bold')
+    ax_traj.invert_yaxis()
+    ax_traj.grid(True, linestyle="--", alpha=0.5)
 
-    # --- Panel 1B: Trajectory by VELOCITY (Bottom Left) ---
-    # ax_vel_map = fig.add_subplot(gs[2:4, 0], sharex=ax_time, sharey=ax_time)
-    # ax_vel_map.plot(df["x"], df["y"], color="lightgray", linestyle=":", linewidth=1.2, zorder=1)
-    # sc_vel = ax_vel_map.scatter(
-    #     on_surface["x"], on_surface["y"],
-    #     c=on_surface["velocity"], s=point_sizes, cmap="plasma",
-    #     alpha=0.85, edgecolors="none", zorder=2
-    # )
-    # cbar_vel = fig.colorbar(sc_vel, ax=ax_vel_map, orientation="horizontal", pad=0.02)
-    # cbar_vel.set_label("Velocity (px/ms)")
-    # ax_vel_map.set_title("Trajectory (Color = Writing Speed)", fontsize=12, fontweight='bold')
-    # # Y-axis already inverted via sharey=ax_time
-    # ax_vel_map.grid(True, linestyle="--", alpha=0.5)
+    # 2. Pen Dynamics Graph
+    ax_dyn = fig.add_subplot(gs[0, 1])
+    ax_dyn.plot(df["time"], df["pressure"], color="#1f77b4", linewidth=2, label="Pressure")
+    ax_dyn.plot(df["time"], df["tiltX"]/90, color="purple", linewidth=1.5, alpha=0.7, label="Tilt X")
+    ax_dyn.plot(df["time"], df["tiltY"]/90, color="green", linewidth=1.5, alpha=0.7, label="Tilt Y")
+    ax_dyn.fill_between(
+        df["time"], 0, 1, where=df["touching"], 
+        color="gray", alpha=0.2, transform=ax_dyn.get_xaxis_transform(), label="Pen Touching"
+    )
+    # THE RED LATENCY LINE
+    ax_dyn.axvline(x=initial_latency, color="crimson", linestyle="--", linewidth=2, label="First Touch")
+    
+    ax_dyn.set_title(f"Pen Dynamics (Latency: {initial_latency:.0f} ms)", fontsize=12, fontweight='bold')
+    ax_dyn.set_ylabel("Normalized Range (0 to 1)")
+    ax_dyn.grid(True, linestyle="--", alpha=0.5)
+    ax_dyn.legend(loc="upper right", fontsize=9)
 
-    # --- Panel 2: Pressure & Pen Tilt ---
-    ax_press = fig.add_subplot(gs[0, 1])
-    ax_press.plot(df["time"], df["pressure"], color="#1f77b4", linewidth=1.5, label="Pressure")
-    ax_press.plot(df["time"], df["tiltX"]/90, color="purple", linewidth=1.0, alpha=0.5, label="Tilt X (Scaled)")
-    ax_press.plot(df["time"], df["tiltY"]/90, color="green", linewidth=1.0, alpha=0.5, label="Tilt Y (Scaled)")
-    ax_press.axvline(x=latency_timestamp, color="crimson", linestyle="--", label=f"Latency: {initial_latency:.0f} ms")
-    ax_press.set_title("Pen Dynamics (Pressure & Tilt)", fontsize=11, fontweight='bold')
-    ax_press.grid(True, linestyle="--", alpha=0.5)
-    ax_press.legend(loc="upper right", fontsize=8)
+    # 3. Kinematics Graph
+    ax_kin = fig.add_subplot(gs[1, 1], sharex=ax_dyn)
+    ax_kin.plot(df["time"], df["vel_norm"], color="#ff7f0e", linewidth=1.5, label="Velocity (Speed)")
+    ax_kin.fill_between(df["time"], 0, df["vel_norm"], color="#ff7f0e", alpha=0.3)
+    ax_kin.plot(df["time"], df["acc_norm"], color="#2ca02c", linewidth=1.5, label="Acceleration")
+    ax_kin.plot(df["time"], df["jerk_norm"], color="#d62728", linewidth=1.5, alpha=0.8, label="Jerk (Micro-stutters)")
+    
+    # THE RED LATENCY LINE
+    ax_kin.axvline(x=initial_latency, color="crimson", linestyle="--", linewidth=2, label="First Touch")
 
-    # --- Panel 3: Velocity ---
-    ax_vel = fig.add_subplot(gs[1, 1], sharex=ax_press)
-    ax_vel.plot(df["time"], df["velocity"], color="#ff7f0e", linewidth=1.2, label="Velocity")
-    ax_vel.set_title("Writing Speed", fontsize=11, fontweight='bold')
-    ax_vel.grid(True, linestyle="--", alpha=0.5)
+    ax_kin.set_title("Kinematics (Normalized Smoothness)", fontsize=12, fontweight='bold')
+    ax_kin.set_xlabel("Time (ms) from Prompt Start")
+    ax_kin.set_ylabel("Relative Intensity (-1 to 1)")
+    ax_kin.grid(True, linestyle="--", alpha=0.5)
+    ax_kin.legend(loc="upper right", fontsize=9)
 
-    # --- Panel 4: Acceleration ---
-    ax_acc = fig.add_subplot(gs[2, 1], sharex=ax_press)
-    ax_acc.plot(df["time"], df["acceleration"], color="#2ca02c", linewidth=1.2, label="Acceleration")
-    ax_acc.set_title("Momentum (Acceleration)", fontsize=11, fontweight='bold')
-    ax_acc.grid(True, linestyle="--", alpha=0.5)
-
-    # --- Panel 5: Jerk (Smoothness) ---
-    ax_jerk = fig.add_subplot(gs[3, 1], sharex=ax_press)
-    ax_jerk.plot(df["time"], df["jerk"], color="#d62728", linewidth=1.2, label="Jerk (Micro-stutters)")
-    ax_jerk.set_title("Smoothness (Jerk)", fontsize=11, fontweight='bold')
-    ax_jerk.set_xlabel("Time (ms)")
-    ax_jerk.grid(True, linestyle="--", alpha=0.5)
-
-    plt.suptitle("Dysgraphia Kinematic Analysis Dashboard", fontsize=16, fontweight='bold')
+    plt.suptitle("Dysgraphia Clinical Dashboard", fontsize=16, fontweight='bold')
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
     plt.show()
 
