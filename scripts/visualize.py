@@ -5,7 +5,7 @@ from matplotlib.colors import TwoSlopeNorm
 from matplotlib.collections import LineCollection
 
 def main():
-    file_path = "../sample/sample_dyslexia.csv"
+    file_path = "../sample/sample_normal_bebek.csv"
     try:
         df = pd.read_csv(file_path)
     except FileNotFoundError:
