@@ -5,7 +5,7 @@ import pandas as pd
 
 def main():
   # 1. Read the CSV file
-  file_path = "../datasets/normal_sample.csv"
+  file_path = "../sample/dyslexia_sample.csv"
   df = pd.read_csv(file_path)
 
   # Normalize 'touching' to boolean
@@ -101,11 +101,11 @@ def main():
       color="crimson",
       linestyle="--",
       linewidth=1.2,
-      label=f"First Touch (Latency: {initial_latency:.3f}s)",
+      label=f"First Touch (Latency: {initial_latency:.3f} ms)",
   )
 
   ax_press.set_title(
-      f"Pen Pressure vs. Time (Initial Latency = {initial_latency:.3f} s)",
+      f"Pen Pressure vs. Time (Initial Latency = {initial_latency:.3f} ms)",
       fontsize=12,
   )
   ax_press.set_ylabel("Pressure")
