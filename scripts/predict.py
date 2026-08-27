@@ -2,9 +2,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 from preprocess import analyze_stroke_data
-
-MAX_TIMESTEPS = 500
-FEATURES = 3
+from config import MAX_TIMESTEPS, FEATURES
 
 def predict_sample(csv_filepath):
     # 1. Load the trained brain

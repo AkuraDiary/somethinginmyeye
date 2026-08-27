@@ -169,3 +169,15 @@ As we reviewed more advanced 2026 literature, we encountered several heavy data 
 * **Hill Climbing & Local Optima:** (Established). An old AI search algorithm. Imagine trying to find the tallest mountain peak in pitch-black fog. You just keep stepping "up". The flaw is getting trapped on a tiny hill next to Mount Everest because every step from the tiny hill goes "down" (*Local Optima*). 
 * **Fisher-Based Supervised Hill Climbing:** (Novel/Made Up). The authors of Paper #13 invented this specific software loop. They used the old Hill Climbing algorithm, but added an SVM (Support Vector Machine) as a "supervisor" to pull the AI off the tiny hills and force it to keep searching for the true peak.
 * **Reading Research Equations:** When reading papers, equations for Velocity/Jerk are established Isaac Newton physics. Equations for REINFORCE or SVMs are established 1990s math. But equations describing thresholds and loops (like $S_{best}$) are the authors mathematically defining the novel software loop they just coded.
+
+## 9. The "Golden 8" Features (Optimized Feature Selection)
+Based on the finding in Paper #13 that extracting too many features causes overfitting (and purely kinematic features like raw speed are insufficient), we have defined a highly optimized, 8-feature array for our V2/V3 ML Architecture. This array perfectly balances Spatial, Temporal, and Kinematic data without overloading the `Bidirectional(LSTM)`:
+
+1. **`Delta_X` (Spatial - Stroke Width):** The pixel distance the pen traveled horizontally in one millisecond. Prevents the AI from getting confused by *where* on the screen the child drew, focusing instead on the physical size of the letter.
+2. **`Delta_Y` (Spatial - Stroke Height):** The pixel distance traveled vertically. Captures inconsistent letter sizing (a core dysgraphia biomarker).
+3. **`Pressure` (Dynamic - Stress/Force):** Raw stylus pressure. If mapped to line-width in the HTML Canvas, the 2D-CNN Vision model will seamlessly learn this as well. Indicates stress or hesitation.
+4. **`Tilt_X` (Dynamic - Pen Grip):** The altitude/azimuth angle of the stylus. Dysgraphic children physically grip the pen at rigid, awkward angles to compensate for poor motor control.
+5. **`Tilt_Y` (Dynamic - Pen Grip):** The secondary angle of the stylus.
+6. **`Velocity` (Kinematic - Speed):** The baseline speed ($\Delta Distance / \Delta Time$).
+7. **`Acceleration` (Kinematic - Momentum):** The rate of change in speed.
+8. **`Jerk` (Kinematic - Smoothness):** The rate of change in acceleration. This is the ultimate mathematical measurement for "smoothness". High Jerk perfectly captures the jagged micro-stutters of a dysgraphic hand fighting to draw a curve.

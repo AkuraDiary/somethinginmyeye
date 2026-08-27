@@ -8,15 +8,9 @@ import pandas as pd
 import numpy as np
 from tensorflow.keras.layers import Input 
 
-
-
 # project's own preprocessing engine
 from preprocess import analyze_stroke_data
-
-# Hyperparameters
-MAX_TIMESTEPS = 500  # We will standardize all writing samples to 500 time-steps
-FEATURES = 3         # We'll feed it 3 features: [velocity, pressure, touching]
-
+from config import MAX_TIMESTEPS, FEATURES
 
 def load_and_pad_data(data_dir):
     sequences = []
