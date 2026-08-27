@@ -48,7 +48,8 @@
             opacity: 0.9;
         }
 
-        input[type="text"], select {
+        input[type="text"],
+        select {
             padding: 10px;
             font-size: 16px;
             border: 1px solid #ccc;
@@ -98,7 +99,8 @@
     <div class="panduan">
         <h4>📖 Panduan Penggunaan Pengumpulan Data:</h4>
         <ol>
-            <li>Pilih <strong>Mode (klasifikasi)</strong> (Normal/Dyslexia) dan isikan <strong>Label</strong> sesuai dengan data yang
+            <li>Pilih <strong>Mode (klasifikasi)</strong> (Normal/Dyslexia) dan isikan <strong>Label</strong> sesuai
+                dengan data yang
                 akan dikumpulkan.</li>
             <li>Klik tombol <strong>Start Writing</strong>. sebelum anda mulai menulis untuk menghitung waktu jeda
                 kognitif (cognitive latency) .</li>
@@ -122,6 +124,16 @@
     </div>
 
     <div class="controls">
+
+        <label for="datasetSelect">Dataset:</label>
+        <select id="datasetSelect">
+            <option value="Train">Train</option>
+            <option value="Test">Test</option>
+        </select>
+
+        <label for="annotatorInput">Annotator:</label>
+        <input type="text" id="annotatorInput" placeholder="e.g. Seta" style="width: 80px;">
+
         <label for="modeSelect">Mode:</label>
         <select id="modeSelect">
             <option value="normal">Normal</option>
@@ -129,14 +141,13 @@
         </select>
 
         <label for="labelInput">Label:</label>
-        <input type="text" id="labelInput" placeholder="e.g., test_1" />
+        <input type="text" id="labelInput" placeholder="e.g., A" />
     </div>
     <!-- The canvas where you will write -->
     <canvas id="drawCanvas" width="800" height="400"></canvas>
 
     <div class="controls">
-        <!-- <button id="downloadImgBtn">Download Image</button> -->
-        <!-- <button id="downloadBtn">Download CSV</button> -->
+
         <button id="downloadBtn">Save Sample (In Server)</button>
         <button id="clearBtn">Clear Canvas</button>
     </div>
@@ -182,6 +193,8 @@
                 x: e.offsetX,
                 y: e.offsetY,
                 pressure: e.pressure || 0.5, // Fallback to 0.5 if mouse is used instead of a stylus
+                tiltX: e.tiltX || 0,
+                tiltY: e.tiltY || 0,
                 touching: isTouching
             });
         }
@@ -237,18 +250,21 @@
                 resultText.innerText = "⚠️ Please draw something on the canvas first!";
                 return;
             }
-
+            // -----
+            const dataset = document.getElementById('datasetSelect').value;
             const mode = document.getElementById('modeSelect').value;
-            const prefix = document.getElementById('labelInput').value || 'sample';
+            const label = document.getElementById('labelInput').value || 'UnknownSubj';
+            const annotator = document.getElementById('annotatorInput').value || 'UnknownAnno';
+            const timestamp = Date.now();
 
-            // 1. Grab the Image
+            const prefix = `${dataset}_${mode}_${label}_${annotator}_${timestamp}`;
+            // ----------------------------------------
             const imageBase64 = canvas.toDataURL("image/png");
-
-            // 2. Grab the CSV data (and inject latency)
             const strokesWithLatency = strokeData.map(point => {
                 return { ...point, latency: latencyMs };
             });
-
+            // --------
+    
             // 3. Package them together
             const payload = {
                 mode: mode,
@@ -278,50 +294,6 @@
                 alert("❌ Error saving data to server.");
             }
         });
-
-        // document.getElementById('downloadImgBtn').addEventListener('click', () => {
-        //     // Grab the same naming prefix you used for the CSV
-        //     const mode = document.getElementById('modeSelect').value;
-        //     const prefix = document.getElementById('labelInput').value || 'sample';
-        //     const filename = `${mode}_${prefix}.png`;
-
-        //     // Convert the canvas to a PNG image URL
-        //     const dataURL = canvas.toDataURL("image/png");
-
-        //     // Trigger download
-        //     const a = document.createElement('a');
-        //     a.href = dataURL;
-        //     a.download = filename;
-        //     document.body.appendChild(a);
-        //     a.click();
-        //     document.body.removeChild(a);
-        // });
-        // document.getElementById('downloadBtn').addEventListener('click', () => {
-        //     const mode = document.getElementById('modeSelect').value;
-        //     const prefix = document.getElementById('labelInput').value || 'sample';
-
-        //     // Generate the smart filename
-        //     const filename = `${mode}_${prefix}.csv`;
-
-        //     // Build the CSV String (Removed the label column!)
-        //     let csvContent = "time,x,y,pressure,touching,latency\n";
-
-        //     strokeData.forEach(point => {
-        //         csvContent += `${point.time},${point.x},${point.y},${point.pressure},${point.touching},${latencyMs}\n`;
-        //     });
-
-
-        //     // Trigger the download
-        //     const blob = new Blob([csvContent], { type: 'text/csv' });
-        //     const url = URL.createObjectURL(blob);
-
-        //     const a = document.createElement('a');
-        //     a.href = url;
-        //     a.download = filename;
-        //     document.body.appendChild(a);
-        //     a.click();
-        //     document.body.removeChild(a);
-        // });
 
         document.getElementById('clearBtn').addEventListener('click', () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -364,7 +336,6 @@
                 const result = await response.json();
                 const confidence = (result.probability * 100).toFixed(1);
 
-                // --- THE HEATMAP MAGIC ---
                 if (result.heatmap && result.heatmap.length > 0) {
                     result.heatmap.forEach((prob, index) => {
                         // Make sure we don't try to draw past the actual recorded strokes

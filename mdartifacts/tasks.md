@@ -6,10 +6,10 @@ File ini digunakan untuk mencatat rencana perbaikan, pembaruan, dan tugas-tugas 
 - [ ] **Pengumpulan Data (Data Collection):** Kumpulkan dataset sesuai dengan protokol 5 ronde per orang menggunakan web app yang sudah live. Target: 200 sampel (100 Normal, 100 Dyslexic-Acted).
 
 ## Prioritas Tinggi (Immediate / Actionable)
-- [ ] **Capture Fitur Pen Tilt (UI):** Modifikasi event listener `pointermove` di `index.html` untuk menangkap `event.tiltX` dan `event.tiltY` lalu menyimpannya ke dalam array data yang dikirim ke server (sebagai indikator *Pen Grip*).
+- [X] **Capture Fitur Pen Tilt (UI):** Modifikasi event listener `pointermove` di `index.html` untuk menangkap `event.tiltX` dan `event.tiltY` lalu menyimpannya ke dalam array data yang dikirim ke server (sebagai indikator *Pen Grip*).
 - [ ] **Ekspansi Fitur Preprocessing (Python):** Update file `preprocess.py` (atau script pemrosesan) untuk menghitung 5 fitur baru menggunakan Pandas: `Delta_X`, `Delta_Y`, `Acceleration`, dan `Jerk`. Ubah `FEATURES = 3` menjadi `FEATURES = 8` di `config.py`.
 - [X] **Perekaman Metrik "Latency":** Tambahkan tombol "Start" di UI. Hitung waktu (delta) antara klik "Start" dengan sentuhan pen pertama (`pointerdown`). Kirim angka ini ke Flask sebagai fitur Latency.
-- [ ] **Restrukturisasi Form Pengumpulan Data:** Modifikasi form input dengan tambahan input nama anotator dan klasifikasi input data (test / validation) di `index.html` agar lebih terstruktur sehingga data masuk ke setiap folder anotator (orang yang input data) sesuai dengan klasifikasi data yang dipilih (test & validation).
+- [X] **Restrukturisasi Form Pengumpulan Data:** Modifikasi form input dengan tambahan input nama anotator dan klasifikasi input data (test / validation) di `index.html` agar lebih terstruktur sehingga data masuk ke setiap folder anotator (orang yang input data) sesuai dengan klasifikasi data yang dipilih (test & validation).
 
 
 ## Prioritas Menengah (Next ML Upgrades)

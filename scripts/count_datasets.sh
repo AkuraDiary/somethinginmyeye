@@ -41,13 +41,10 @@ for csv_file in "$DIR"/*.csv; do
         ((missing_pairs++))
     fi
     
-    # Parse the format: [classification]_[label]_[timestamp]
-    classification="${basename%%_*}"
-    timestamp="${basename##*_}"
-    temp="${basename#*_}"
-    label="${temp%_*}"
+    # Parse the new format: dataset_mode_label_annotator_timestamp
+    IFS='_' read -r dataset mode label annotator timestamp <<< "$basename"
     
-    echo "$classification|$label" >> "$tmp_file"
+    echo "$dataset|$mode|$label|$annotator" >> "$tmp_file"
 done
 
 echo "------------------------------------------------"
@@ -61,19 +58,19 @@ else
     echo "❌ Missing PNG pairs: $missing_pairs"
 fi
 echo ""
-echo "📋 Summary by Classification & Label:"
-echo "------------------------------------------------"
-printf "%-15s | %-20s | %s\n" "Classification" "Label" "Count"
-echo "------------------------------------------------"
+echo "📋 Summary by Dataset, Mode, Label & Annotator:"
+echo "--------------------------------------------------------------------------------"
+printf "%-15s | %-10s | %-15s | %-15s | %s\n" "Dataset" "Mode" "Label" "Annotator" "Count"
+echo "--------------------------------------------------------------------------------"
 
 # Group and count using AWK
 if [ -s "$tmp_file" ]; then
     awk -F'|' '{
-        count[$1 "|" $2]++
+        count[$1 "|" $2 "|" $3 "|" $4]++
     } END {
         for (key in count) {
             split(key, arr, "|")
-            printf "%-15s | %-20s | %d\n", arr[1], arr[2], count[key]
+            printf "%-15s | %-10s | %-15s | %-15s | %d\n", arr[1], arr[2], arr[3], arr[4], count[key]
         }
     }' "$tmp_file" | sort
 fi
