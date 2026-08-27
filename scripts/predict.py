@@ -10,44 +10,59 @@ def predict_sample(csv_filepath):
     # 1. Load the trained brain
     print("Loading AI model...")
     try:
-        model = tf.keras.models.load_model("../models/elkinematic.keras")
+        model = tf.keras.models.load_model("../models/elkinematicV2.keras")
     except Exception as e:
         print("Error: Could not find model. Did you save it?")
         return
         
     # 2. Load and preprocess the NEW handwriting sample
     print(f"\nAnalyzing handwriting sample: {csv_filepath}")
-    df = analyze_stroke_data(csv_filepath)
-    stroke_data = df[['velocity', 'pressure', 'touching']].values
+    # df = analyze_stroke_data(csv_filepath)
+    # stroke_data = df[['velocity', 'pressure', 'touching']].values
     
+    
+    
+    processed_df = analyze_stroke_data(csv_filepath)
+    latency_val = processed_df['latency'].iloc[0] # latency feature
+    model_input = processed_df[['velocity', 'pressure', 'touching']].values # sequence features
     # 3. Pad or Truncate (Must match the training shape perfectly!)
-    if len(stroke_data) > MAX_TIMESTEPS:
-        stroke_data = stroke_data[:MAX_TIMESTEPS]
+    if len(model_input) > MAX_TIMESTEPS:
+        model_input = model_input[:MAX_TIMESTEPS]
     else:
-        padding = np.zeros((MAX_TIMESTEPS - len(stroke_data), FEATURES))
-        stroke_data = np.vstack((stroke_data, padding))
+        padding = np.zeros((MAX_TIMESTEPS - len(model_input), FEATURES))
+        model_input = np.vstack((model_input, padding))
         
-    # Neural networks expect a "batch" of files. We only have 1 file, 
-    # so we wrap it in an array to change the shape from (500, 3) to (1, 500, 3)
-    input_data = np.array([stroke_data])
+    # 4. Pad/Truncate
+    if len(model_input) > MAX_TIMESTEPS:
+        model_input = model_input[:MAX_TIMESTEPS]
+    else:
+        padding = np.zeros((MAX_TIMESTEPS - len(model_input), FEATURES))
+        model_input = np.vstack((model_input, padding))
+        
+     # 1. Make the prediction
+    prediction = model.predict([np.array([model_input]), np.array([latency_val])])
     
-    # 4. Make the Prediction!
-    prediction = model.predict(input_data)[0][0]
+    # 2. prediction is shape (1, 500, 1). Flatten it to a list of 500 floats!
+    heatmap_array = prediction[0].flatten().tolist()
     
     # 5. Interpret the Results
-    confidence = prediction * 100
+    global_score = sum(heatmap_array) / len(heatmap_array)
+    
+    confidence = global_score * 100
     print("\n" + "="*45)
     print(" 🔍 AI SCREENING RESULT")
     print("="*45)
-    if prediction > 0.5:
-        print(f" ⚠️ A typical/Dyslexic Pattern Detected")
-        print(f"    Probability: {confidence:.1f}%")
-        print("    Indicators: High in-air pausing, irregular velocity.")
-    else:
-        print(f" Normal Handwriting Pattern")
-        print(f"    Probability: {100 - confidence:.1f}%")
-        print("    Indicators: Fluid motion, standard writing duration.")
-    print("="*45 + "\n")
+    print("Global Score : ", global_score)
+    print("Confidence : ", confidence)
+    # if prediction > 0.5:
+    #     print(f" ⚠️ A typical/Dyslexic Pattern Detected")
+    #     print(f"    Probability: {confidence:.1f}%")
+    #     print("    Indicators: High in-air pausing, irregular velocity.")
+    # else:
+    #     print(f" Normal Handwriting Pattern")
+    #     print(f"    Probability: {100 - confidence:.1f}%")
+    #     print("    Indicators: Fluid motion, standard writing duration.")
+    # print("="*45 + "\n")
 
 if __name__ == "__main__":
     # This lets you pass the file path directly in the terminal
