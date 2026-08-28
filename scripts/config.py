@@ -10,7 +10,7 @@ MODEL_DIR = "../models/"
 MODEL_PATHS = {
     "v0": f"{MODEL_DIR}elkinematic.keras",
     "v1": f"{MODEL_DIR}elkinematicV1.keras",
-    "v2": f"{MODEL_DIR}elkinematicV2.keras"
+    "v2": f"{MODEL_DIR}elkinematicliteV2.tflite"
 }
 
-FORCE_RETRAIN = True  # Ubah ke True untuk memaksa training ulang secara adil (Apples-to-Apples)
+FORCE_RETRAIN = False  # Ubah ke True untuk memaksa training ulang secara adil (Apples-to-Apples)
