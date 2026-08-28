@@ -133,7 +133,7 @@ def main():
     ax_kin.legend(loc="upper right", fontsize=9)
 
     plt.suptitle(
-        "Dysgraphia Clinical Dashboard\n"
+        "Dyslexia Kinematic Handwriting Analysis\n"
         f"Subject initiated the first touch {initial_latency:.0f} ms after the given prompt started.", 
         fontsize=16, fontweight='bold'
     )
