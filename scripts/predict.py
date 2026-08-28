@@ -2,8 +2,8 @@ import sys
 import argparse
 import numpy as np
 import tensorflow as tf
-from preprocess import analyze_stroke_data
 from config import MAX_TIMESTEPS, MODEL_PATHS 
+import pandas as pd
 
 def predict_sample(model_version, csv_filepath):
     # 1. Peta Model otomatis ditarik dari config.py
@@ -12,7 +12,7 @@ def predict_sample(model_version, csv_filepath):
         print(f"Error: Model versi '{model_version}' tidak terdaftar di config.py!")
         return
         
-    print(f"Memuat otak AI (Model {model_version.upper()}) dari: {filepath}")
+    print(f"Memuat Model {model_version.upper()}) dari: {filepath}")
     
     try:
         model = tf.keras.models.load_model(filepath)
@@ -21,29 +21,32 @@ def predict_sample(model_version, csv_filepath):
         return
         
     print(f"\nMenganalisis sampel: {csv_filepath}")
-    processed_df = analyze_stroke_data(csv_filepath)
-    
-    # 2. Ekstraksi Universal (Membuat 9 Parameter Utama)
-    if "touching" not in processed_df.columns: processed_df["touching"] = True
+    df =  pd.read_csv(csv_filepath) 
+    if "touching" not in df.columns: df["touching"] = True
     for col in ["tiltX", "tiltY", "latency"]:
-        if col not in processed_df.columns: processed_df[col] = 0
+        if col not in df.columns: df[col] = 0
         
-    processed_df["dt"] = processed_df["time"].diff().fillna(1)
-    processed_df.loc[processed_df["dt"] == 0, "dt"] = 1
-    processed_df["delta_x"] = processed_df["x"].diff().fillna(0)
-    processed_df["delta_y"] = processed_df["y"].diff().fillna(0)
-    processed_df["distance"] = np.sqrt(processed_df["delta_x"]**2 + processed_df["delta_y"]**2)
-    processed_df["velocity"] = processed_df["distance"] / processed_df["dt"]
-    processed_df["acceleration"] = processed_df["velocity"].diff().fillna(0) / processed_df["dt"]
-    processed_df["jerk"] = processed_df["acceleration"].diff().fillna(0) / processed_df["dt"]
+    df["dt"] = df["time"].diff().fillna(1)
+    df.loc[df["dt"] == 0, "dt"] = 1
     
-    universal_features = processed_df[[
-        "dt", "pressure", "velocity", 
-        "delta_x", "delta_y", "tiltX", 
-        "tiltY", "acceleration", "jerk"
-    ]].values
+    df["delta_x"] = df["x"].diff().fillna(0)
+    df["delta_y"] = df["y"].diff().fillna(0)
+    df["distance"] = np.sqrt(df["delta_x"]**2 + df["delta_y"]**2)
+    df["velocity"] = df["distance"] / df["dt"]
+    df["acceleration"] = df["velocity"].diff().fillna(0) / df["dt"]
+    df["jerk"] = df["acceleration"].diff().fillna(0) / df["dt"]
     
-    latency_val = processed_df['latency'].iloc[0] / 1000.0 
+    # Indeks 0, 1, 2 adalah fitur klasik V0/V1 (Duration/dt, Pressure, Velocity)
+    # Indeks 3 sampai 8 adalah tambahan fitur Golden untuk V2
+    universal_features = df[[
+        # Index 0 s/d 7 (Golden 8 in model V2/V3) 
+        "delta_x", "delta_y", "pressure", "tiltX", "tiltY", "velocity", "acceleration", "jerk",
+        # Index 8 (Durasi/dt khusus untuk V0 dan V1) 
+        "dt"
+    ]]
+    
+    
+    latency_val = df['latency'].iloc[0] / 1000.0 
     
     # 3. Clean & Pad (500 Timesteps)
     universal_features = np.nan_to_num(universal_features, nan=0.0, posinf=0.0, neginf=0.0)
