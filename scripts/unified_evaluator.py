@@ -94,7 +94,7 @@ if __name__ == "__main__":
     ]
     
     for name, model, X, y_true in models_to_test:
-        print(f"Mengevaluasi {name}...")
+        print(f"Mengevaluasi {name}.|")
         # Evaluate mengembalikan [loss, accuracy, recall]
         scores = model.evaluate(X, y_true, verbose=0)
         loss, acc = scores[0], scores[1]

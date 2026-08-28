@@ -27,9 +27,10 @@ def extract_universal_features(df):
     # Indeks 0, 1, 2 adalah fitur klasik V0/V1 (Duration/dt, Pressure, Velocity)
     # Indeks 3 sampai 8 adalah tambahan fitur Golden untuk V2
     universal_df = df[[
-        "dt", "pressure", "velocity",           # Index 0, 1, 2 (Untuk V0 & V1)
-        "delta_x", "delta_y", "tiltX",          # Index 3, 4, 5
-        "tiltY", "acceleration", "jerk"         # Index 6, 7, 8
+        # Index 0 s/d 7 (Golden 8 in model V2/V3) 
+        "delta_x", "delta_y", "pressure", "tiltX", "tiltY", "velocity", "acceleration", "jerk",
+        # Index 8 (Durasi/dt khusus untuk V0 dan V1) 
+        "dt"
     ]]
     
     universal_df = universal_df.fillna(0)
@@ -93,21 +94,17 @@ def load_and_scale_universal(data_dir="datasets/"):
 # ====================================================
 
 def get_v0_data(X_seq_scaled, y):
-    """ V0: Input 3 fitur klasik, Output skor tunggal. """
-    X_v0 = X_seq_scaled[:, :, :3] # Hanya ambil Index 0, 1, 2 (dt, pressure, velocity)
-    y_v0 = y # Skor biner tunggal (Samples, 1)
+    """ V0: [velocity, duration, pressure] -> Index 5, 8, 2 """
+    X_v0 = X_seq_scaled[:, :, [5, 8, 2]] 
+    y_v0 = y 
     return X_v0, y_v0
-
 def get_v1_data(X_seq_scaled, X_lat_scaled, y):
-    """ V1: Input 3 fitur + Latency, Output TimeDistributed """
-    X_v1_seq = X_seq_scaled[:, :, :3] # Hanya ambil Index 0, 1, 2
-    # Expand y jadi (Samples, 500, 1) untuk TimeDistributed
+    """ V1: [velocity, duration, pressure] -> Index 5, 8, 2 + Latency """
+    X_v1_seq = X_seq_scaled[:, :, [5, 8, 2]]
     y_time_distributed = np.repeat(np.expand_dims(y, axis=(1, 2)), MAX_TIMESTEPS, axis=1)
     return [X_v1_seq, X_lat_scaled], y_time_distributed
-
 def get_v2_data(X_seq_scaled, X_lat_scaled, y):
-    """ V2: Input Golden 8 (Hilangkan dt, pakai 8 parameter lainnya) + Latency, Output TimeDistributed """
-    # Ambil index 1 sampai 8 (buang index 0 'dt' karena model V3 Anda hanya pakai 8 fitur kinematik murni)
-    X_v2_seq = X_seq_scaled[:, :, 1:9] 
+    """ V2: Ambil 8 fitur pertama persis seperti saat ditraining! """
+    X_v2_seq = X_seq_scaled[:, :, :8] 
     y_time_distributed = np.repeat(np.expand_dims(y, axis=(1, 2)), MAX_TIMESTEPS, axis=1)
     return [X_v2_seq, X_lat_scaled], y_time_distributed
