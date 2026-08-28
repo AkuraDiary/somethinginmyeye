@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dysgraphia Kinematic Screening</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 20px; text-align: center; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; }
+        p { color: #555; }
+        canvas { 
+            border: 2px dashed #bdc3c7; 
+            border-radius: 8px; 
+            background-color: #fafafa; 
+            cursor: crosshair; 
+            touch-action: none; 
+            margin-top: 15px; 
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
+        }
+        .controls { margin-top: 20px; display: flex; justify-content: center; gap: 15px; }
+        button { 
+            padding: 12px 24px; font-size: 16px; font-weight: bold; border: none; border-radius: 6px; 
+            cursor: pointer; transition: 0.3s; color: white; 
+        }
+        .btn-analyze { background-color: #3498db; }
+        .btn-analyze:hover { background-color: #2980b9; }
+        .btn-clear { background-color: #e74c3c; }
+        .btn-clear:hover { background-color: #c0392b; }
+        .dashboard { 
+            margin-top: 30px; padding: 20px; border-radius: 8px; display: none;
+            background-color: #f8f9fa; border-left: 5px solid #3498db; text-align: left;
+        }
+        .score-high { color: #e74c3c; font-weight: bold; }
+        .score-low { color: #27ae60; font-weight: bold; }
+        .status-badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; color: white;}
+        .badge-red { background-color: #e74c3c; }
+        .badge-green { background-color: #27ae60; }
+        .instruction { font-size: 18px; font-weight: 500; margin-bottom: 10px; color: #34495e; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Dysgraphia AI Screening</h1>
+    <p>Please write the sentence provided by the examiner on the canvas below.</p>
+    
+    <div class="instruction" id="promptDisplay">"The quick brown fox"</div>
+    
+    <canvas id="drawingCanvas" width="700" height="300"></canvas>
+    
+    <div class="controls">
+        <button class="btn-clear" id="clearBtn">Clear Canvas</button>
+        <button class="btn-analyze" id="analyzeBtn">Analyze Writing</button>
+    </div>
+
+    <!-- Dashboard Results -->
+    <div class="dashboard" id="resultsDashboard">
+        <h2>📊 Clinical Analysis Dashboard</h2>
+        <p><strong>Diagnosis:</strong> <span id="diagnosisBadge" class="status-badge badge-green">Normal</span></p>
+        <p><strong>Atypical Kinematic Probability:</strong> <span id="probabilityText">0%</span></p>
+        <hr>
+        <p><small><em>The heatmap on the canvas above highlights specific moments of cognitive hesitation and motor struggle (Red = High Risk, >80% confidence).</em></small></p>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('drawingCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let isDrawing = false;
+    let strokeData = [];
+    
+    // Cognitive Latency Tracking
+    let promptStartTime = Date.now();
+    let hasStartedWriting = false;
+    let latencyMs = 0;
+
+    // Reset setup
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        strokeData = [];
+        hasStartedWriting = false;
+        promptStartTime = Date.now();
+        document.getElementById('resultsDashboard').style.display = 'none';
+        
+        // Redraw faint baseline if you want (optional)
+        ctx.beginPath();
+        ctx.moveTo(50, 200);
+        ctx.lineTo(650, 200);
+        ctx.strokeStyle = "#ecf0f1";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+    }
+    
+    clearCanvas();
+
+    function recordPoint(e, isTouching) {
+        strokeData.push({
+            time: e.timeStamp,
+            x: e.offsetX,
+            y: e.offsetY,
+            pressure: e.pressure || 0.5,
+            tiltX: e.tiltX || 0,
+            tiltY: e.tiltY || 0,
+            touching: isTouching
+        });
+    }
+
+    canvas.addEventListener('pointerdown', (e) => {
+        if (!hasStartedWriting) {
+            latencyMs = Date.now() - promptStartTime;
+            hasStartedWriting = true;
+        }
+        isDrawing = true;
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+        recordPoint(e, 1);
+    });
+
+    canvas.addEventListener('pointermove', (e) => {
+        if (isDrawing) {
+            ctx.lineWidth = e.pressure * 5;
+            ctx.strokeStyle = "#2c3e50";
+            ctx.lineTo(e.offsetX, e.offsetY);
+            ctx.stroke();
+            recordPoint(e, 1);
+        }
+    });
+
+    canvas.addEventListener('pointerup', (e) => {
+        isDrawing = false;
+        recordPoint(e, 0);
+    });
+
+    canvas.addEventListener('pointerout', (e) => {
+        if (isDrawing) {
+            isDrawing = false;
+            recordPoint(e, 0);
+        }
+    });
+
+    document.getElementById('clearBtn').addEventListener('click', clearCanvas);
+
+    document.getElementById('analyzeBtn').addEventListener('click', async () => {
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const dashboard = document.getElementById('resultsDashboard');
+        const diagBadge = document.getElementById('diagnosisBadge');
+        const probText = document.getElementById('probabilityText');
+
+        if (strokeData.length === 0) {
+            alert("Please draw something first!");
+            return;
+        }
+
+        analyzeBtn.innerText = "Analyzing...";
+        analyzeBtn.disabled = true;
+
+        try {
+            const strokesWithLatency = strokeData.map(point => {
+                return { ...point, latency: latencyMs };
+            });
+
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(strokesWithLatency)
+            });
+
+            const result = await response.json();
+            
+            if (result.error) {
+                alert(result.error);
+                return;
+            }
+
+            const confidence = (result.probability * 100).toFixed(1);
+
+            // Overlay the Heatmap on the Canvas!
+            if (result.heatmap && result.heatmap.length > 0) {
+                result.heatmap.forEach((prob, index) => {
+                    if (index < strokeData.length && prob > 0.80) {
+                        const point = strokeData[index];
+                        ctx.beginPath();
+                        ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
+                        ctx.fillStyle = "rgba(231, 76, 60, 0.15)"; // Red glow
+                        ctx.fill();
+                    }
+                });
+            }
+
+            // Update Dashboard
+            dashboard.style.display = 'block';
+            if (result.is_dyslexic) {
+                diagBadge.innerText = "Atypical / Dysgraphic Pattern";
+                diagBadge.className = "status-badge badge-red";
+                probText.innerHTML = `<span class="score-high">${confidence}%</span>`;
+            } else {
+                diagBadge.innerText = "Normal Pattern";
+                diagBadge.className = "status-badge badge-green";
+                probText.innerHTML = `<span class="score-low">${confidence}%</span>`;
+            }
+
+        } catch (error) {
+            alert("Error communicating with AI Server.");
+        } finally {
+            analyzeBtn.innerText = "Analyze Writing";
+            analyzeBtn.disabled = false;
+        }
+    });
+</script>
+</body>
+</html>
