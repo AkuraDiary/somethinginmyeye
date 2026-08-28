@@ -56,6 +56,7 @@ def load_and_scale_universal(data_dir="datasets/"):
         filename = os.path.basename(file).lower()
         if "normal" in filename: label = 0
         elif "dyslexia" in filename: label = 1
+        elif "dysgraphia" in filename: label = 1
         else: continue
             
         stroke_data = extract_universal_features(df)
