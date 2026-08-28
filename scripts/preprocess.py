@@ -33,4 +33,4 @@ def analyze_stroke_data(csv_filepath):
 
 if __name__ == "__main__":
     # Point this to a CSV file you downloaded from your web app!
-    analyze_stroke_data("../data/normal_A_1787739691815.csv")
+    analyze_stroke_data("../sample/sample_dyslexia.csv")

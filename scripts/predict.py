@@ -9,7 +9,7 @@ def predict_sample(csv_filepath):
     print("Loading AI model...")
     try:
         # NOTE: Double check this name matches your notebook!
-        model = tf.keras.models.load_model("../models/elkinematicV2.keras") 
+        model = tf.keras.models.load_model("../models/elkinematicV3.keras") 
     except Exception as e:
         print("Error: Could not find model. Did you save it?")
         return
