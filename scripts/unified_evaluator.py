@@ -97,7 +97,8 @@ if __name__ == "__main__":
         print(f"Mengevaluasi {name}...")
         # Evaluate mengembalikan [loss, accuracy, recall]
         scores = model.evaluate(X, y_true, verbose=0)
-        loss, acc, recall = scores[0], scores[1], scores[2]
+        loss, acc = scores[0], scores[1]
+        recall = scores[2] if len(scores) > 2 else 0.0 
         print(f"{name:<15} | {acc*100:>13.2f}% | {recall*100:>13.2f}% | {loss:>10.4f}")
     
     print("-" * 65)
