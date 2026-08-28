@@ -207,3 +207,39 @@ A critical distinction must be made between **Dyslexia** (a cognitive/phonologic
 
 **Why our app works for Dyslexia:**
 If our app only recorded X and Y, we would be building a Dysgraphia app. Because our app explicitly tracks **Latency** and separates **Touching vs In-Air Time**, we are actively measuring the *cognitive hesitation* happening in the air. This perfectly aligns with our goal of screening for Dyslexia, rather than just physical motor impairment.
+
+## 14. The Danger of Unscaled Data (The "Dead Neuron" Problem)
+During the first training run of our LSTM on the 302-sample dataset, the model completely froze on Epoch 1 (Accuracy locked, Recall stuck at 1.0000). We learned that this is a classic mathematical failure caused by feeding **unscaled physics data** into a neural network.
+
+* **The Problem (Apples vs. Watermelons):** Our Golden 8 features have vastly different numerical scales. `Pressure` ranges from 0 to 1, while `Jerk` can spike to ±500, and `Latency` can exceed 2500 ms. If fed raw data, the neural network mistakenly assumes the larger numbers are inherently more "important." Worse, multiplying these massive numbers by the network's weights causes the activation functions to instantly max out at 100%. The math hits a brick wall, gradients drop to zero, and the LSTM neurons essentially "die."
+* **The Solution (Z-Score Normalization):** To prevent this mathematical overload, we must normalize the data before training using the formula: `(Value - Mean) / Standard Deviation`.
+* **The Result:** This math strips away the raw units (pixels, grams, milliseconds) and converts every feature into a standardized score. A value of `0.0` now represents "exactly average," while `+1.0` represents "above average." By forcing `Pressure`, `Velocity`, and `Jerk` to all hover safely between `-2.0` and `+2.0`, we put all features on a perfectly level playing field. This allows the LSTM to actually perceive the *patterns* in the writing rather than being blinded by massive integers.
+
+## 15. Reading the AI Report Card (Diagnosing Model Health)
+When training the LSTM, the terminal outputs a stream of metrics. Understanding these numbers is crucial for diagnosing the health of the AI's "brain" and knowing when to tune the model.
+
+### Core Definitions
+* **Epoch:** One complete pass through your entire dataset.
+* **Step (Batch):** A smaller chunk of data (e.g., 32 samples). The AI reviews one step, updates its mathematical weights, and then moves to the next step to save RAM.
+* **Training Metrics (`loss`, `accuracy`, `recall`):** The AI's performance on the data it is actively studying (the "textbook").
+* **Validation Metrics (`val_loss`, `val_accuracy`, `val_recall`):** The AI's performance on the 20% of data hidden from it during training (the "final exam").
+* **Loss:** The mathematical penalty score for making mistakes. A high loss means the AI is arrogant and wrong. The goal is to drive this as close to `0.0` as possible.
+* **Accuracy:** The total percentage of correct diagnoses (e.g., `0.85` = 85%).
+* **Recall:** The Sensitivity. Out of all the truly Dyslexic children, what percentage did the AI successfully catch?
+
+### Diagnosing Training States
+**1. The "Lazy Doctor" Syndrome (Dead Model):**
+* *Symptom:* `recall: 1.0000` but `accuracy: 0.5000`. 
+* *Diagnosis:* The AI suffered mathematical overload (usually due to unscaled data) and gave up. It decided to simply diagnose *every single patient* with Dyslexia. By doing so, it successfully catches 100% of the Dyslexic cases (Recall = 1.0), but falsely diagnoses all the healthy children (Accuracy drops to the 50% baseline).
+
+**2. Underfitting (The AI is confused):**
+* *Symptom:* `accuracy: 0.55` / `val_accuracy: 0.54` / `loss: 2.5`
+* *Diagnosis:* The AI is too simple, or the data is too messy, for it to learn anything. Both training and validation scores are terrible and refuse to improve over multiple epochs.
+
+**3. Overfitting (The AI memorized the textbook):**
+* *Symptom:* `accuracy: 0.99` / `val_accuracy: 0.55` / `val_loss` starts increasing.
+* *Diagnosis:* A massive gap opens between the two accuracies. The AI trained for too long. It stopped learning the general physical rules of Dyslexia and started strictly memorizing the specific handwriting quirks of the exact kids in the training set. When tested on unseen real-world kids (validation), it fails miserably.
+
+**4. The Sweet Spot (Optimal Learning):**
+* *Symptom:* `accuracy: 0.88` / `val_accuracy: 0.86` / `loss: 0.25` / `val_loss: 0.28`.
+* *Diagnosis:* The training and validation metrics improve together, side-by-side. The AI is learning universal clinical rules that apply perfectly to both the training data and real-world, unseen data.
