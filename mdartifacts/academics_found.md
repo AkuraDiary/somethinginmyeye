@@ -151,3 +151,29 @@ We reviewed three recent, cutting-edge papers exploring multidimensional screeni
 * **Core Concept:** Successfully implemented the "Two-Headed Network" we hypothesized in our Phase 5 roadmap.
 * **Key Innovation:** Used a CNN for the visual trace and a Transformer for the trajectory. The ablation study revealed a massive insight: The Trajectory-Transformer model *failed catastrophically* when running completely on its own without visual data.
 * **Takeaway:** This proves that raw kinematics (speed/pressure) lose their context without spatial data. This absolutely validates our decision to inject `Delta_X` and `Delta_Y` (Spatial data) into our Golden 8 array, bridging the gap so our LSTM doesn't fail like their Transformer did.
+
+## 3. New Citations Added (Aug 2026 Batch)
+
+### 3.1. The Role of Artificial Intelligence in Diagnosis and Monitoring of Specific Learning Disorders: A Systematic Review
+**Authors:** Tiziana D'Alessandro et al.
+**Status:** SSRN Preprint (Not Peer-Reviewed)
+**Relevance:** This is a comprehensive 2025 systematic review covering AI tools for Dyslexia, Dysgraphia, and Dyscalculia. 
+**Usage:** Even though it's not peer-reviewed, we can use it to map the SOTA (State of the Art). It highlights that most existing datasets are small or proprietary, and many models lack explainability. We can cite this to defend our "Explainable AI" approach and our focus on building a transparent, real-time screening platform rather than just a black-box model.
+
+### 3.2. Exploration and analysis of On-Surface and In-Air handwriting attributes to improve dysgraphia disorder diagnosis in children based on machine learning methods
+**Authors:** Jayakanth Kunhoth et al. (2023)
+**Journal:** Biomedical Signal Processing and Control
+**Relevance:** Very close to our work. They used ML classifiers (KNN, SVM, RF, AdaBoost) to diagnose dysgraphia using On-Surface (drawing) and In-Air (latency/pauses) features. 
+**Usage:** We MUST cite this paper. Their use of "In-Air" features perfectly validates our use of **Latency/Cognitive Pauses**. They achieved ~80.8% accuracy. We can compare our V2 model (95.9%) against their results in our Discussion section to show our model's superiority.
+
+### 3.3. Extending the Spectrum of Dysgraphia: A Data Driven Strategy to Estimate Handwriting Quality
+**Authors:** Thomas Asselborn et al. (2020)
+**Journal:** Scientific Reports (Nature)
+**Relevance:** A landmark paper in dysgraphia kinematics. They used a Wacom tablet to extract 53 dynamic features (kinematic, pressure, tilt) to detect dysgraphia.
+**Usage:** Use this in the Introduction/Literature Review to justify why Kinematics (Pressure, Velocity, Jerk) are standard medical proxies for detecting dysgraphia.
+
+### 3.4. Acquisition of handwriting in children with and without dysgraphia: A computational approach
+**Authors:** Gargot, Asselborn, et al. (2020)
+**Journal:** PLoS One
+**Relevance:** Analyzes the differences in how dysgraphic children physically move the pen compared to normal children.
+**Usage:** Great theoretical backing for the "Golden 8 Features". 

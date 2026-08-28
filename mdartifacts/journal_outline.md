@@ -1,35 +1,64 @@
-# JOURNAL OUTLINE
+# JOURNAL OUTLINE (JISEBI 2024 Compliant)
 **Title:** Prototyping an Early Dysgraphia Screening System Using Explainable AI Approach Through Handwriting Kinematics
 
-## 1. ABSTRACT
-* **Background:** Keterlambatan deteksi Disgrafia karena kurangnya alat skrining awal yang objektif.
-* **Problem:** Model AI medis saat ini terlalu berat (Transformer/Vision) dan bersifat *Black Box* sehingga tidak dipercaya oleh guru/klinisi.
-* **Methodology:** Menggunakan metode *Rapid Application Development* (RAD) untuk membangun purwarupa aplikasi web ringan (*Lightweight*).
-* **Proposed Solution:** Membangun *Bidirectional LSTM* berbasis murni Kinematika (kecepatan, tekanan, jeda) yang dilengkapi *TimeDistributed layer* untuk menghasilkan *Explainable AI* (Visual Heatmap).
-* **Results:** Mencapai akurasi validasi 95.95% dan Recall 92.94% pada 302 sampel, mengungguli arsitektur CNN konvensional yang terbukti terjebak dalam *Shortcut Learning*.
+> [!IMPORTANT] 
+> **JISEBI 2024 Golden Rules:**
+> - **Format:** IMRaD (Introduction, Methods, Results, Discussion, Conclusion).
+> - **Word Count:** 3000 - 6000 words.
+> - **Language:** Grammatically correct American English.
+> - **References:** Minimum 20 references using IEEE style (via Mendeley).
 
-## 2. INTRODUCTION (Pendahuluan)
+## 1. ABSTRACT
+*(Must be 150-300 words, structured exactly with these prefixes)*
+* **Background:** Keterlambatan deteksi Disgrafia karena kurangnya alat skrining awal yang objektif.
+* **Objective:** Membangun purwarupa sistem berbasis web yang ringan (*lightweight*) dan transparan (*explainable*).
+* **Methods:** Rapid Application Development (RAD) untuk membangun Bidirectional LSTM berbasis Kinematika (kecepatan, tekanan, jeda) dengan *TimeDistributed layer* sebagai jembatan *Explainable AI*.
+* **Results:** Akurasi validasi 95.95% pada 302 sampel, mengatasi *Shortcut Learning* (Data Leakage) yang ditemukan pada arsitektur konvensional.
+* **Conclusion:** Kinematika murni (tanpa visi komputer) dapat digunakan untuk skrining awal yang *lightweight* dan sangat akurat jika dipadukan dengan desain arsitektur yang tepat.
+
+## 2. INTRODUCTION
+> [!WARNING]
+> **JISEBI Rule:** Must cite at least **6 recent papers** closely related to the title here to prove the Research Gap.
 * Latar belakang pentingnya deteksi dini hambatan menulis (Disgrafia).
 * Masalah pada proses asesmen manual (subjektif dan memakan waktu).
-* Tantangan AI konvensional: Terlalu berat (*computationally expensive*) dan tidak bisa menjelaskan keputusannya (*Black Box*).
-* **Tujuan Penelitian:** Membangun purwarupa sistem berbasis web (*end-to-end*) yang ringan dan transparan menggunakan pendekatan RAD.
+* **Research Gap (The 6 Papers):** Kutip paper seperti Yuri Pamungkas dll. Tunjukkan kelemahan mereka (Terlalu berat/computationally expensive, dan AI yang bersifat Black Box).
+* **Tujuan/Kontribusi:** Membangun purwarupa web end-to-end (RAD) yang menutupi *gap* tersebut.
 
-## 3. RELATED WORKS (Penelitian Terkait / SOTA)
+## 3. LITERATURE REVIEW (Optional but Recommended)
 * Referensi paper terkait *Kinematic parameters* (Suarez-Coalla, Sindhu).
-* Perbandingan langsung dengan paper Yuri Pamungkas (ITS). Jelaskan posisi penelitian ini: **Lightweight vs Heavy Transformer**, dan **Pure Kinematics vs Computer Vision**.
+* Teori *Cognitive Load* dan Hubungan Jeda Motorik (Latency & Jerk) dengan kesulitan memori kerja (*working memory*).
 
-## 4. METHODOLOGY (Metodologi Penelitian)
-* **4.1. Rapid Application Development (RAD) Lifecycle:** Penjelasan iterasi purwarupa.
-* **4.2. Data Collection (Web Canvas System):** Bagaimana aplikasi mengumpulkan data sumbu X, Y, Waktu, dan Tekanan (302 sampel).
-* **4.3. Feature Engineering:** Ekstraksi "Golden 8 Features" dan perlunya penyamaan skala (*Z-Score Normalization*).
-* **4.4. System Architecture:** Desain *Universal Pipeline* dan *Dual-Input Model* (Kinematics Sequence + Latency).
-* **4.5. Explainable AI (XAI) Integration:** Mekanisme *TimeDistributed* untuk menerjemahkan matriks probabilitas kembali menjadi titik *Heatmap* visual di antarmuka HTML.
+## 4. METHODS
+> [!NOTE]
+> **JISEBI Rule:** Procedure must be written chronologically. Do not introduce interpretation/opinion here.
+* **4.1. Rapid Application Development (RAD):** Iterasi purwarupa V0 (Baseline) -> V1 (CNN) -> V2 (LSTM).
+* **4.2. Data Collection & Preprocessing:** Web Canvas System (302 sampel). Z-Score Normalization untuk mencegah *Dead Neurons*.
+* **4.3. Feature Engineering:** Ekstraksi "Golden 8 Features".
+* **4.4. System Architecture:** Dual-Input Bidirectional LSTM model.
+* **4.5. Explainable AI Integration:** Mekanisme *TimeDistributed* menjadi UI *Heatmap* visual.
 
-## 5. RESULTS & DISCUSSION (Hasil dan Pembahasan)
-* **5.1. Model Performance (The Leaderboard):** Tabel perbandingan evaluasi V0 (Baseline), V1 (CNN), dan V2 (LSTM). Tampilkan angka 95.95%.
-* **5.2. Analysis of Shortcut Learning (The Padding Trap):** Bukti kritis mengapa V0 dibuang meski mendapat 99%, karena fenomena *Data Leakage* akibat *Flattening* dan *Zero-Padding*.
-* **5.3. Prototype UI Evaluation:** Tangkapan layar (*Screenshot*) aplikasi `screening.html`. Menunjukkan antarmuka pengguna yang responsif dan bagaimana *Heatmap* bekerja secara *real-time*.
+## 5. RESULTS
+> [!NOTE]
+> **JISEBI Rule:** Pure, unbiased results presented first without interpretation.
+* **5.1. Learning Curves:** Grafik *Train vs Validation (Loss & Accuracy)* untuk membuktikan model tidak mengalami *overfitting* selama proses iterasi *training*.
+* **5.2. Confusion Matrix:** Metrik performa evaluasi klinis (TP, TN, FP, FN) pada skenario klasifikasi biner untuk memastikan minimnya salah diagnosa (*False Negatives*).
+* **5.3. ROC Curve & AUC:** Bukti kuantitatif yang mengukur kemampuan diskriminatif model dalam memisahkan pola tulisan normal dan disgrafia di berbagai ambang batas (*threshold*).
 
-## 6. CONCLUSION & FUTURE WORK
-* **Conclusion:** Prototyping berhasil membuktikan bahwa sistem skrining Disgrafia yang ringan (*lightweight*) dan *explainable* dapat dibangun menggunakan murni parameter kinematik.
-* **Future Work (Roadmap):** Rencana untuk mengembangkan ke arsitektur *Multi-Stream* (menambahkan NLP) untuk secara definitif membedakan Disleksia (Kesalahan Ejaan) dari Disgrafia (Eksekusi Motorik).
+## 6. DISCUSSION
+> [!NOTE]
+> **JISEBI Rule:** Interpret the results. Compare with other studies. Acknowledge limitations.
+* **6.1. Qualitative XAI Results (Visual Evaluation):** Interpretasi visual dari antarmuka purwarupa (`screening.html`). Memberikan bukti perbedaan visual *Heatmap* pada tulisan normal (bersih) dibandingkan dengan tulisan disgrafia (titik merah).
+* **6.2. Analysis of Shortcut Learning (The Padding Trap):** Interpretasi kritis mengapa V0 dibuang meski mendapat akurasi 99%. Penjelasan matematis tentang *Data Leakage* akibat efek *Zero-Padding*.
+* **6.3. Lightweight vs Heavy:** Bandingkan efisiensi model sistem kita dibandingkan model *Computer Vision/Transformer* dari penelitian sebelumnya.
+* **6.4. Limitations (Threats to Validity):** Sistem saat ini baru mendeteksi hambatan motorik (Disgrafia), belum memvalidasi semantik kebenaran ejaan (Disleksia murni).
+
+## 7. CONCLUSION
+* Ringkasan eksplisit menjawab pertanyaan penelitian (berhasil membuat purwarupa).
+* Rekomendasi/Future Work (Membangun Multi-stream NLP architecture di masa depan).
+
+## 8. MANDATORY JISEBI STATEMENTS (Must be filled at the end of the manuscript)
+* **Author Contributions:** (Use CRediT taxonomy: Conceptualization, Methodology, Software, etc.)
+* **Funding:** (State any grants or "This research received no specific grant...").
+* **Conflicts of Interest:** (e.g., "The authors declare no conflict of interest.")
+* **Data Availability:** (Explanation of dataset accessibility or privacy restriction).
+* **Informed Consent:** (e.g., "Informed consent was obtained from all subjects...").
