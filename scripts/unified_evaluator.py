@@ -55,7 +55,7 @@ def get_or_train_model(model_name, filepath, build_fn, X_train, y_train):
         except Exception as e:
             print(f"⚠️ Gagal me-load {filepath} (mungkin beda versi arsitektur). Fallback ke training ulang!")
     
-    print(f"🚀 Membangun dan men-training ulang {model_name} dari awal...")
+    print(f"Men-training ulang {model_name} dari awal...")
     model = build_fn()
     # Training cepat (20 epochs)
     model.fit(X_train, y_train, epochs=20, validation_split=0.2, verbose=1)
