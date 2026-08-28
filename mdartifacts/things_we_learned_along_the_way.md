@@ -243,3 +243,24 @@ When training the LSTM, the terminal outputs a stream of metrics. Understanding 
 **4. The Sweet Spot (Optimal Learning):**
 * *Symptom:* `accuracy: 0.88` / `val_accuracy: 0.86` / `loss: 0.25` / `val_loss: 0.28`.
 * *Diagnosis:* The training and validation metrics improve together, side-by-side. The AI is learning universal clinical rules that apply perfectly to both the training data and real-world, unseen data.
+
+## 16. Beyond Kinematics: The Tri-Stream Architecture & The OCR Paradox
+While our current Bidirectional LSTM effectively captures the motor struggles of Dysgraphia and the cognitive hesitations (latency) of Dyslexia, a complete clinical system requires analyzing *what* the child is writing, not just *how* they write it. We conceptualized a theoretical **Tri-Stream Architecture**:
+
+1. **Kinematic Stream (LSTM):** Analyzes Speed/Jerk/Latency (Detects Motor Dysgraphia & Cognitive Hesitation).
+2. **Visuospatial Stream (CNN):** Analyzes the final canvas image (Detects Spatial Dysgraphia like drifting lines and overlapping letters).
+3. **Semantic Stream (NLP):** Analyzes the transcribed text for spelling errors, transpositions, omissions, and low lexical diversity (Directly detects Dyslexia).
+
+### The Prompting Requirement
+For the Semantic Stream to work, data collection cannot rely on copying text (e.g., "Copy this sentence"). Copying heavily bypasses the phonological processing center of the brain. Prompts must be expository (e.g., "Write a story about a dog") to force the child to formulate the spelling and grammar from scratch.
+
+### The "Smart OCR" Paradox
+To feed handwriting into an NLP model, it must first be transcribed via OCR. However, this creates a massive technical paradox:
+* **The Autocorrect Trap:** Modern OCRs (Google Vision, Apple Vision) intelligently auto-correct misspelled words (e.g., reading "whent" and outputting "went"). This completely erases the Dyslexic spelling biomarkers before the NLP stream can even see them.
+* **The Visuospatial Trap:** If we train a custom "dumb" OCR that doesn't autocorrect, it will still fail if the child has Spatial Dysgraphia. Severely overlapping, deformed letters will be transcribed as random garbage characters. The NLP will read this garbage and falsely diagnose severe Dyslexia, when the core issue was actually just physical motor control.
+
+### Architectural Solutions to the OCR Paradox
+To bypass OCR transcription failures on severely degraded handwriting, we documented three potential solutions:
+1. **Trajectory Decoding (Online OCR):** Standard OCR looks at a static image and gets confused by overlapping ink. Because our web app records the exact millisecond timeline (`dt`), an AI can read the *chronological sequence of strokes* over time. Two overlapping letters drawn seconds apart will not confuse a temporal model.
+2. **The "Quad-Stream" Model (Multimodal Audio/Speech):** Adding a microphone to record the child telling the story out loud while writing. By running Speech-to-Text, the AI captures the perfect "Intended Text" directly from the child's mind. It then mathematically compares this fluent speech to the failing handwriting to pinpoint the exact brain-to-hand cognitive bottleneck.
+3. **Human-in-the-Loop (Teacher Ground Truth):** The most practical clinical solution. The app simply asks the teacher or clinician to type the child's intended sentence after the test is over. The AI uses this clean Ground Truth to perform "Forced Alignment" against the messy strokes, completely removing the need for a flawless AI OCR.

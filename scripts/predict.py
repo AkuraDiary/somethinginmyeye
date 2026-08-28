@@ -57,7 +57,7 @@ def predict_sample(csv_filepath):
     print(f"Global Score : {global_score:.4f}")
     
     if global_score > 0.5:
-        print(f"Atypical/Dyslexic Pattern Detected")
+        print(f"Atypical Pattern Detected")
         print(f"Probability: {confidence:.1f}%")
     else:
         print(f"Normal Handwriting Pattern")

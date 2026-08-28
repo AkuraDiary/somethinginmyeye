@@ -1,11 +1,12 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
 from matplotlib.colors import TwoSlopeNorm
 from matplotlib.collections import LineCollection
 
-def main():
-    file_path = "../sample/sample_normal_bebek.csv"
+def main(file_path):
+    # file_path = "../sample/sample_normal_bebek.csv"
     try:
         df = pd.read_csv(file_path)
     except FileNotFoundError:
@@ -133,7 +134,7 @@ def main():
     ax_kin.legend(loc="upper right", fontsize=9)
 
     plt.suptitle(
-        "Dyslexia Kinematic Handwriting Analysis\n"
+        "Dyslexia / Dysgraphia Kinematic Handwriting Analysis\n"
         f"Subject initiated the first touch {initial_latency:.0f} ms after the given prompt started.", 
         fontsize=16, fontweight='bold'
     )
@@ -141,4 +142,4 @@ def main():
     plt.show()
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1])
