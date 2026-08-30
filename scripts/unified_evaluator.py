@@ -13,25 +13,16 @@ from config import *
 
 def build_v0_baseline():
     """V0: Standard spatial CNN with GlobalAveragePooling"""
-    # model = Sequential([
-    #     Input(shape=(MAX_TIMESTEPS, 3), name="kinematics_input"),
-    #     Conv1D(filters=32, kernel_size=3, activation='relu'),
-    #     MaxPooling1D(pool_size=2),
-    #     Conv1D(filters=64, kernel_size=3, activation='relu'),
-    #     GlobalAveragePooling1D(),
-    #     Dense(64, activation='relu'),
-    #     Dropout(0.5),
-    #     Dense(1, activation='sigmoid')
-    # ])
-    seq_in = Input(shape=(MAX_TIMESTEPS, 3), name="kinematics_input")
-    x = Conv1D(filters=32, kernel_size=3, activation='relu')(seq_in)
-    x = MaxPooling1D(pool_size=2)(x)
-    x = Conv1D(filters=64, kernel_size=3, activation='relu')(x)
-    x = GlobalAveragePooling1D()(x)
-    x = Dense(64, activation='relu')(x)
-    x = Dropout(0.5)(y)
-    out = Dense(1, activation='sigmoid')(x)
-    model = Model(inputs=[seq_in], outputs=out)
+    model = Sequential([
+        Input(shape=(MAX_TIMESTEPS, 3), name="kinematics_input"),
+        Conv1D(filters=32, kernel_size=3, activation='relu'),
+        MaxPooling1D(pool_size=2),
+        Conv1D(filters=64, kernel_size=3, activation='relu'),
+        GlobalAveragePooling1D(),
+        Dense(64, activation='relu'),
+        Dropout(0.5),
+        Dense(1, activation='sigmoid')
+    ], name="elkinematicsv0")
     model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.Recall(name='recall')])
     return model
 
@@ -87,7 +78,7 @@ def get_or_train_model(model_name, filepath, build_fn, X_train, y_train):
     print(f"Men-training ulang {model_name} dari awal...")
     model = build_fn()
     # Training cepat (20 epochs)
-    # model.fit(X_train, y_train, epochs=20, validation_split=0.2, verbose=1)
+    model.fit(X_train, y_train, epochs=20, validation_split=0.2, verbose=1)
     return model
 
 if __name__ == "__main__":
