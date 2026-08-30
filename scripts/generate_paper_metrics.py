@@ -17,76 +17,132 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # SWITCH: Set to True to generate 5.1 Learning Curves (requires brief retraining)
 # Set to False to strictly load existing models from disk.
 # ==========================================
-RETRAIN_FOR_LEARNING_CURVES = False
+RETRAIN_FOR_LEARNING_CURVES = True
 
 def plot_learning_curves(histories, titles):
-    """5.1 Learning Curves: Train vs Validation (Loss & Accuracy)"""
+    """5.1 Learning Curves: Train vs Validation (Loss & Accuracy) - INDIVIDUAL & COMBINED"""
+    
+    # 1. INDIVIDUAL LEARNING CURVES
+    for history, title in zip(histories, titles):
+        safe_title = title.replace(" ", "_").replace("(", "").replace(")", "").replace("+", "plus")
+        fig, axes = plt.subplots(1, 2, figsize=(12, 5), dpi=300)
+        fig.suptitle(f"{title} Learning Curve", fontsize=16, fontweight='bold')
+        
+        # Accuracy Plot
+        axes[0].plot(history.history['accuracy'], label='Train Acc', color='blue', lw=2)
+        axes[0].plot(history.history['val_accuracy'], label='Val Acc', color='orange', lw=2, linestyle='--')
+        axes[0].set_title("Accuracy")
+        axes[0].set_ylabel("Accuracy")
+        axes[0].set_xlabel("Epochs")
+        axes[0].set_ylim([0, 1.05])
+        axes[0].legend()
+        axes[0].grid(True, linestyle=':', alpha=0.6)
+        
+        # Loss Plot
+        axes[1].plot(history.history['loss'], label='Train Loss', color='red', lw=2)
+        axes[1].plot(history.history['val_loss'], label='Val Loss', color='green', lw=2, linestyle='--')
+        axes[1].set_title("Loss")
+        axes[1].set_ylabel("Loss")
+        axes[1].set_xlabel("Epochs")
+        axes[1].legend()
+        axes[1].grid(True, linestyle=':', alpha=0.6)
+
+        plt.tight_layout()
+        plt.savefig(os.path.join(OUTPUT_DIR, f"5_1_{safe_title}_Learning_Curve.png"), bbox_inches='tight')
+        plt.close()
+        
+    # 2. COMBINED LEARNING CURVES (2x3 Grid)
     fig, axes = plt.subplots(2, 3, figsize=(15, 8), dpi=300)
-    fig.suptitle("5.1 Model Learning Curves (Accuracy & Loss)", fontsize=16, fontweight='bold')
+    fig.suptitle("5.1 Combined Model Learning Curves (Accuracy & Loss)", fontsize=16, fontweight='bold')
     
     for i, (history, title) in enumerate(zip(histories, titles)):
+        # Accuracy Row
         axes[0, i].plot(history.history['accuracy'], label='Train Acc', color='blue', lw=2)
         axes[0, i].plot(history.history['val_accuracy'], label='Val Acc', color='orange', lw=2, linestyle='--')
         axes[0, i].set_title(f"{title} - Accuracy")
-        axes[0, i].set_ylabel("Accuracy")
+        axes[0, i].set_ylabel("Accuracy" if i == 0 else "")
         axes[0, i].set_ylim([0, 1.05])
         axes[0, i].legend()
         axes[0, i].grid(True, linestyle=':', alpha=0.6)
         
+        # Loss Row
         axes[1, i].plot(history.history['loss'], label='Train Loss', color='red', lw=2)
         axes[1, i].plot(history.history['val_loss'], label='Val Loss', color='green', lw=2, linestyle='--')
         axes[1, i].set_title(f"{title} - Loss")
-        axes[1, i].set_ylabel("Loss")
+        axes[1, i].set_ylabel("Loss" if i == 0 else "")
         axes[1, i].set_xlabel("Epochs")
         axes[1, i].legend()
         axes[1, i].grid(True, linestyle=':', alpha=0.6)
 
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "5_1_Learning_Curves.png"), bbox_inches='tight')
+    plt.savefig(os.path.join(OUTPUT_DIR, "5_1_Combined_Learning_Curves.png"), bbox_inches='tight')
     plt.close()
-    print("✅ Saved 5.1 Learning Curves")
+    
+    print("✅ Saved individual and combined 5.1 Learning Curves")
+
 
 def plot_confusion_matrices(cms, titles):
-    """5.2 Confusion Matrix (1x3 Subplots)"""
-    fig, axes = plt.subplots(1, 3, figsize=(18, 5), dpi=300)
-    fig.suptitle("5.2 System Evaluation: Confusion Matrices", fontsize=16, fontweight='bold')
-    
-    for i, (cm, title) in enumerate(zip(cms, titles)):
-        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False, ax=axes[i],
-                    annot_kws={"size": 16, "weight": "bold"},
+    """5.2 Confusion Matrix - INDIVIDUAL"""
+    for cm, title in zip(cms, titles):
+        safe_title = title.replace(" ", "_").replace("(", "").replace(")", "").replace("+", "plus")
+        plt.figure(figsize=(6, 5), dpi=300)
+        
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
+                    annot_kws={"size": 18, "weight": "bold"},
                     xticklabels=['Typical', 'Atypical'],
                     yticklabels=['Typical', 'Atypical'])
-        axes[i].set_title(title, fontsize=14)
-        axes[i].set_ylabel('Actual Classification' if i == 0 else '')
-        axes[i].set_xlabel('System Prediction')
+        
+        plt.title(f"{title}\nConfusion Matrix", fontsize=14, fontweight='bold')
+        plt.ylabel('Actual Classification', fontweight='bold')
+        plt.xlabel('System Prediction', fontweight='bold')
 
-    plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "5_2_Confusion_Matrices.png"), bbox_inches='tight')
-    plt.close()
-    print("✅ Saved 5.2 Confusion Matrices")
+        plt.tight_layout()
+        plt.savefig(os.path.join(OUTPUT_DIR, f"5_2_{safe_title}_Confusion_Matrix.png"), bbox_inches='tight')
+        plt.close()
+    print("✅ Saved individual 5.2 Confusion Matrices")
+
 
 def plot_combined_roc(roc_data):
-    """5.3 ROC Curve & AUC (Combined)"""
-    plt.figure(figsize=(8, 6), dpi=300)
+    """5.3 ROC Curve & AUC - INDIVIDUAL AND COMBINED"""
     colors = ['blue', 'green', 'darkorange']
     
+    # INDIVIDUAL ROC CURVES
+    for (fpr, tpr, roc_auc, label), color in zip(roc_data, colors):
+        safe_title = label.replace(" ", "_").replace("(", "").replace(")", "").replace("+", "plus")
+        plt.figure(figsize=(7, 6), dpi=300)
+        plt.plot(fpr, tpr, color=color, lw=2.5, label=f'{label} (AUC = {roc_auc:.4f})')
+        plt.plot([0, 1], [0, 1], color='gray', lw=2, linestyle='--', label='Random Guess')
+        
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate (1 - Specificity)', fontweight='bold')
+        plt.ylabel('True Positive Rate (Sensitivity / Recall)', fontweight='bold')
+        plt.title(f'{label} ROC Curve', fontsize=14, fontweight='bold')
+        plt.legend(loc="lower right")
+        plt.grid(True, linestyle=':', alpha=0.6)
+        
+        plt.tight_layout()
+        plt.savefig(os.path.join(OUTPUT_DIR, f"5_3_{safe_title}_ROC_Curve.png"), bbox_inches='tight')
+        plt.close()
+    
+    # COMBINED ROC CURVE (Standard for papers)
+    plt.figure(figsize=(8, 6), dpi=300)
     for (fpr, tpr, roc_auc, label), color in zip(roc_data, colors):
         plt.plot(fpr, tpr, color=color, lw=2.5, label=f'{label} (AUC = {roc_auc:.4f})')
         
     plt.plot([0, 1], [0, 1], color='gray', lw=2, linestyle='--', label='Random Guess')
-    
     plt.xlim([0.0, 1.0])
     plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate (1 - Specificity)', fontweight='bold')
-    plt.ylabel('True Positive Rate (Sensitivity / Recall)', fontweight='bold')
-    plt.title('5.3 Receiver Operating Characteristic (ROC-AUC)', fontsize=14, fontweight='bold')
+    plt.xlabel('False Positive Rate', fontweight='bold')
+    plt.ylabel('True Positive Rate', fontweight='bold')
+    plt.title('Combined Receiver Operating Characteristic (ROC-AUC)', fontsize=14, fontweight='bold')
     plt.legend(loc="lower right")
     plt.grid(True, linestyle=':', alpha=0.6)
     
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "5_3_ROC_AUC_Curve.png"), bbox_inches='tight')
+    plt.savefig(os.path.join(OUTPUT_DIR, "5_3_Combined_ROC_AUC_Curve.png"), bbox_inches='tight')
     plt.close()
-    print("✅ Saved 5.3 Combined ROC Curve")
+    print("✅ Saved individual and combined 5.3 ROC Curves")
 
 def process_predictions(model, X, y_raw):
     y_pred_probs = model.predict(X, verbose=0)
