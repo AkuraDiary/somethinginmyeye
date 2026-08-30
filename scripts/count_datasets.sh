@@ -52,10 +52,10 @@ if [ "$missing_pairs" -eq 0 ]; then
     if [ "$csv_count" -eq 0 ]; then
         echo "No data files found yet."
     else
-        echo "✅ All CSV files have a matching PNG pair."
+        echo " All CSV files have a matching PNG pair."
     fi
 else
-    echo "❌ Missing PNG pairs: $missing_pairs"
+    echo " Missing PNG pairs: $missing_pairs"
 fi
 echo ""
 echo "📋 Summary by Dataset, Mode, Label & Annotator:"
