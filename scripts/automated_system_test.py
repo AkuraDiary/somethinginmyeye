@@ -81,7 +81,7 @@ def single_request():
 
 def test_non_functional(report_lines, num_requests=300, concurrent=10):
     header = f"\n--- NON-FUNCTIONAL TESTING (Performance & Load) ---"
-    setup_msg = f"Sending {num_requests} requests ({concurrent} concurrent threads) using random real datasets..."
+    setup_msg = f"Sending {num_requests} requests ({concurrent} concurrent threads) using random val datasets..."
     print(header)
     print(setup_msg)
     report_lines.extend([header, setup_msg])
