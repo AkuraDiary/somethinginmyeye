@@ -66,42 +66,48 @@ def build_v2_lstm():
 # ====================================================
 # 2. RUNNER (LOAD OR RETRAIN LOGIC)
 # ====================================================
-def get_or_train_model(model_name, filepath, build_fn, X_train, y_train):
+def get_or_train_model_with_tuning(model_name, filepath, build_fn, X_train, y_train, X_val, y_val):
     if not FORCE_RETRAIN and os.path.exists(filepath):
         print(f"Me-load {model_name} dari {filepath}...")
         try:
             model = load_model(filepath)
             return model
         except Exception as e:
-            print(f"⚠️ Gagal me-load {filepath} (mungkin beda versi arsitektur). Fallback ke training ulang!")
+            print(f"⚠️ Gagal me-load {filepath}. Fallback ke training ulang!")
     
-    print(f"Men-training ulang {model_name} dari awal...")
+    print(f"Men-training ulang {model_name} dari awal dengan Tuning...")
+    from universal_pipeline import train_with_tuning
     model = build_fn()
-    # Training cepat (20 epochs)
-    model.fit(X_train, y_train, epochs=20, validation_split=0.2, verbose=1)
+    model, _ = train_with_tuning(model, X_train, y_train, X_val, y_val)
     return model
 
 if __name__ == "__main__":
-    print("Memproses Data Universal...")
-    X_seq_scaled, X_lat_scaled, y = load_and_scale_universal(VAL_DATASET_DIR)
+    from universal_pipeline import load_validation_with_train_scalers
     
-    # Menyiapkan adapter data
-    X_v0, y_v0 = get_v0_data(X_seq_scaled, y)
-    X_v1, y_v1 = get_v1_data(X_seq_scaled, X_lat_scaled, y)
-    X_v2, y_v2 = get_v2_data(X_seq_scaled, X_lat_scaled, y)
+    print("Memproses TRAINING Data (datasets/)...")
+    X_train_seq_scaled, X_train_lat_scaled, y_train = load_and_scale_universal("../datasets")
+    
+    print("Memproses VALIDATION Data (val_datasets/)...")
+    X_val_seq_scaled, X_val_lat_scaled, y_val = load_validation_with_train_scalers("../val_datasets")
+    
+    # Menyiapkan adapter data TRAIN
+    X_train_v0, y_train_v0 = get_v0_data(X_train_seq_scaled, y_train)
+    X_train_v1, y_train_v1 = get_v1_data(X_train_seq_scaled, X_train_lat_scaled, y_train)
+    X_train_v2, y_train_v2 = get_v2_data(X_train_seq_scaled, X_train_lat_scaled, y_train)
+    
+    # Menyiapkan adapter data VAL
+    X_val_v0, y_val_v0 = get_v0_data(X_val_seq_scaled, y_val)
+    X_val_v1, y_val_v1 = get_v1_data(X_val_seq_scaled, X_val_lat_scaled, y_val)
+    X_val_v2, y_val_v2 = get_v2_data(X_val_seq_scaled, X_val_lat_scaled, y_val)
     
     # 1. Dapatkan V0
-    model_v0 = get_or_train_model("V0 (Baseline)", MODEL_PATHS['v0'], build_v0_baseline, X_v0, y_v0)
-    # model_v0.save("../models/elkinematic.keras")
+    model_v0 = get_or_train_model_with_tuning("V0 (Baseline)", MODEL_PATHS['v0'], build_v0_baseline, X_train_v0, y_train_v0, X_val_v0, y_val_v0)
     
     # 2. Dapatkan V1
-    model_v1 = get_or_train_model("V1 (XAI CNN)", MODEL_PATHS['v1'], build_v1_xai, X_v1, y_v1)
-    # model_v1.save("../models/elkinematicV1.keras")
-
+    model_v1 = get_or_train_model_with_tuning("V1 (XAI CNN)", MODEL_PATHS['v1'], build_v1_xai, X_train_v1, y_train_v1, X_val_v1, y_val_v1)
     
     # 3. Dapatkan V2
-    model_v2 = get_or_train_model("V2 (LSTM) [Current]", MODEL_PATHS['v2'], build_v2_lstm, X_v2, y_v2)
-    # model_v2.save("../models/elkinematicV2.keras")
+    model_v2 = get_or_train_model_with_tuning("V2 (LSTM) [Current]", MODEL_PATHS['v2'], build_v2_lstm, X_train_v2, y_train_v2, X_val_v2, y_val_v2)
     
     # ====================================================
     # 3. LEADERBOARD (EVALUASI MENGGUNAKAN DATA NORMALISASI)
@@ -112,9 +118,9 @@ if __name__ == "__main__":
     print("-" * 65)
     
     models_to_test = [
-        ("V0", model_v0, X_v0, y_v0),
-        ("V1", model_v1, X_v1, y_v1),
-        ("V2", model_v2, X_v2, y_v2)
+        ("V0", model_v0, X_val_v0, y_val_v0),
+        ("V1", model_v1, X_val_v1, y_val_v1),
+        ("V2", model_v2, X_val_v2, y_val_v2)
     ]
     
     for name, model, X, y_true in models_to_test:

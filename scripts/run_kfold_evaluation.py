@@ -2,6 +2,7 @@ import os
 import time
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import confusion_matrix, roc_curve, auc, accuracy_score, recall_score, precision_score, f1_score
 import matplotlib.pyplot as plt
@@ -38,12 +39,9 @@ def evaluate_with_kfold(name, build_fn, X_data, y_data, k=5):
     all_y_prob = []
     all_y_class = []
     
-    # Handle single input (V0) vs multiple inputs (V1/V2)
     is_multi_input = isinstance(X_data, list)
     
     if not is_multi_input:
-        # For V0, y_data is 1D or 2D
-        # StratifiedKFold needs 1D targets for splitting
         if len(y_data.shape) > 1 and y_data.shape[1] > 1:
             y_split_target = np.max(y_data, axis=1).flatten()
         else:
@@ -55,14 +53,11 @@ def evaluate_with_kfold(name, build_fn, X_data, y_data, k=5):
             y_split_target = y_data.flatten()
             
     fold_no = 1
-    
-    # Use just the first input array's length to split indices
     split_basis = X_data[0] if is_multi_input else X_data
     
     for train_idx, test_idx in kfold.split(split_basis, y_split_target):
         print(f"   -> Fold {fold_no}/{k}...")
         
-        # Split Data
         if is_multi_input:
             X_train = [x[train_idx] for x in X_data]
             X_test = [x[test_idx] for x in X_data]
@@ -72,11 +67,20 @@ def evaluate_with_kfold(name, build_fn, X_data, y_data, k=5):
             
         y_train, y_test = y_data[train_idx], y_data[test_idx]
         
-        # Build fresh model and train
         model = build_fn()
-        model.fit(X_train, y_train, epochs=20, batch_size=32, verbose=0)
         
-        # Predict on UNSEEN test chunk
+        # --- THE NEW TUNING CALLBACKS ---
+        # 1. Early Stopping: Stop if validation loss doesn't improve for 12 epochs
+        early_stop = EarlyStopping(monitor='val_loss', patience=12, restore_best_weights=True, verbose=0)
+        
+        # 2. ReduceLROnPlateau: Cut learning rate in half if stuck for 5 epochs
+        reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=5, min_lr=1e-6, verbose=0)
+        
+        # Train for up to 100 epochs, but let EarlyStopping cut it short if needed
+        model.fit(X_train, y_train, epochs=100, batch_size=32, verbose=0, 
+                  validation_data=(X_test, y_test), 
+                  callbacks=[early_stop, reduce_lr])
+        
         y_true, y_prob, y_class = process_predictions_kfold(model, X_test, y_test)
         
         all_y_true.extend(y_true)
@@ -85,7 +89,6 @@ def evaluate_with_kfold(name, build_fn, X_data, y_data, k=5):
         
         fold_no += 1
         
-    # Calculate final aggregated metrics
     cm = confusion_matrix(all_y_true, all_y_class)
     acc = accuracy_score(all_y_true, all_y_class)
     recall = recall_score(all_y_true, all_y_class)
@@ -98,7 +101,6 @@ def evaluate_with_kfold(name, build_fn, X_data, y_data, k=5):
     print(f"\n✅ {name} 5-Fold Results:")
     print(f"   -> Accuracy: {acc*100:.2f}% | Recall: {recall*100:.2f}% | Precision: {prec*100:.2f}% | F1: {f1*100:.2f}% | AUC: {roc_auc:.4f}")
     
-    # Save Confusion Matrix image
     plt.figure(figsize=(6, 5), dpi=300)
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', cbar=False,
                 annot_kws={"size": 18, "weight": "bold"},
@@ -115,8 +117,10 @@ def evaluate_with_kfold(name, build_fn, X_data, y_data, k=5):
     return fpr, tpr, roc_auc, name
 
 def main():
-    print("📁 Loading dataset for 5-Fold CV...")
+    print("📁 Loading dataset for 5-Fold CV (With Hyperparameter Tuning!)...")
     X_seq_scaled, X_lat_scaled, y = load_and_scale_universal(DATASET_DIR)
+    
+    print(f"📊 Total Dataset Size Loaded: {len(y)} samples")
     
     data_maps = [
         ("V0 (CNN Baseline)", build_v0_baseline, get_v0_data(X_seq_scaled, y)),
@@ -130,7 +134,6 @@ def main():
         fpr, tpr, roc_auc, label = evaluate_with_kfold(name, build_fn, X_data, y_data, k=5)
         roc_data.append((fpr, tpr, roc_auc, label))
         
-    # Plot Combined ROC Curve
     plt.figure(figsize=(8, 6), dpi=300)
     colors = ['blue', 'green', 'darkorange']
     for (fpr, tpr, roc_auc, label), color in zip(roc_data, colors):

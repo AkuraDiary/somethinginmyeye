@@ -7,9 +7,10 @@ from sklearn.metrics import confusion_matrix, roc_curve, auc, accuracy_score, re
 from tensorflow.keras.models import load_model
 
 # Import centralized configuration and data pipeline
-from config import MODEL_PATHS, DATASET_DIR
+from config import MODEL_PATHS, DATASET_DIR, VAL_DATASET_DIR
 from universal_pipeline import load_and_scale_universal, get_v0_data, get_v1_data, get_v2_data
 from unified_evaluator import build_v0_baseline, build_v1_xai, build_v2_lstm
+
 
 OUTPUT_DIR = "../evaluation_results"
 
@@ -19,7 +20,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # SWITCH: Set to True to generate 5.1 Learning Curves (requires brief retraining)
 # Set to False to strictly load existing models from disk.
 # ==========================================
-RETRAIN_FOR_LEARNING_CURVES = False
+RETRAIN_FOR_LEARNING_CURVES = True
 
 def plot_learning_curves(histories, titles, train_times=None, infer_times=None):
     """ Learning Curves: Train vs Validation (Loss & Accuracy) - INDIVIDUAL & COMBINED"""
@@ -135,7 +136,7 @@ def plot_combined_roc(roc_data):
         plt.grid(True, linestyle=':', alpha=0.6)
         
         plt.tight_layout()
-        plt.savefig(os.path.join(OUTPUT_DIR, f"5_3_{safe_title}_ROC_Curve.png"), bbox_inches='tight')
+        plt.savefig(os.path.join(OUTPUT_DIR, f"{safe_title}_ROC_Curve.png"), bbox_inches='tight')
         plt.close()
     
     # COMBINED ROC CURVE (Standard for papers)
@@ -153,9 +154,9 @@ def plot_combined_roc(roc_data):
     plt.grid(True, linestyle=':', alpha=0.6)
     
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "5_3_Combined_ROC_AUC_Curve.png"), bbox_inches='tight')
+    plt.savefig(os.path.join(OUTPUT_DIR, "Combined_ROC_AUC_Curve.png"), bbox_inches='tight')
     plt.close()
-    print("✅ Saved individual and combined 5.3 ROC Curves")
+    print("✅ Saved individual and combined ROC Curves")
 
 def process_predictions(model, X, y_raw):
     y_pred_probs = model.predict(X, verbose=0)
@@ -177,13 +178,21 @@ def main():
     print(f"Starting Comprehensive JISEBI Evaluation Pipeline")
     print(f"Retrain for Learning Curves: {RETRAIN_FOR_LEARNING_CURVES}")
     
-    print("📁 Loading and scaling dataset...")
-    X_seq_scaled, X_lat_scaled, y = load_and_scale_universal(DATASET_DIR)
+    from universal_pipeline import load_validation_with_train_scalers, train_with_tuning
+    
+    print("📁 Loading TRAINING dataset (for scalers and optional retraining)...")
+    X_train_seq, X_train_lat, y_train = load_and_scale_universal(DATASET_DIR)
+    
+    print("📁 Loading VALIDATION dataset (strictly unseen for metrics)...")
+    X_val_seq, X_val_lat, y_val = load_validation_with_train_scalers(VAL_DATASET_DIR)
     
     data_maps = [
-        ("V0 (CNN Baseline)", MODEL_PATHS['v0'], build_v0_baseline, get_v0_data(X_seq_scaled, y)),
-        ("V1 (CNN + XAI)", MODEL_PATHS['v1'], build_v1_xai, get_v1_data(X_seq_scaled, X_lat_scaled, y)),
-        ("V2 (Bi-LSTM)", MODEL_PATHS['v2'], build_v2_lstm, get_v2_data(X_seq_scaled, X_lat_scaled, y))
+        ("V0 (CNN Baseline)", MODEL_PATHS['v0'], build_v0_baseline, 
+         get_v0_data(X_train_seq, y_train), get_v0_data(X_val_seq, y_val)),
+        ("V1 (CNN + XAI)", MODEL_PATHS['v1'], build_v1_xai, 
+         get_v1_data(X_train_seq, X_train_lat, y_train), get_v1_data(X_val_seq, X_val_lat, y_val)),
+        ("V2 (Bi-LSTM)", MODEL_PATHS['v2'], build_v2_lstm, 
+         get_v2_data(X_train_seq, X_train_lat, y_train), get_v2_data(X_val_seq, X_val_lat, y_val))
     ]
     
     cms = []
@@ -193,21 +202,27 @@ def main():
     train_times = []
     infer_times = []
 
-    for name, model_path, build_fn, (X_test, y_test) in data_maps:
+    for name, model_path, build_fn, (X_tr, y_tr), (X_te, y_te) in data_maps:
         print(f"\n🧠 Evaluating {name}...")
         titles.append(name)
         
         if RETRAIN_FOR_LEARNING_CURVES:
-            print("   -> Retraining model for 20 epochs to capture Learning Curves...")
+            print("   -> Retraining model for 50 epochs with tuning to capture Learning Curves...")
             model = build_fn()
             
             start_train = time.time()
-            history = model.fit(X_test, y_test, epochs=20, validation_split=0.2, verbose=0)
+            model, history = train_with_tuning(model, X_tr, y_tr, X_te, y_te)
             train_time = time.time() - start_train
+            
+            # SAVE THE NEW MODEL SO WE DON'T NEED UNIFIED_EVALUATOR
+            os.makedirs(os.path.dirname(model_path), exist_ok=True)
+            model.save(model_path)
+            print(f"   -> 💾 Model successfully saved to {model_path}")
+            
             histories.append(history)
             train_times.append(train_time)
             
-            print(f"   -> ⏱️ Training Time (20 Epochs): {train_time:.2f} seconds")
+            print(f"   -> ⏱️ Training Time: {train_time:.2f} seconds")
         else:
             if not os.path.exists(model_path):
                 print(f"Error: Model file not found at {model_path}. Skipping.")
@@ -216,10 +231,10 @@ def main():
             model = load_model(model_path)
             train_times.append(0.0)
         
-        # Extract predictions for CM and ROC
+        # Extract predictions for CM and ROC purely on TEST data
         start_infer = time.time()
-        y_true, y_prob, y_class = process_predictions(model, X_test, y_test)
-        infer_time_ms = ((time.time() - start_infer) / len(X_test)) * 1000
+        y_true, y_prob, y_class = process_predictions(model, X_te, y_te)
+        infer_time_ms = ((time.time() - start_infer) / len(X_te)) * 1000
         infer_times.append(infer_time_ms)
         print(f"   -> ⚡ Inference Time (per sample): {infer_time_ms:.2f} ms")
         
