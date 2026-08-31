@@ -1,4 +1,5 @@
 import os
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -19,14 +20,20 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # ==========================================
 RETRAIN_FOR_LEARNING_CURVES = True
 
-def plot_learning_curves(histories, titles):
+def plot_learning_curves(histories, titles, train_times=None, infer_times=None):
     """5.1 Learning Curves: Train vs Validation (Loss & Accuracy) - INDIVIDUAL & COMBINED"""
     
     # 1. INDIVIDUAL LEARNING CURVES
-    for history, title in zip(histories, titles):
+    for i, (history, title) in enumerate(zip(histories, titles)):
         safe_title = title.replace(" ", "_").replace("(", "").replace(")", "").replace("+", "plus")
         fig, axes = plt.subplots(1, 2, figsize=(12, 5), dpi=300)
-        fig.suptitle(f"{title} Learning Curve", fontsize=16, fontweight='bold')
+        
+        # Build Title String with Timing if available
+        time_str = ""
+        if train_times and infer_times and i < len(train_times) and i < len(infer_times):
+            time_str = f" | Train Time: {train_times[i]:.2f}s | Inference: {infer_times[i]:.2f}ms"
+            
+        fig.suptitle(f"{title} Learning Curve{time_str}", fontsize=14, fontweight='bold')
         
         # Accuracy Plot
         axes[0].plot(history.history['accuracy'], label='Train Acc', color='blue', lw=2)
@@ -56,10 +63,15 @@ def plot_learning_curves(histories, titles):
     fig.suptitle("5.1 Combined Model Learning Curves (Accuracy & Loss)", fontsize=16, fontweight='bold')
     
     for i, (history, title) in enumerate(zip(histories, titles)):
+        
+        time_str = ""
+        if train_times and infer_times and i < len(train_times) and i < len(infer_times):
+            time_str = f"\n(Train: {train_times[i]:.2f}s | Infer: {infer_times[i]:.2f}ms)"
+            
         # Accuracy Row
         axes[0, i].plot(history.history['accuracy'], label='Train Acc', color='blue', lw=2)
         axes[0, i].plot(history.history['val_accuracy'], label='Val Acc', color='orange', lw=2, linestyle='--')
-        axes[0, i].set_title(f"{title} - Accuracy")
+        axes[0, i].set_title(f"{title} - Accuracy{time_str}", fontsize=11)
         axes[0, i].set_ylabel("Accuracy" if i == 0 else "")
         axes[0, i].set_ylim([0, 1.05])
         axes[0, i].legend()
@@ -68,7 +80,7 @@ def plot_learning_curves(histories, titles):
         # Loss Row
         axes[1, i].plot(history.history['loss'], label='Train Loss', color='red', lw=2)
         axes[1, i].plot(history.history['val_loss'], label='Val Loss', color='green', lw=2, linestyle='--')
-        axes[1, i].set_title(f"{title} - Loss")
+        axes[1, i].set_title(f"{title} - Loss", fontsize=11)
         axes[1, i].set_ylabel("Loss" if i == 0 else "")
         axes[1, i].set_xlabel("Epochs")
         axes[1, i].legend()
@@ -177,6 +189,8 @@ def main():
     roc_data = []
     titles = []
     histories = []
+    train_times = []
+    infer_times = []
 
     for name, model_path, build_fn, (X_test, y_test) in data_maps:
         print(f"\n🧠 Evaluating {name}...")
@@ -185,17 +199,28 @@ def main():
         if RETRAIN_FOR_LEARNING_CURVES:
             print("   -> Retraining model for 20 epochs to capture Learning Curves...")
             model = build_fn()
+            
+            start_train = time.time()
             history = model.fit(X_test, y_test, epochs=20, validation_split=0.2, verbose=0)
+            train_time = time.time() - start_train
             histories.append(history)
+            train_times.append(train_time)
+            
+            print(f"   -> ⏱️ Training Time (20 Epochs): {train_time:.2f} seconds")
         else:
             if not os.path.exists(model_path):
-                print(f"❌ Error: Model file not found at {model_path}. Skipping.")
+                print(f"Error: Model file not found at {model_path}. Skipping.")
                 continue
             print(f"   -> Loading existing model from {model_path}...")
             model = load_model(model_path)
+            train_times.append(0.0)
         
         # Extract predictions for CM and ROC
+        start_infer = time.time()
         y_true, y_prob, y_class = process_predictions(model, X_test, y_test)
+        infer_time_ms = ((time.time() - start_infer) / len(X_test)) * 1000
+        infer_times.append(infer_time_ms)
+        print(f"   -> ⚡ Inference Time (per sample): {infer_time_ms:.2f} ms")
         
         cm = confusion_matrix(y_true, y_class)
         cms.append(cm)
@@ -209,19 +234,19 @@ def main():
         
         print(f"   -> Acc: {accuracy_score(y_true, y_class)*100:.2f}% | Recall: {recall_score(y_true, y_class)*100:.2f}% | Prec: {precision*100:.2f}% | F1: {f1*100:.2f}% | AUC: {roc_auc:.4f}")
 
-    print("\n📊 Generating Plots...")
+    print("\nGenerating Plots...")
     
     if RETRAIN_FOR_LEARNING_CURVES and len(histories) == 3:
-        plot_learning_curves(histories, titles)
+        plot_learning_curves(histories, titles, train_times, infer_times)
         
     if cms and len(cms) == 3:
         plot_confusion_matrices(cms, titles)
     if roc_data:
         plot_combined_roc(roc_data)
     
-    print(f"\n🎉 Done! Images saved to {OUTPUT_DIR}/")
+    print(f"\n Done! Images saved to {OUTPUT_DIR}/")
     if not RETRAIN_FOR_LEARNING_CURVES:
-        print("⚠️ Note: 5.1 Learning Curves were skipped. Set RETRAIN_FOR_LEARNING_CURVES = True in the script to generate them.")
+        print("Note: 5.1 Learning Curves were skipped. Set RETRAIN_FOR_LEARNING_CURVES = True in the script to generate them.")
 
 if __name__ == "__main__":
     main()
