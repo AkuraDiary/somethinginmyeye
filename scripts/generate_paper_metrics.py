@@ -12,6 +12,7 @@ from universal_pipeline import load_and_scale_universal, get_v0_data, get_v1_dat
 from unified_evaluator import build_v0_baseline, build_v1_xai, build_v2_lstm
 
 OUTPUT_DIR = "../evaluation_results"
+
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ==========================================
@@ -21,7 +22,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 RETRAIN_FOR_LEARNING_CURVES = False
 
 def plot_learning_curves(histories, titles, train_times=None, infer_times=None):
-    """5.1 Learning Curves: Train vs Validation (Loss & Accuracy) - INDIVIDUAL & COMBINED"""
+    """ Learning Curves: Train vs Validation (Loss & Accuracy) - INDIVIDUAL & COMBINED"""
     
     # 1. INDIVIDUAL LEARNING CURVES
     for i, (history, title) in enumerate(zip(histories, titles)):
@@ -55,12 +56,12 @@ def plot_learning_curves(histories, titles, train_times=None, infer_times=None):
         axes[1].grid(True, linestyle=':', alpha=0.6)
 
         plt.tight_layout()
-        plt.savefig(os.path.join(OUTPUT_DIR, f"5_1_{safe_title}_Learning_Curve.png"), bbox_inches='tight')
+        plt.savefig(os.path.join(OUTPUT_DIR, f"{safe_title}_Learning_Curve.png"), bbox_inches='tight')
         plt.close()
         
     # 2. COMBINED LEARNING CURVES (2x3 Grid)
     fig, axes = plt.subplots(2, 3, figsize=(15, 8), dpi=300)
-    fig.suptitle("5.1 Combined Model Learning Curves (Accuracy & Loss)", fontsize=16, fontweight='bold')
+    fig.suptitle(" Combined Model Learning Curves (Accuracy & Loss)", fontsize=16, fontweight='bold')
     
     for i, (history, title) in enumerate(zip(histories, titles)):
         
@@ -87,14 +88,14 @@ def plot_learning_curves(histories, titles, train_times=None, infer_times=None):
         axes[1, i].grid(True, linestyle=':', alpha=0.6)
 
     plt.tight_layout()
-    plt.savefig(os.path.join(OUTPUT_DIR, "5_1_Combined_Learning_Curves.png"), bbox_inches='tight')
+    plt.savefig(os.path.join(OUTPUT_DIR, "Combined_Learning_Curves.png"), bbox_inches='tight')
     plt.close()
     
-    print("✅ Saved individual and combined 5.1 Learning Curves")
+    print("Saved individual and combined Learning Curves")
 
 
 def plot_confusion_matrices(cms, titles):
-    """5.2 Confusion Matrix - INDIVIDUAL"""
+    """Confusion Matrix - INDIVIDUAL"""
     for cm, title in zip(cms, titles):
         safe_title = title.replace(" ", "_").replace("(", "").replace(")", "").replace("+", "plus")
         plt.figure(figsize=(6, 5), dpi=300)
@@ -109,9 +110,9 @@ def plot_confusion_matrices(cms, titles):
         plt.xlabel('System Prediction', fontweight='bold')
 
         plt.tight_layout()
-        plt.savefig(os.path.join(OUTPUT_DIR, f"5_2_{safe_title}_Confusion_Matrix.png"), bbox_inches='tight')
+        plt.savefig(os.path.join(OUTPUT_DIR, f"{safe_title}_Confusion_Matrix.png"), bbox_inches='tight')
         plt.close()
-    print("✅ Saved individual 5.2 Confusion Matrices")
+    print("✅ Saved individual Confusion Matrices")
 
 
 def plot_combined_roc(roc_data):
@@ -173,8 +174,8 @@ def process_predictions(model, X, y_raw):
     return y_true_flat, y_pred_probs_flat, y_pred_classes
 
 def main():
-    print(f"🚀 Starting Comprehensive JISEBI Evaluation Pipeline")
-    print(f"🔄 Retrain for Learning Curves: {RETRAIN_FOR_LEARNING_CURVES}")
+    print(f"Starting Comprehensive JISEBI Evaluation Pipeline")
+    print(f"Retrain for Learning Curves: {RETRAIN_FOR_LEARNING_CURVES}")
     
     print("📁 Loading and scaling dataset...")
     X_seq_scaled, X_lat_scaled, y = load_and_scale_universal(DATASET_DIR)
@@ -246,7 +247,7 @@ def main():
     
     print(f"\n Done! Images saved to {OUTPUT_DIR}/")
     if not RETRAIN_FOR_LEARNING_CURVES:
-        print("Note: 5.1 Learning Curves were skipped. Set RETRAIN_FOR_LEARNING_CURVES = True in the script to generate them.")
+        print("Note: Learning Curves were skipped. Set RETRAIN_FOR_LEARNING_CURVES = True in the script to generate them.")
 
 if __name__ == "__main__":
     main()

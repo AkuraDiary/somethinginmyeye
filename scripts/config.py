@@ -5,6 +5,7 @@ MAX_TIMESTEPS = 500
 FEATURES = 8
 
 DATASET_DIR = "../datasets/"
+VAL_DATASET_DIR = "../val_datasets"
 MODEL_DIR = "../models/"
 
 MODEL_PATHS = {
@@ -13,4 +14,4 @@ MODEL_PATHS = {
     "v2": f"{MODEL_DIR}elkinematicV2.keras"
 }
 
-FORCE_RETRAIN = True  # Ubah ke True untuk memaksa training ulang secara adil (Apples-to-Apples)
+FORCE_RETRAIN = False  # Ubah ke True untuk memaksa training ulang secara adil (Apples-to-Apples)

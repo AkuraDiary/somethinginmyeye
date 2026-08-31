@@ -1,0 +1,15 @@
+WEB APP EVALUATION REPORT
+Generated: 2026-08-31 15:51:04
+========================================
+--- FUNCTIONAL TESTING ---
+PASSED: API returned Status 200 and correct JSON structure.
+   -> AI Prediction: False (Prob: 0.1144)
+
+--- NON-FUNCTIONAL TESTING (Performance & Load) ---
+Sending 500 requests (10 concurrent threads) using random real datasets...
+PASSED: 500/500 requests successful.
+   -> Total Test Duration : 55.94 seconds
+   -> Average Latency     : 1.1107 seconds/req
+   -> Max Latency         : 3.0118 seconds/req
+   -> Min Latency         : 0.3652 seconds/req
+   -> System Throughput   : 8.94 requests/second

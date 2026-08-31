@@ -83,7 +83,7 @@ def get_or_train_model(model_name, filepath, build_fn, X_train, y_train):
 
 if __name__ == "__main__":
     print("Memproses Data Universal...")
-    X_seq_scaled, X_lat_scaled, y = load_and_scale_universal(DATASET_DIR)
+    X_seq_scaled, X_lat_scaled, y = load_and_scale_universal(VAL_DATASET_DIR)
     
     # Menyiapkan adapter data
     X_v0, y_v0 = get_v0_data(X_seq_scaled, y)
@@ -92,16 +92,16 @@ if __name__ == "__main__":
     
     # 1. Dapatkan V0
     model_v0 = get_or_train_model("V0 (Baseline)", MODEL_PATHS['v0'], build_v0_baseline, X_v0, y_v0)
-    model_v0.save("../models/elkinematic.keras")
+    # model_v0.save("../models/elkinematic.keras")
     
     # 2. Dapatkan V1
     model_v1 = get_or_train_model("V1 (XAI CNN)", MODEL_PATHS['v1'], build_v1_xai, X_v1, y_v1)
-    model_v1.save("../models/elkinematicV1.keras")
+    # model_v1.save("../models/elkinematicV1.keras")
 
     
     # 3. Dapatkan V2
     model_v2 = get_or_train_model("V2 (LSTM) [Current]", MODEL_PATHS['v2'], build_v2_lstm, X_v2, y_v2)
-    model_v2.save("../models/elkinematicV2.keras")
+    # model_v2.save("../models/elkinematicV2.keras")
     
     # ====================================================
     # 3. LEADERBOARD (EVALUASI MENGGUNAKAN DATA NORMALISASI)
