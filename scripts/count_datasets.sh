@@ -1,8 +1,8 @@
 #!/bin/bash
 
-DIR=${1:-../datasets}
-if [ ! -d "$DIR" ] && [ -d "datasets" ]; then
-    DIR="datasets"
+DIR=${1:-../val_datasets}
+if [ ! -d "$DIR" ] && [ -d "val_datasets" ]; then
+    DIR="val_datasets"
 fi
 
 csv_count=0
