@@ -2,5 +2,6 @@
 /academic_resources
 /data
 /datasets
+/val_datasets
 /elkinematic-journal
 **/__pycache__/
