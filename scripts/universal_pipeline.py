@@ -88,6 +88,11 @@ def load_and_scale_universal(data_dir="datasets/"):
     X_seq_scaled = (X_seq_clean - feature_means) / feature_stds
     X_lat_scaled = X_lat / 1000.0
     
+    # Save the global scalers for the live web server!
+    os.makedirs("../models", exist_ok=True)
+    np.savez("../models/feature_scalers.npz", means=feature_means, stds=feature_stds)
+    print(f"✅ Saved Global Feature Scalers to ../models/feature_scalers.npz")
+    
     return X_seq_scaled, X_lat_scaled, y
 
 # ====================================================
@@ -109,3 +114,76 @@ def get_v2_data(X_seq_scaled, X_lat_scaled, y):
     X_v2_seq = X_seq_scaled[:, :, :8] 
     y_time_distributed = np.repeat(np.expand_dims(y, axis=(1, 2)), MAX_TIMESTEPS, axis=1)
     return [X_v2_seq, X_lat_scaled], y_time_distributed
+def get_or_create_scalers(data_dir="../datasets/", scaler_path="../models/feature_scalers.npz"):
+    """
+    Computes or loads the global feature scalers for live inference.
+    """
+    if os.path.exists(scaler_path):
+        data = np.load(scaler_path)
+        return data['means'], data['stds']
+        
+    print("⚠️ Scalers not found! Computing global scale from dataset...")
+    # Compute them by loading the dataset
+    X_seq_scaled, X_lat_scaled, y = load_and_scale_universal(data_dir)
+    # The load_and_scale_universal function needs to save them! We'll override it below.
+    return None, None
+
+def unified_predict(df, model, version, scaler_path="../models/feature_scalers.npz"):
+    """
+    Universal prediction function for ANY version of the model.
+    Loads the true global scalers so the math exactly matches the training phase.
+    """
+    # 1. Extract Raw Features
+    stroke_data = extract_universal_features(df)
+    
+    # 2. Extract Latency
+    latency_val = df["latency"].iloc[0] / 1000.0 if "latency" in df.columns and len(df) > 0 else 0.0
+    
+    # 3. Clean and Pad Sequence
+    stroke_data = np.nan_to_num(stroke_data, nan=0.0, posinf=0.0, neginf=0.0)
+    if len(stroke_data) > MAX_TIMESTEPS:
+        stroke_data = stroke_data[:MAX_TIMESTEPS]
+    else:
+        padding = np.zeros((MAX_TIMESTEPS - len(stroke_data), 9))
+        stroke_data = np.vstack((stroke_data, padding))
+        
+    # 4. Load Global Scalers (CRITICAL BUG FIX)
+    try:
+        scaler_data = np.load(scaler_path)
+        feature_means = scaler_data['means']
+        feature_stds = scaler_data['stds']
+    except Exception as e:
+        print(f"Error loading {scaler_path}. Did you run training/metrics to generate it?")
+        raise e
+        
+    # 5. Apply Global Z-Score Scaling
+    stroke_scaled = (stroke_data - feature_means) / feature_stds
+    
+    # We must add the batch dimension (1, 500, 9)
+    stroke_scaled = np.expand_dims(stroke_scaled, axis=0)
+    latency_val = np.expand_dims(np.array([latency_val]), axis=0)
+    
+    # 6. Route to the correct Model Input Shape
+    if version == "v0":
+        # V0: [velocity, duration, pressure] -> Index 5, 8, 2
+        model_input = stroke_scaled[:, :, [5, 8, 2]]
+        prediction = model.predict(model_input, verbose=0)
+        global_score = float(prediction[0][0])
+        heatmap_array = [] # V0 has no heatmap
+        
+    elif version == "v1":
+        # V1: Index 5, 8, 2 + Latency
+        model_input = stroke_scaled[:, :, [5, 8, 2]]
+        prediction = model.predict([model_input, latency_val], verbose=0)
+        heatmap_array = prediction[0].flatten().tolist()
+        global_score = sum(heatmap_array) / len(heatmap_array)
+        
+    elif version == "v2":
+        # V2: First 8 features + Latency
+        model_input = stroke_scaled[:, :, :8]
+        prediction = model.predict([model_input, latency_val], verbose=0)
+        heatmap_array = prediction[0].flatten().tolist()
+        global_score = sum(heatmap_array) / len(heatmap_array)
+        
+    return global_score, heatmap_array
+

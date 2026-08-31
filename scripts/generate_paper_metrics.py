@@ -18,7 +18,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # SWITCH: Set to True to generate 5.1 Learning Curves (requires brief retraining)
 # Set to False to strictly load existing models from disk.
 # ==========================================
-RETRAIN_FOR_LEARNING_CURVES = True
+RETRAIN_FOR_LEARNING_CURVES = False
 
 def plot_learning_curves(histories, titles, train_times=None, infer_times=None):
     """5.1 Learning Curves: Train vs Validation (Loss & Accuracy) - INDIVIDUAL & COMBINED"""

@@ -105,66 +105,13 @@ def analyze_live():
     stroke_data = request.json
     df = pd.DataFrame(stroke_data)
     
-    # 2. Extract Universal Features (Just like in predict.py)
-    if "touching" not in df.columns: df["touching"] = True
-    for col in ["tiltX", "tiltY", "latency"]:
-        if col not in df.columns: df[col] = 0
-        
-    df["dt"] = df["time"].diff().fillna(1)
-    df.loc[df["dt"] == 0, "dt"] = 1
-    df["delta_x"] = df["x"].diff().fillna(0)
-    df["delta_y"] = df["y"].diff().fillna(0)
-    df["distance"] = np.sqrt(df["delta_x"]**2 + df["delta_y"]**2)
-    df["velocity"] = df["distance"] / df["dt"]
-    df["acceleration"] = df["velocity"].diff().fillna(0) / df["dt"]
-    df["jerk"] = df["acceleration"].diff().fillna(0) / df["dt"]
-    
-    universal_features = df[[
-        "dt", "pressure", "velocity", 
-        "delta_x", "delta_y", "tiltX", 
-        "tiltY", "acceleration", "jerk"
-    ]].values
-    
-    latency_val = df['latency'].iloc[0] / 1000.0 if 'latency' in df.columns and len(df) > 0 else 0
-    
-    # 3. Clean & Pad
-    universal_features = np.nan_to_num(universal_features, nan=0.0, posinf=0.0, neginf=0.0)
-    if len(universal_features) > MAX_TIMESTEPS:
-        universal_features = universal_features[:MAX_TIMESTEPS]
-    else:
-        padding = np.zeros((MAX_TIMESTEPS - len(universal_features), 9))
-        universal_features = np.vstack((universal_features, padding))
-        
-    # 4. Single-sample Z-Score Scaling
-    feature_means = np.mean(universal_features, axis=0)
-    feature_stds = np.std(universal_features, axis=0)
-    feature_stds[feature_stds == 0] = 1 
-    universal_scaled = (universal_features - feature_means) / feature_stds
-    
-    # 5. Extract Golden 8 for V2 Model
-    # V2 expects: delta_x, delta_y, pressure, tiltX, tiltY, velocity, acceleration, jerk
-    # These are at indices: 3, 4, 1, 5, 6, 2, 7, 8 in our universal_features array.
-    # WAIT! Instead of extracting by raw indices, let's just select columns from DF cleanly!
-    
-    golden_df = df[["delta_x", "delta_y", "pressure", "tiltX", "tiltY", "velocity", "acceleration", "jerk"]].copy()
-    golden_features = golden_df.values
-    golden_features = np.nan_to_num(golden_features, nan=0.0, posinf=0.0, neginf=0.0)
-    
-    if len(golden_features) > MAX_TIMESTEPS:
-        golden_features = golden_features[:MAX_TIMESTEPS]
-    else:
-        padding = np.zeros((MAX_TIMESTEPS - len(golden_features), 8))
-        golden_features = np.vstack((golden_features, padding))
-        
-    f_means = np.mean(golden_features, axis=0)
-    f_stds = np.std(golden_features, axis=0)
-    f_stds[f_stds == 0] = 1 
-    golden_scaled = (golden_features - f_means) / f_stds
-    
-    # 6. Predict using V2 Model
-    prediction = model.predict([np.array([golden_scaled]), np.array([latency_val])])
-    heatmap_array = prediction[0].flatten().tolist()
-    global_score = sum(heatmap_array) / len(heatmap_array)
+    # 2. Extract Features, Scale Globally, and Predict using Unified Pipeline
+    from universal_pipeline import unified_predict
+    try:
+        global_score, heatmap_array = unified_predict(df, model, "v2", scaler_path="../models/feature_scalers.npz")
+    except Exception as e:
+        print(e)
+        return jsonify({"error": "Failed to run unified prediction. Ensure models/feature_scalers.npz exists."}), 500
     
     # 7. RECLAIM MEMORY IMMEDIATELY AFTER AN ANALYSIS RUN
     # This prevents RAM stacking if multiple users call the route back-to-back.
