@@ -68,7 +68,7 @@ def build_v2_lstm():
 # ====================================================
 def get_or_train_model(model_name, filepath, build_fn, X_train, y_train):
     if not FORCE_RETRAIN and os.path.exists(filepath):
-        print(f"📦 Me-load {model_name} dari {filepath}...")
+        print(f"Me-load {model_name} dari {filepath}...")
         try:
             model = load_model(filepath)
             return model
@@ -92,18 +92,15 @@ if __name__ == "__main__":
     
     # 1. Dapatkan V0
     model_v0 = get_or_train_model("V0 (Baseline)", MODEL_PATHS['v0'], build_v0_baseline, X_v0, y_v0)
-    
     model_v0.save("../models/elkinematic.keras")
     
     # 2. Dapatkan V1
     model_v1 = get_or_train_model("V1 (XAI CNN)", MODEL_PATHS['v1'], build_v1_xai, X_v1, y_v1)
-    
     model_v1.save("../models/elkinematicV1.keras")
 
     
     # 3. Dapatkan V2
     model_v2 = get_or_train_model("V2 (LSTM) [Current]", MODEL_PATHS['v2'], build_v2_lstm, X_v2, y_v2)
-    
     model_v2.save("../models/elkinematicV2.keras")
     
     # ====================================================

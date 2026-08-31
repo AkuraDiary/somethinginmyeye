@@ -1,25 +1,19 @@
 #!/bin/bash
 
-# Directory can be passed as argument, defaulting to '../datasets' if run from inside scripts/
 DIR=${1:-../datasets}
-
-# Fallback to local 'datasets' if run from project root
 if [ ! -d "$DIR" ] && [ -d "datasets" ]; then
     DIR="datasets"
-fi
-
-if [ ! -d "$DIR" ]; then
-    echo "Error: Directory '$DIR' not found."
-    exit 1
 fi
 
 csv_count=0
 png_count=0
 missing_pairs=0
 
-echo "🔍 Analyzing files in $DIR..."
+typical_count=0
+atypical_count=0
 
-# Count absolute totals
+echo "Analyzing files in $DIR..."
+
 csv_count=$(find "$DIR" -maxdepth 1 -name "*.csv" | wc -l | tr -d ' ')
 png_count=$(find "$DIR" -maxdepth 1 -name "*.png" | wc -l | tr -d ' ')
 
@@ -27,7 +21,6 @@ echo "Total CSV files: $csv_count"
 echo "Total PNG files: $png_count"
 echo "------------------------------------------------"
 
-# Write found pairs to a temporary file for AWK to process
 tmp_file=$(mktemp)
 
 for csv_file in "$DIR"/*.csv; do
@@ -37,33 +30,41 @@ for csv_file in "$DIR"/*.csv; do
     png_file="$DIR/$basename.png"
     
     if [ ! -f "$png_file" ]; then
-        echo "⚠️ Missing PNG pair for: $basename"
         ((missing_pairs++))
     fi
     
-    # Parse the new format: dataset_mode_label_annotator_timestamp
     IFS='_' read -r dataset mode label annotator timestamp <<< "$basename"
+    
+    # The 'normal' or 'dyslexia' tag is actually in the $mode variable!
+    if echo "$mode" | grep -qi "normal"; then
+        ((typical_count++))
+    elif echo "$mode" | grep -qi -e "dyslexia" -e "dysgraphia"; then
+        ((atypical_count++))
+    fi
     
     echo "$dataset|$mode|$label|$annotator" >> "$tmp_file"
 done
 
 echo "------------------------------------------------"
 if [ "$missing_pairs" -eq 0 ]; then
-    if [ "$csv_count" -eq 0 ]; then
-        echo "No data files found yet."
-    else
-        echo " All CSV files have a matching PNG pair."
-    fi
+    echo "All CSV files have a matching PNG pair."
 else
-    echo " Missing PNG pairs: $missing_pairs"
+    echo "Missing PNG pairs: $missing_pairs"
 fi
 echo ""
-echo "📋 Summary by Dataset, Mode, Label & Annotator:"
+
+echo "Paper Summary Breakdown (Class 0 vs Class 1):"
+echo "--------------------------------------------------------------------------------"
+echo "   -> Typical (Normal): $typical_count"
+echo "   -> Atypical (Dysgraphia/Dyslexia): $atypical_count"
+echo "--------------------------------------------------------------------------------"
+echo ""
+
+echo "Detailed Summary by Dataset, Mode, Label & Annotator:"
 echo "--------------------------------------------------------------------------------"
 printf "%-15s | %-10s | %-15s | %-15s | %s\n" "Dataset" "Mode" "Label" "Annotator" "Count"
 echo "--------------------------------------------------------------------------------"
 
-# Group and count using AWK
 if [ -s "$tmp_file" ]; then
     awk -F'|' '{
         count[$1 "|" $2 "|" $3 "|" $4]++

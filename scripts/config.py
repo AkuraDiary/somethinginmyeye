@@ -13,4 +13,4 @@ MODEL_PATHS = {
     "v2": f"{MODEL_DIR}elkinematicV2.keras"
 }
 
-FORCE_RETRAIN = False  # Ubah ke True untuk memaksa training ulang secara adil (Apples-to-Apples)
+FORCE_RETRAIN = True  # Ubah ke True untuk memaksa training ulang secara adil (Apples-to-Apples)
