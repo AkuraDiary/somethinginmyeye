@@ -17,8 +17,8 @@ import tf2onnx
 import onnx
 import onnxruntime as ort
 
-MODEL_KERAS_PATH = "scratch/dual_head_reversal_model.keras"
-MODEL_ONNX_PATH = "scratch/dual_head_reversal.onnx"
+MODEL_KERAS_PATH = "../scratch/dual_head_reversal_model.keras"
+MODEL_ONNX_PATH = "../scratch/dual_head_reversal.onnx"
 
 def export_model_to_onnx():
     print(f"Loading Keras model from: {MODEL_KERAS_PATH}")
