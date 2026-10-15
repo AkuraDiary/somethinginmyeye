@@ -28,7 +28,9 @@ import pandas as pd
 import tensorflow as tf
 
 from config import DATASET_DIR, MODEL_PATHS, PROJECT_ROOT, SCALER_PATH
+from sld_integrator import evaluate_sld_differential
 from universal_pipeline import unified_predict
+
 
 # Configure TensorFlow threading for low memory consumption
 tf.config.threading.set_intra_op_parallelism_threads(1)
@@ -98,35 +100,50 @@ def save_data():
 
 @app.route("/analyze", methods=["POST"])
 def analyze_live():
-    """Performs real-time explainable kinematic inference."""
+    """Performs real-time explainable dual-stream SLD differential inference."""
     if model is None:
         return jsonify({"error": "Model not loaded on server."}), 500
 
-    stroke_data = request.json or []
+    payload = request.json or {}
+    if isinstance(payload, list):
+        stroke_data = payload
+        expected_prompt = "bebek"
+        decoded_text = None
+        enable_grammar = False
+    elif isinstance(payload, dict):
+        stroke_data = payload.get("strokes", [])
+        expected_prompt = payload.get("prompt", "bebek")
+        decoded_text = payload.get("decoded_text", None)
+        enable_grammar = payload.get("enable_grammar", False)
+    else:
+        return jsonify({"error": "Invalid request payload format."}), 400
+
     if not stroke_data:
         return jsonify({"error": "Empty stroke data provided."}), 400
 
     df = pd.DataFrame(stroke_data)
 
     try:
-        global_score, heatmap_array = unified_predict(
+        sld_results = evaluate_sld_differential(
             df=df,
             model=model,
-            version="v2",
+            expected_prompt=expected_prompt,
+            decoded_text=decoded_text,
+            enable_grammar=enable_grammar,
             scaler_path=SCALER_PATH,
         )
     except Exception as e:
         print(f"Inference error: {e}")
         return jsonify({"error": f"Failed to run inference: {str(e)}"}), 500
 
+    # Maintain backward compatibility fields for legacy clients
+    sld_results["probability"] = float(sld_results["dysgraphia_risk_percentage"]) / 100.0
+
     # Purge memory after inference to maintain low resource profile
     gc.collect()
 
-    return jsonify({
-        "probability": float(global_score),
-        "is_dyslexic": bool(global_score > 0.5),
-        "heatmap": heatmap_array,
-    })
+    return jsonify(sld_results)
+
 
 
 if __name__ == "__main__":

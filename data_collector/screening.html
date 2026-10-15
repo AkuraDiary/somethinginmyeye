@@ -42,9 +42,20 @@
 <body>
 
 <div class="container">
-    <h1>Dysgraphia AI Screening</h1>
-    <p>Please write the sentence provided by the examiner on the canvas below.</p>
+    <h1>Multi-Stream Specific Learning Disorder (SLD) Screening</h1>
+    <p>Differential screening for Dyslexia and Motor Dysgraphia via kinematics, orthography, and cognitive latency.</p>
     
+    <div style="margin: 15px auto; display: flex; justify-content: center; align-items: center; gap: 10px;">
+        <label for="promptSelect"><strong>Evaluation Prompt:</strong></label>
+        <select id="promptSelect" style="padding: 8px 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc;">
+            <option value="bebek">bebek (Multi-character Word)</option>
+            <option value="b">b (Lower-case Ascender)</option>
+            <option value="d">d (Lower-case Ascender)</option>
+            <option value="p">p (Lower-case Descender)</option>
+            <option value="q">q (Lower-case Descender)</option>
+        </select>
+    </div>
+
     <div class="instruction" id="promptDisplay">"bebek"</div>
     
     <canvas id="drawingCanvas"></canvas>
@@ -56,11 +67,34 @@
 
     <!-- Dashboard Results -->
     <div class="dashboard" id="resultsDashboard">
-        <h2>Analysis Dashboard</h2>
-        <p><strong>Diagnosis:</strong> <span id="diagnosisBadge" class="status-badge badge-green">Normal</span></p>
-        <p><strong>Atypical Kinematic Probability:</strong> <span id="probabilityText">0%</span></p>
+        <h2>Clinical Screening Assessment (DSM-5 Grounded)</h2>
+        <p><strong>Primary Classification:</strong> <span id="diagnosisBadge" class="status-badge badge-green">Typical Development</span></p>
+        <p><strong>Clinical Severity:</strong> <span id="severityText">Within Normal Limits</span></p>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; text-align: center;">
+            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                <div style="font-weight: bold; color: #2c3e50;">Dysgraphia Risk (Motor Stream)</div>
+                <div id="dysgraphiaRiskText" style="font-size: 26px; font-weight: bold; color: #27ae60; margin: 10px 0;">0%</div>
+                <small style="color: #7f8c8d;">Bi-LSTM Kinematic Instability Metric</small>
+            </div>
+            <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
+                <div style="font-weight: bold; color: #2c3e50;">Dyslexia Risk (Orthographic Stream)</div>
+                <div id="dyslexiaRiskText" style="font-size: 26px; font-weight: bold; color: #27ae60; margin: 10px 0;">0%</div>
+                <small style="color: #7f8c8d;">Spelling Distance & Reversal Heuristic</small>
+            </div>
+        </div>
+
+        <div id="reversalAlertBox" style="display: none; margin-top: 15px; padding: 12px; background-color: #fce4ec; border-left: 4px solid #c2185b; color: #880e4f; border-radius: 4px;">
+            <strong>Orthographic Deficit:</strong> <span id="reversalAlertText"></span>
+        </div>
+
+        <div style="margin-top: 15px; font-size: 14px; color: #555;">
+            <span><strong>Cognitive Initiation Latency:</strong> <span id="latencyText">0 ms</span></span>
+            <span id="latencyAlert" style="display: none; color: #c0392b; font-weight: bold; margin-left: 10px;">(Exceeds 1500 ms Clinical Working Memory Threshold)</span>
+        </div>
+
         <hr>
-        <p><small><em>The heatmap on the canvas above highlights specific moments of cognitive hesitation and motor struggle (Red = High Risk, >80% confidence).</em></small></p>
+        <p><small><em>The heatmap on the canvas above highlights specific kinematic segments with elevated atypical probability (>80% confidence).</em></small></p>
     </div>
 </div>
 
@@ -154,13 +188,27 @@
         }
     });
 
+    const promptSelect = document.getElementById('promptSelect');
+    const promptDisplay = document.getElementById('promptDisplay');
+
+    promptSelect.addEventListener('change', () => {
+        promptDisplay.innerText = `"${promptSelect.value}"`;
+        clearCanvas();
+    });
+
     document.getElementById('clearBtn').addEventListener('click', clearCanvas);
 
     document.getElementById('analyzeBtn').addEventListener('click', async () => {
         const analyzeBtn = document.getElementById('analyzeBtn');
         const dashboard = document.getElementById('resultsDashboard');
         const diagBadge = document.getElementById('diagnosisBadge');
-        const probText = document.getElementById('probabilityText');
+        const severityText = document.getElementById('severityText');
+        const dysgraphiaRiskText = document.getElementById('dysgraphiaRiskText');
+        const dyslexiaRiskText = document.getElementById('dyslexiaRiskText');
+        const reversalAlertBox = document.getElementById('reversalAlertBox');
+        const reversalAlertText = document.getElementById('reversalAlertText');
+        const latencyText = document.getElementById('latencyText');
+        const latencyAlert = document.getElementById('latencyAlert');
 
         if (strokeData.length === 0) {
             alert("Please draw something first!");
@@ -175,10 +223,16 @@
                 return { ...point, latency: latencyMs };
             });
 
+            const currentPrompt = promptSelect.value;
+            const payload = {
+                strokes: strokesWithLatency,
+                prompt: currentPrompt
+            };
+
             const response = await fetch('/analyze', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(strokesWithLatency)
+                body: JSON.stringify(payload)
             });
 
             const result = await response.json();
@@ -188,8 +242,7 @@
                 return;
             }
 
-            const confidence = (result.probability * 100).toFixed(1);
-
+            // Draw explainable AI heatmap for elevated motor segments
             if (result.heatmap && result.heatmap.length > 0) {
                 result.heatmap.forEach((prob, index) => {
                     if (index < strokeData.length && prob > 0.80) {
@@ -203,17 +256,44 @@
             }
 
             dashboard.style.display = 'block';
-            if (result.is_dyslexic) {
-                diagBadge.innerText = "Atypical / Dysgraphic Pattern";
+
+            // Primary DSM-5 Diagnosis & Badges
+            diagBadge.innerText = result.dsm5_diagnosis || "Typical Development";
+            severityText.innerText = result.clinical_severity || "Within Normal Limits";
+
+            if (result.is_dysgraphic || result.is_dyslexic) {
                 diagBadge.className = "status-badge badge-red";
-                probText.innerHTML = `<span class="score-high">${confidence}%</span>`;
             } else {
-                diagBadge.innerText = "Normal Pattern";
                 diagBadge.className = "status-badge badge-green";
-                probText.innerHTML = `<span class="score-low">${confidence}%</span>`;
+            }
+
+            // Risk Percentages
+            const dysgraphiaPct = (result.dysgraphia_risk_percentage || 0).toFixed(1);
+            const dyslexiaPct = (result.dyslexia_risk_percentage || 0).toFixed(1);
+
+            dysgraphiaRiskText.innerText = `${dysgraphiaPct}%`;
+            dysgraphiaRiskText.style.color = result.is_dysgraphic ? "#e74c3c" : "#27ae60";
+
+            dyslexiaRiskText.innerText = `${dyslexiaPct}%`;
+            dyslexiaRiskText.style.color = result.is_dyslexic ? "#e74c3c" : "#27ae60";
+
+            // Letter Reversal Alert
+            if (result.reversal_detected) {
+                reversalAlertBox.style.display = 'block';
+                reversalAlertText.innerText = result.reversal_description;
+            } else {
+                reversalAlertBox.style.display = 'none';
+            }
+
+            // Cognitive Initiation Latency
+            latencyText.innerText = `${Math.round(result.cognitive_latency_ms || 0)} ms`;
+            if (result.latency_exceeds_threshold) {
+                latencyAlert.style.display = 'inline';
+            } else {
+                latencyAlert.style.display = 'none';
             }
             
-            // Scroll otomatis ke bawah agar hasil terlihat di tablet
+            // Auto-scroll to results
             dashboard.scrollIntoView({ behavior: "smooth" });
 
         } catch (error) {
@@ -223,6 +303,7 @@
             analyzeBtn.disabled = false;
         }
     });
+
 </script>
 </body>
 </html>
