@@ -1,11 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Handwriting Canvas</title>
     <link rel="stylesheet" href="css/screening.css">
+
 </head>
+
 <body>
     <!-- Explicit Tablet Scrollbar Track & Thumb -->
     <div class="tablet-scrollbar-track" id="tabletScrollTrack">
@@ -18,7 +21,7 @@
         <div class="container">
             <h1>Handwriting Canvas</h1>
             <p>Write freely on the canvas or follow a prompt to transcribe text and monitor movement dynamics.</p>
-            
+
             <!-- Mode Selection -->
             <div class="mode-selection-container">
                 <label><strong>Mode:</strong></label>
@@ -46,9 +49,9 @@
             </div>
 
             <div class="instruction prompt-display-free" id="promptDisplay">"Write freely on the canvas below"</div>
-            
+
             <canvas id="drawingCanvas"></canvas>
-            
+
             <!-- Movement Dynamics Summary -->
             <div class="telemetry-grid">
                 <div class="telemetry-card">
@@ -86,7 +89,8 @@
             <!-- Assessment Summary -->
             <div class="dashboard" id="resultsDashboard">
                 <h2 class="dashboard-heading">Assessment Summary</h2>
-                <p><strong>Overall Status:</strong> <span id="diagnosisBadge" class="status-badge badge-green">Typical</span></p>
+                <p><strong>Overall Status:</strong> <span id="diagnosisBadge"
+                        class="status-badge badge-green">Typical</span></p>
                 <p><strong>Rating:</strong> <span id="severityText">Standard</span></p>
 
                 <div class="risk-grid">
@@ -111,11 +115,14 @@
                 </div>
 
                 <hr class="dashboard-divider">
-                <p class="dashboard-footer-note">Highlighted marks on the canvas indicate segments with higher movement variability.</p>
+                <p class="dashboard-footer-note">Highlighted marks on the canvas indicate segments with higher movement
+                    variability.</p>
             </div>
         </div>
     </div>
-
+    <!-- ONNX Runtime Web for Local Browser Inference -->
+    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
     <script src="js/screening.js"></script>
 </body>
+
 </html>
