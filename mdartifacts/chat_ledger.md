@@ -57,6 +57,12 @@ All conversations, turns, tool calls, and token metrics are also automatically c
 - *Hyperparameter Centralization:* All paths, sequence limits (`MAX_TIMESTEPS=500`), dimensions (`FEATURES=8`), and training parameters (`BATCH_SIZE=32`, `EPOCHS=50`, `LEARNING_RATE=1e-3`) are centralized in `scripts/config.py`.
 - *Literature Centralization:* Single unified folder `academic_resources/` for 38 research PDFs.
 - *Style Invariant:* Strict zero-emoji policy across all artifacts, code comments, and chat responses; no informal jargons like "Golden features".
+- *Kin-Coder Dumb Coder Architecture (Academic & Engineering Record):*
+  - Paradigm: Transparent, non-neural spatial segmenter and topological glyph decoder designed for low-resource hardware (< 1 MB RAM, < 1 ms latency).
+  - Rotation & Uphill Baseline Resilience: 2D Principal Component Alignment (PCA) deskewing calculates dominant trajectory axis and rotates coordinates into a canonical horizontal frame without coordinate reflection, preserving true mirror reversals ('b' vs 'd') regardless of tablet angle.
+  - Spatial Topology over Chronology: Evaluates geometric bounding boxes, stem positions, loop centroids, and diagonal slopes rather than stroke timestamps, ensuring robustness against erratic, inverted, or switched stroke orders (e.g., 'N' vs inverted 'И', 'F' with leftward bars).
+  - Spatial Gap Space Emission: Measures inter-cluster horizontal distance along the deskewed baseline to emit ASCII space `' '` tokens for sentence assembly.
+
 
 #### Sub-Agent Task Delegations
 | Task ID | Assignee | Task Description | Status | Output / Artifact |

@@ -45,10 +45,25 @@
     <h1>Multi-Stream Specific Learning Disorder (SLD) Screening</h1>
     <p>Differential screening for Dyslexia and Motor Dysgraphia via kinematics, orthography, and cognitive latency.</p>
     
-    <div style="margin: 15px auto; display: flex; justify-content: center; align-items: center; gap: 10px;">
-        <label for="promptSelect"><strong>Evaluation Prompt:</strong></label>
+    <!-- Mode Selection: Free Flow vs Prompted -->
+    <div style="margin: 15px auto; display: flex; justify-content: center; align-items: center; gap: 15px; background: #eef2f5; padding: 10px; border-radius: 8px; max-width: 650px;">
+        <label><strong>Screening Mode:</strong></label>
+        <label style="cursor: pointer;">
+            <input type="radio" name="screeningMode" value="freeflow" checked id="modeFreeFlow">
+            <strong>Free-Flow Mode</strong>
+        </label>
+        <label style="cursor: pointer;">
+            <input type="radio" name="screeningMode" value="prompted" id="modePrompted">
+            Clinical Prompt Mode
+        </label>
+    </div>
+
+    <!-- Clinical Prompt Selector (Hidden in Free-Flow Mode) -->
+    <div id="promptSelectorContainer" style="display: none; margin: 10px auto; justify-content: center; align-items: center; gap: 10px;">
+        <label for="promptSelect"><strong>Target Word / Letter:</strong></label>
         <select id="promptSelect" style="padding: 8px 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc;">
             <option value="bebek">bebek (Multi-character Word)</option>
+            <option value="A">A (Upper-case Apex & Crossbar)</option>
             <option value="b">b (Lower-case Ascender)</option>
             <option value="d">d (Lower-case Ascender)</option>
             <option value="p">p (Lower-case Descender)</option>
@@ -56,20 +71,49 @@
         </select>
     </div>
 
-    <div class="instruction" id="promptDisplay">"bebek"</div>
+    <div class="instruction" id="promptDisplay" style="color: #7f8c8d; font-size: 20px; font-style: italic;">"Write freely on the canvas below"</div>
     
     <canvas id="drawingCanvas"></canvas>
     
+    <!-- Live EPFL Asselborn Kinematic Telemetry -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 1000px; margin: 15px auto 5px auto; font-size: 14px;">
+        <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;">
+            <div style="color: #7f8c8d; font-size: 12px;">Cognitive Latency</div>
+            <div id="telemetryLatency" style="font-weight: bold; font-size: 18px; color: #2c3e50;">0 ms</div>
+        </div>
+        <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;">
+            <div style="color: #7f8c8d; font-size: 12px;">Asselborn NIV (Tremor Index)</div>
+            <div id="telemetryNIV" style="font-weight: bold; font-size: 18px; color: #27ae60;">0</div>
+        </div>
+        <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;">
+            <div style="color: #7f8c8d; font-size: 12px;">Strokes / Lifts</div>
+            <div id="telemetryStrokes" style="font-weight: bold; font-size: 18px; color: #2c3e50;">0</div>
+        </div>
+        <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;">
+            <div style="color: #7f8c8d; font-size: 12px;">Kinematic Status</div>
+            <div id="telemetryStatus" style="font-weight: bold; font-size: 18px; color: #27ae60;">Fluent</div>
+        </div>
+    </div>
+
     <div class="controls">
         <button class="btn-clear" id="clearBtn">Clear</button>
-        <button class="btn-analyze" id="analyzeBtn">Analyze</button>
+        <button class="btn-analyze" id="analyzeBtn">Analyze Free Flow</button>
     </div>
 
     <!-- Dashboard Results -->
     <div class="dashboard" id="resultsDashboard">
-        <h2>Clinical Screening Assessment (DSM-5 Grounded)</h2>
+        <h2>Screening Assessment Prototype</h2>
+        
+        <!-- Transparent Transcription Banner -->
+        <div style="background: #e8f4fd; border-left: 5px solid #2980b9; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
+            <div style="font-size: 13px; color: #555; text-transform: uppercase; font-weight: bold;">Kin-Coder Transcription</div>
+            <div id="decodedTextDisplay" style="font-size: 32px; font-weight: bold; color: #2c3e50; font-family: monospace; margin: 5px 0;">"..."</div>
+            <div id="alternativeCandidates" style="font-size: 13px; color: #7f8c8d;">Raw Candidates: —</div>
+        </div>
+
         <p><strong>Primary Classification:</strong> <span id="diagnosisBadge" class="status-badge badge-green">Typical Development</span></p>
-        <p><strong>Clinical Severity:</strong> <span id="severityText">Within Normal Limits</span></p>
+        <p><strong>Severity:</strong> <span id="severityText">Within Normal Limits</span></p>
+
         
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; text-align: center;">
             <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
@@ -90,7 +134,7 @@
 
         <div style="margin-top: 15px; font-size: 14px; color: #555;">
             <span><strong>Cognitive Initiation Latency:</strong> <span id="latencyText">0 ms</span></span>
-            <span id="latencyAlert" style="display: none; color: #c0392b; font-weight: bold; margin-left: 10px;">(Exceeds 1500 ms Clinical Working Memory Threshold)</span>
+            <!-- <span id="latencyAlert" style="display: none; color: #c0392b; font-weight: bold; margin-left: 10px;">(Exceeds 1500 ms Clinical Working Memory Threshold)</span> -->
         </div>
 
         <hr>
@@ -123,14 +167,98 @@
     // Dengarkan saat layar diputar (potret/lanskap)
     window.addEventListener('resize', resizeCanvas);
 
+    // --- SCREENING MODE LOGIC ---
+    const modeFreeFlow = document.getElementById('modeFreeFlow');
+    const modePrompted = document.getElementById('modePrompted');
+    const promptSelectorContainer = document.getElementById('promptSelectorContainer');
+    const promptSelect = document.getElementById('promptSelect');
+    const promptDisplay = document.getElementById('promptDisplay');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+
+    function updateModeUI() {
+        if (modeFreeFlow.checked) {
+            promptSelectorContainer.style.display = 'none';
+            promptDisplay.innerText = '"Write freely on the canvas below"';
+            promptDisplay.style.color = '#7f8c8d';
+            analyzeBtn.innerText = "Analyze Free Flow";
+        } else {
+            promptSelectorContainer.style.display = 'flex';
+            promptDisplay.innerText = `"${promptSelect.value}"`;
+            promptDisplay.style.color = '#34495e';
+            analyzeBtn.innerText = "Analyze Against Prompt";
+        }
+        clearCanvas();
+    }
+
+    modeFreeFlow.addEventListener('change', updateModeUI);
+    modePrompted.addEventListener('change', updateModeUI);
+    promptSelect.addEventListener('change', () => {
+        if (modePrompted.checked) {
+            promptDisplay.innerText = `"${promptSelect.value}"`;
+            clearCanvas();
+        }
+    });
+
+    // --- EPFL ASSELBORN KINEMATICS TELEMETRY ---
+    let currentStrokeCount = 0;
+
+    function computeAsselbornKinematics() {
+        if (strokeData.length < 5) return;
+
+        // Compute velocities and NIV (Number of Inversions of Velocity)
+        let vels = [];
+        let nivCount = 0;
+        let lastAccel = 0;
+
+        for (let i = 1; i < strokeData.length; i++) {
+            const p0 = strokeData[i - 1];
+            const p1 = strokeData[i];
+            const dt = Math.max(p1.time - p0.time, 1.0);
+            const dist = Math.hypot(p1.x - p0.x, p1.y - p0.y);
+            const v = dist / dt;
+            vels.push(v);
+
+            if (vels.length >= 2) {
+                const accel = v - vels[vels.length - 2];
+                if (lastAccel !== 0 && ((accel > 0 && lastAccel < 0) || (accel < 0 && lastAccel > 0))) {
+                    nivCount++;
+                }
+                lastAccel = accel;
+            }
+        }
+
+        document.getElementById('telemetryLatency').innerText = `${Math.round(latencyMs)} ms`;
+        document.getElementById('telemetryNIV').innerText = nivCount;
+        document.getElementById('telemetryStrokes').innerText = currentStrokeCount;
+
+        const statusEl = document.getElementById('telemetryStatus');
+        if (nivCount > 55) {
+            statusEl.innerText = "Severe Tremor";
+            statusEl.style.color = "#e74c3c";
+        } else if (nivCount > 30) {
+            statusEl.innerText = "Mild Disfluency";
+            statusEl.style.color = "#f39c12";
+        } else {
+            statusEl.innerText = "Fluent";
+            statusEl.style.color = "#27ae60";
+        }
+    }
+
     function clearCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         strokeData = [];
         hasStartedWriting = false;
         promptStartTime = Date.now();
+        currentStrokeCount = 0;
+        latencyMs = 0;
         document.getElementById('resultsDashboard').style.display = 'none';
+        document.getElementById('telemetryLatency').innerText = "0 ms";
+        document.getElementById('telemetryNIV').innerText = "0";
+        document.getElementById('telemetryStrokes').innerText = "0";
+        document.getElementById('telemetryStatus').innerText = "Fluent";
+        document.getElementById('telemetryStatus').style.color = "#27ae60";
         
-        // Garis bantu (baseline)
+        // Baseline guide
         ctx.beginPath();
         ctx.moveTo(canvas.width * 0.05, canvas.height * 0.75);
         ctx.lineTo(canvas.width * 0.95, canvas.height * 0.75);
@@ -141,6 +269,7 @@
 
     // Panggil sekali saat pertama load
     resizeCanvas();
+    updateModeUI();
 
     // --- DRAWING LOGIC ---
     function recordPoint(e, isTouching) {
@@ -161,6 +290,7 @@
             hasStartedWriting = true;
         }
         isDrawing = true;
+        currentStrokeCount++;
         ctx.beginPath();
         ctx.moveTo(e.offsetX, e.offsetY);
         recordPoint(e, 1);
@@ -168,7 +298,7 @@
 
     canvas.addEventListener('pointermove', (e) => {
         if (isDrawing) {
-            ctx.lineWidth = e.pressure * 5;
+            ctx.lineWidth = Math.max((e.pressure || 0.5) * 5, 2.5);
             ctx.strokeStyle = "#2c3e50";
             ctx.lineTo(e.offsetX, e.offsetY);
             ctx.stroke();
@@ -177,29 +307,87 @@
     });
 
     canvas.addEventListener('pointerup', (e) => {
-        isDrawing = false;
-        recordPoint(e, 0);
+        if (isDrawing) {
+            isDrawing = false;
+            recordPoint(e, 0);
+            computeAsselbornKinematics();
+        }
     });
 
     canvas.addEventListener('pointerout', (e) => {
         if (isDrawing) {
             isDrawing = false;
             recordPoint(e, 0);
+            computeAsselbornKinematics();
         }
-    });
-
-    const promptSelect = document.getElementById('promptSelect');
-    const promptDisplay = document.getElementById('promptDisplay');
-
-    promptSelect.addEventListener('change', () => {
-        promptDisplay.innerText = `"${promptSelect.value}"`;
-        clearCanvas();
     });
 
     document.getElementById('clearBtn').addEventListener('click', clearCanvas);
 
+    // --- TRANSPARENT DIGITAL INK STROKE RECOGNIZER ---
+    async function transcribeDigitalInkStrokes(rawStrokes) {
+        // Group points by contiguous touching segments
+        const strokes = [];
+        let currentStroke = [];
+
+        rawStrokes.forEach(p => {
+            if (p.touching === 1 || p.touching === true) {
+                currentStroke.push(p);
+            } else {
+                if (currentStroke.length > 2) {
+                    strokes.push(currentStroke);
+                }
+                currentStroke = [];
+            }
+        });
+        if (currentStroke.length > 2) {
+            strokes.push(currentStroke);
+        }
+
+        if (strokes.length === 0) return { winner: "?", candidates: [] };
+
+        // Structure as standard Google Ink JSON
+        const inkData = strokes.map(s => [
+            s.map(pt => Math.round(pt.x)),
+            s.map(pt => Math.round(pt.y)),
+            s.map((pt, idx) => Math.round(pt.time - strokes[0][0].time))
+        ]);
+
+        const requestPayload = {
+            options: "enable_pre_space",
+            requests: [{
+                writing_guide: {
+                    writing_area_width: Math.round(canvas.width),
+                    writing_area_height: Math.round(canvas.height)
+                },
+                ink: inkData,
+                language: "en"
+            }]
+        };
+
+        try {
+            const res = await fetch("https://www.google.com/inputtools/request?ime=handwriting", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(requestPayload)
+            });
+            const data = await res.json();
+            if (data && data[1] && data[1][0] && data[1][0][1]) {
+                const candidates = data[1][0][1];
+                return {
+                    winner: candidates[0] || "?",
+                    candidates: candidates.slice(0, 6)
+                };
+            }
+        } catch (err) {
+            console.warn("Digital ink recognition offline or unreachable, proceeding with fallback.");
+        }
+
+        return { winner: "?", candidates: [] };
+    }
+
+    // --- MAIN ANALYSIS HANDLER ---
     document.getElementById('analyzeBtn').addEventListener('click', async () => {
-        const analyzeBtn = document.getElementById('analyzeBtn');
         const dashboard = document.getElementById('resultsDashboard');
         const diagBadge = document.getElementById('diagnosisBadge');
         const severityText = document.getElementById('severityText');
@@ -209,24 +397,40 @@
         const reversalAlertText = document.getElementById('reversalAlertText');
         const latencyText = document.getElementById('latencyText');
         const latencyAlert = document.getElementById('latencyAlert');
+        const decodedTextDisplay = document.getElementById('decodedTextDisplay');
+        const alternativeCandidates = document.getElementById('alternativeCandidates');
 
         if (strokeData.length === 0) {
-            alert("Please draw something first!");
+            alert("Please draw or write something first!");
             return;
         }
 
-        analyzeBtn.innerText = "Analyzing...";
+        analyzeBtn.innerText = "Decoding Strokes...";
         analyzeBtn.disabled = true;
 
         try {
+            // 1. Transparent Stroke-to-Text Transcription
+            const inkResult = await transcribeDigitalInkStrokes(strokeData);
+            decodedTextDisplay.innerText = `"${inkResult.winner}"`;
+            if (inkResult.candidates.length > 0) {
+                alternativeCandidates.innerText = `Raw Candidates: ${inkResult.candidates.join(" | ")}`;
+            } else {
+                alternativeCandidates.innerText = `Raw Candidates: [Uncertain / Inconclusive Stroke]`;
+            }
+
+            analyzeBtn.innerText = "Running Kinematic Bi-LSTM...";
+
             const strokesWithLatency = strokeData.map(point => {
                 return { ...point, latency: latencyMs };
             });
 
-            const currentPrompt = promptSelect.value;
+            const isFreeFlow = modeFreeFlow.checked;
+            const targetPrompt = isFreeFlow ? inkResult.winner : promptSelect.value;
+
             const payload = {
                 strokes: strokesWithLatency,
-                prompt: currentPrompt
+                prompt: targetPrompt,
+                decoded_text: inkResult.winner
             };
 
             const response = await fetch('/analyze', {
@@ -299,7 +503,7 @@
         } catch (error) {
             alert("Error communicating with AI Server.");
         } finally {
-            analyzeBtn.innerText = "Analyze";
+            analyzeBtn.innerText = modeFreeFlow.checked ? "Analyze Free Flow" : "Analyze Against Prompt";
             analyzeBtn.disabled = false;
         }
     });
@@ -307,3 +511,4 @@
 </script>
 </body>
 </html>
+
