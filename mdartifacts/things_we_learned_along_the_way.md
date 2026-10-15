@@ -264,3 +264,45 @@ To bypass OCR transcription failures on severely degraded handwriting, we docume
 1. **Trajectory Decoding (Online OCR):** Standard OCR looks at a static image and gets confused by overlapping ink. Because our web app records the exact millisecond timeline (`dt`), an AI can read the *chronological sequence of strokes* over time. Two overlapping letters drawn seconds apart will not confuse a temporal model.
 2. **The "Quad-Stream" Model (Multimodal Audio/Speech):** Adding a microphone to record the child telling the story out loud while writing. By running Speech-to-Text, the AI captures the perfect "Intended Text" directly from the child's mind. It then mathematically compares this fluent speech to the failing handwriting to pinpoint the exact brain-to-hand cognitive bottleneck.
 3. **Human-in-the-Loop (Teacher Ground Truth):** The most practical clinical solution. The app simply asks the teacher or clinician to type the child's intended sentence after the test is over. The AI uses this clean Ground Truth to perform "Forced Alignment" against the messy strokes, completely removing the need for a flawless AI OCR.
+
+---
+
+## 17. The Transparent Stroke Coder & Sayre's Paradox
+When translating online handwriting trajectories (x, y, t) into characters for dyslexia and dysgraphia screening, we encountered the limitations of manual heuristic engineering:
+
+* **Failure of Decision Trees & Prototype Dictionaries:** Hand-crafting 26-letter geometric decision trees (`if has_loop and stem_on_left: 'b'`) or template coordinate dictionaries is fundamentally fragile. Children rotate tablets, write at erratic baseline tilts, skip strokes, or vary handwriting order.
+* **The PCA Deskewing Trap:** Applying 2D Principal Component Analysis (PCA) to deskew individual letters fails. For an upright letter like 'A', PCA treats the spread of the legs as a dominant tilt axis, rotating the letter sideways by ~55 degrees.
+* **Sayre's Paradox in Cursive Writing:** In connected handwriting (e.g., "bebek" written without pen lifts), letters cannot be segmented without first knowing what was written, and words cannot be recognized without segmenting letters.
+* **Online Handwriting Recognition (OHR) via Digital Ink:** Modern on-line decoders (such as Google Digital Ink / CTC temporal decoders) operate directly on temporal coordinate streams. For clinical screening, the language model (autocorrect / spell snapping) must be bypassed so that raw orthographic errors (letter reversals, transpositions, omissions) remain uncorrected and observable.
+
+---
+
+## 18. Quantifying Motor Hesitation & NIV Calibration
+* **Number of Inversions of Velocity (NIV):** Measures the count of acceleration zero-crossings (direction changes between acceleration and deceleration). A single fluent ballistic stroke produces a single velocity peak (NIV close to zero). Motor tremor, hesitations, and visual-feedback corrections produce high NIV counts.
+* **Clinical Benchmark (Asselborn et al., Nature Scientific Reports 2020 / EPFL CHILI Lab):**
+  - Typical school-aged children produce 4 to 7 inversions of velocity per character during fluent feedforward motor execution.
+  - Children with motor dysgraphia produce 12 to 15+ inversions per character due to continuous closed-loop corrective micro-movements.
+* **Empirical Local Calibration:**
+  - In `sample_normal_bebek.csv` (fluent 5-letter word), total NIV across all 5 characters is 37 (~7 per letter).
+  - In `sample_dyslexia.csv`, a single hesitant letter 'A' produced 71 inversions.
+  - Screening thresholds on our canvas are calibrated as: <= 30 Smooth, 31 to 55 Variable, > 55 Hesitant.
+
+---
+
+## 19. User Interface Decoupling & Anti-Jargon Guardrail
+* **Decoupled Workflows:** Stroke-to-text decoding must be independent of neural network inference. Testing stroke decoding should not force a heavy backend inference pass.
+* **Clean, Non-Intimidating Terminology:** Clinical screening interfaces used by educators and children must avoid academic buzzwords (e.g., using "Movement Smoothness" instead of "Bi-LSTM Kinematic Instability Metric", and "Direction Changes" instead of "EPFL Asselborn NIV Tremor Index").
+
+---
+
+## 20. The Reciprocal Pair Ambiguity in Free Writing (The b-d Dilemma)
+When applying horizontal reflection testing, we uncovered a fundamental mathematical distinction between two classes of letter reversals:
+
+* **Class 1: Non-Character Chiral Reversals ($N \to И, S \to Ƨ, E \to Ǝ, 3 \to Ɛ$):**
+  These characters possess an intrinsic asymmetry whose mirror reflection does *not* form another valid character in the standard Latin alphabet. Therefore, if mirroring the stroke produces a high-confidence target (e.g., mirrored stroke cleanly matches 'N' or 'S'), it is unconditionally a mirror reversal, even in unprompted free writing.
+* **Class 2: Reciprocal Letter Pairs ($b \leftrightarrow d, p \leftrightarrow q, n \leftrightarrow u$):**
+  The horizontal reflection of a valid lowercase 'd' is a valid lowercase 'b'. In free-flow writing without an assigned reference prompt, the algorithm cannot determine whether the writer intended to write a 'd' or a 'b'. 
+  - *The Trap:* Naively flagging every 'd' whose mirror is 'b' as a "reversed b" causes 100% false-positive reversal rates on regular, correct writing.
+  - *The Solution:* In unprompted free-writing, reciprocal pairs must only be evaluated if a prompt is specified (e.g., user was asked to write 'b' but produced 'd'), or through stroke formation directionality (e.g., whether the circular loop was formed clockwise vs. counter-clockwise relative to the vertical stem).
+
+

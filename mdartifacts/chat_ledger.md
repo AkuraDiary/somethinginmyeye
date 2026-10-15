@@ -74,8 +74,13 @@ All conversations, turns, tool calls, and token metrics are also automatically c
 | T05 | `ml-coder` | Add Section 9 to `playground.ipynb` demonstrating SLD differential evaluation | **Completed** | [`playground.ipynb`](file:///Users/asthiseta/Project/somethinginmyeye/playground.ipynb) |
 | T06 | `academic-writer` | Draft IEEE conference paper outline and full manuscript | **Completed** | [`le-conference-dyslexia/conference_outline.md`](file:///Users/asthiseta/Project/somethinginmyeye/le-conference-dyslexia/conference_outline.md), [`le-conference-dyslexia/conference_paper.md`](file:///Users/asthiseta/Project/somethinginmyeye/le-conference-dyslexia/conference_paper.md) |
 | T07 | `academic-writer` | Compile IEEE conference paper into Word format (`.docx`) | **Completed** | [`scripts/build_conference_docx.py`](file:///Users/asthiseta/Project/somethinginmyeye/scripts/build_conference_docx.py), [`le-conference-dyslexia/elkinematics-conference.docx`](file:///Users/asthiseta/Project/somethinginmyeye/le-conference-dyslexia/elkinematics-conference.docx) |
+| T08 | `ml-coder` | Integrate transparent Digital Ink stroke transcriber and decouple from inference | **Completed** | [`data_collector/screening.html`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/screening.html) |
+| T09 | `ml-coder` | Calibrate NIV velocity inversion thresholds and eliminate UI jargon | **Completed** | [`data_collector/screening.html`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/screening.html), [`mdartifacts/things_we_learned_along_the_way.md`](file:///Users/asthiseta/Project/somethinginmyeye/mdartifacts/things_we_learned_along_the_way.md) |
+| T10 | `ml-coder` | Implement fixed viewport and tactile on-screen tablet touch scrollbar | **Completed** | [`data_collector/screening.html`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/screening.html) |
+| T11 | `ml-coder` | Implement horizontal reflection test, fix reciprocal pair false-positives, create roadmap | **Completed** | [`data_collector/screening.html`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/screening.html), [`mdartifacts/roadmap.md`](file:///Users/asthiseta/Project/somethinginmyeye/mdartifacts/roadmap.md) |
 
 ---
+
 
 ## Ongoing Workstreams Overview
 

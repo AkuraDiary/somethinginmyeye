@@ -2,72 +2,243 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Mencegah tablet melakukan zoom-in saat di-tap -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dysgraphia Kinematic Screening</title>
+    <title>Handwriting Canvas</title>
     <style>
-        /* Mencegah layar bergeser (pull-to-refresh) di tablet */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 15px; text-align: center; touch-action: none; overscroll-behavior: none; }
+        html, body { 
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            position: fixed;
+            background-color: #f4f7f6;
+            touch-action: none;
+        }
+        .app-scroll-container { 
+            width: 100%;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-y: contain;
+            overscroll-behavior: contain;
+            touch-action: pan-y;
+            padding: 15px 44px 60px 15px;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+        }
+
+        /* Explicit Tablet Touch Scrollbar */
+        .tablet-scrollbar-track {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 36px;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.05);
+            border-left: 1px solid #dcdde1;
+            z-index: 1000;
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            user-select: none;
+        }
+
+        .tablet-scrollbar-thumb {
+            position: absolute;
+            top: 10px;
+            width: 24px;
+            height: 90px;
+            background: #7f8c8d;
+            border-radius: 12px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            cursor: pointer;
+            touch-action: none;
+            transition: background 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tablet-scrollbar-thumb:active, .tablet-scrollbar-thumb.dragging {
+            background: #2c3e50;
+            width: 28px;
+        }
+
+        .tablet-scrollbar-thumb::after {
+            content: "";
+            width: 10px;
+            height: 16px;
+            border-top: 2px solid rgba(255, 255, 255, 0.8);
+            border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .quick-nav-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 48px;
+            z-index: 999;
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+            opacity: 0.9;
+            transition: 0.2s;
+        }
+        .quick-nav-btn:hover {
+            opacity: 1;
+            background: #1a252f;
+        }
         
-        .container { width: 95%; max-width: 1400px; margin: auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h1 { color: #2c3e50; font-size: 26px; margin-bottom: 5px; margin-top: 5px;}
-        p { color: #555; margin-top: 5px; font-size: 16px; }
+        .container { 
+            width: 95%; 
+            max-width: 1400px; 
+            margin: auto; 
+            background: white; 
+            padding: 20px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+        }
+        
+        h1 { 
+            color: #2c3e50; 
+            font-size: 26px; 
+            margin-bottom: 5px; 
+            margin-top: 5px;
+        }
+        
+        p { 
+            color: #555; 
+            margin-top: 5px; 
+            font-size: 16px; 
+        }
         
         canvas { 
             border: 2px dashed #bdc3c7; 
             border-radius: 8px; 
             background-color: #fafafa; 
             cursor: crosshair; 
-            touch-action: none; /* KUNCI UNTUK STYLUS: Mencegah scroll di area kanvas */
+            touch-action: none; 
             margin-top: 10px; 
             box-shadow: inset 0 0 10px rgba(0,0,0,0.05);
         }
         
-        .controls { margin-top: 25px; display: flex; justify-content: center; gap: 20px; }
-        button { padding: 16px 32px; font-size: 18px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; color: white; width: 200px; }
-        .btn-analyze { background-color: #3498db; }
-        .btn-analyze:hover { background-color: #2980b9; }
-        .btn-clear { background-color: #e74c3c; }
-        .btn-clear:hover { background-color: #c0392b; }
+        .controls { 
+            margin-top: 25px; 
+            display: flex; 
+            justify-content: center; 
+            gap: 15px; 
+            flex-wrap: wrap;
+        }
         
-        .dashboard { margin-top: 20px; padding: 20px; border-radius: 8px; display: none; background-color: #f8f9fa; border-left: 5px solid #3498db; text-align: left; }
-        .score-high { color: #e74c3c; font-weight: bold; font-size: 20px; }
-        .score-low { color: #27ae60; font-weight: bold; font-size: 20px;}
-        .status-badge { display: inline-block; padding: 8px 15px; border-radius: 20px; font-size: 16px; font-weight: bold; color: white;}
+        button { 
+            padding: 14px 28px; 
+            font-size: 17px; 
+            font-weight: bold; 
+            border: none; 
+            border-radius: 8px; 
+            cursor: pointer; 
+            transition: 0.3s; 
+            color: white; 
+        }
+        
+        .btn-transcribe { 
+            background-color: #2980b9; 
+            min-width: 200px; 
+        }
+        .btn-transcribe:hover { 
+            background-color: #1f618d; 
+        }
+        
+        .btn-clear { 
+            background-color: #e74c3c; 
+            min-width: 140px; 
+        }
+        .btn-clear:hover { 
+            background-color: #c0392b; 
+        }
+
+        .btn-secondary { 
+            background-color: #7f8c8d; 
+            min-width: 180px; 
+        }
+        .btn-secondary:hover { 
+            background-color: #636e72; 
+        }
+        
+        .dashboard { 
+            margin: 20px auto 0 auto; 
+            max-width: 1000px;
+            padding: 20px; 
+            border-radius: 8px; 
+            display: none; 
+            background-color: #f8f9fa; 
+            border-left: 5px solid #27ae60; 
+            text-align: left; 
+        }
+        
+        .status-badge { 
+            display: inline-block; 
+            padding: 6px 14px; 
+            border-radius: 18px; 
+            font-size: 15px; 
+            font-weight: bold; 
+            color: white;
+        }
         .badge-red { background-color: #e74c3c; }
         .badge-green { background-color: #27ae60; }
-        .instruction { font-size: 24px; font-weight: bold; margin-bottom: 5px; color: #34495e; }
+        
+        .instruction { 
+            font-size: 24px; 
+            font-weight: bold; 
+            margin-bottom: 5px; 
+            color: #34495e; 
+        }
     </style>
 </head>
 <body>
+<!-- Explicit Tablet Scrollbar Track & Thumb -->
+<div class="tablet-scrollbar-track" id="tabletScrollTrack">
+    <div class="tablet-scrollbar-thumb" id="tabletScrollThumb"></div>
+</div>
 
+<button class="quick-nav-btn" id="quickScrollBtn">Results &#8595;</button>
+
+<div class="app-scroll-container">
 <div class="container">
-    <h1>Multi-Stream Specific Learning Disorder (SLD) Screening</h1>
-    <p>Differential screening for Dyslexia and Motor Dysgraphia via kinematics, orthography, and cognitive latency.</p>
+    <h1>Handwriting Canvas</h1>
+    <p>Write freely on the canvas or follow a prompt to transcribe text and monitor movement dynamics.</p>
     
-    <!-- Mode Selection: Free Flow vs Prompted -->
+    <!-- Mode Selection -->
     <div style="margin: 15px auto; display: flex; justify-content: center; align-items: center; gap: 15px; background: #eef2f5; padding: 10px; border-radius: 8px; max-width: 650px;">
-        <label><strong>Screening Mode:</strong></label>
+        <label><strong>Mode:</strong></label>
         <label style="cursor: pointer;">
             <input type="radio" name="screeningMode" value="freeflow" checked id="modeFreeFlow">
-            <strong>Free-Flow Mode</strong>
+            <strong>Free Writing</strong>
         </label>
         <label style="cursor: pointer;">
             <input type="radio" name="screeningMode" value="prompted" id="modePrompted">
-            Clinical Prompt Mode
+            Prompted Writing
         </label>
     </div>
 
-    <!-- Clinical Prompt Selector (Hidden in Free-Flow Mode) -->
+    <!-- Target Word Selector (Visible in Prompted Mode) -->
     <div id="promptSelectorContainer" style="display: none; margin: 10px auto; justify-content: center; align-items: center; gap: 10px;">
-        <label for="promptSelect"><strong>Target Word / Letter:</strong></label>
+        <label for="promptSelect"><strong>Target Word:</strong></label>
         <select id="promptSelect" style="padding: 8px 12px; font-size: 16px; border-radius: 6px; border: 1px solid #ccc;">
-            <option value="bebek">bebek (Multi-character Word)</option>
-            <option value="A">A (Upper-case Apex & Crossbar)</option>
-            <option value="b">b (Lower-case Ascender)</option>
-            <option value="d">d (Lower-case Ascender)</option>
-            <option value="p">p (Lower-case Descender)</option>
-            <option value="q">q (Lower-case Descender)</option>
+            <option value="bebek">bebek</option>
+            <option value="A">A</option>
+            <option value="b">b</option>
+            <option value="d">d</option>
+            <option value="p">p</option>
+            <option value="q">q</option>
         </select>
     </div>
 
@@ -75,71 +246,71 @@
     
     <canvas id="drawingCanvas"></canvas>
     
-    <!-- Live EPFL Asselborn Kinematic Telemetry -->
+    <!-- Movement Dynamics Summary -->
     <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-width: 1000px; margin: 15px auto 5px auto; font-size: 14px;">
         <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;">
-            <div style="color: #7f8c8d; font-size: 12px;">Cognitive Latency</div>
+            <div style="color: #7f8c8d; font-size: 12px;">Start Delay</div>
             <div id="telemetryLatency" style="font-weight: bold; font-size: 18px; color: #2c3e50;">0 ms</div>
         </div>
         <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;">
-            <div style="color: #7f8c8d; font-size: 12px;">Asselborn NIV (Tremor Index)</div>
+            <div style="color: #7f8c8d; font-size: 12px;">Direction Changes</div>
             <div id="telemetryNIV" style="font-weight: bold; font-size: 18px; color: #27ae60;">0</div>
         </div>
         <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;">
-            <div style="color: #7f8c8d; font-size: 12px;">Strokes / Lifts</div>
+            <div style="color: #7f8c8d; font-size: 12px;">Stroke Count</div>
             <div id="telemetryStrokes" style="font-weight: bold; font-size: 18px; color: #2c3e50;">0</div>
         </div>
         <div style="background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 6px; padding: 8px;">
-            <div style="color: #7f8c8d; font-size: 12px;">Kinematic Status</div>
-            <div id="telemetryStatus" style="font-weight: bold; font-size: 18px; color: #27ae60;">Fluent</div>
+            <div style="color: #7f8c8d; font-size: 12px;">Movement Smoothness</div>
+            <div id="telemetryStatus" style="font-weight: bold; font-size: 18px; color: #27ae60;">Smooth</div>
         </div>
     </div>
 
     <div class="controls">
         <button class="btn-clear" id="clearBtn">Clear</button>
-        <button class="btn-analyze" id="analyzeBtn">Analyze Free Flow</button>
+        <button class="btn-transcribe" id="transcribeBtn">Transcribe Text</button>
+        <button class="btn-secondary" id="analyzeBtn">Run Assessment</button>
     </div>
 
-    <!-- Dashboard Results -->
+    <!-- Transcription Box -->
+    <div id="transcriptionCard" style="display: none; margin: 20px auto 0 auto; max-width: 1000px; background: #e8f4fd; border-left: 5px solid #2980b9; padding: 15px 20px; border-radius: 8px; text-align: left;">
+        <div style="font-size: 13px; color: #555; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">Recognized Text</div>
+        <div id="decodedTextDisplay" style="font-size: 34px; font-weight: bold; color: #2c3e50; font-family: monospace; margin: 6px 0;">"..."</div>
+        <div id="alternativeCandidates" style="font-size: 14px; color: #555;">Alternative Guesses: —</div>
+        <div id="reversalNotice" style="display: none; margin-top: 10px; padding: 8px 12px; background: #fde8e8; border-radius: 6px; color: #c0392b; font-weight: bold; font-size: 14px;"></div>
+    </div>
+
+    <!-- Assessment Summary -->
     <div class="dashboard" id="resultsDashboard">
-        <h2>Screening Assessment Prototype</h2>
-        
-        <!-- Transparent Transcription Banner -->
-        <div style="background: #e8f4fd; border-left: 5px solid #2980b9; padding: 12px 15px; border-radius: 6px; margin-bottom: 15px;">
-            <div style="font-size: 13px; color: #555; text-transform: uppercase; font-weight: bold;">Kin-Coder Transcription</div>
-            <div id="decodedTextDisplay" style="font-size: 32px; font-weight: bold; color: #2c3e50; font-family: monospace; margin: 5px 0;">"..."</div>
-            <div id="alternativeCandidates" style="font-size: 13px; color: #7f8c8d;">Raw Candidates: —</div>
-        </div>
+        <h2 style="margin-top: 0; color: #2c3e50;">Assessment Summary</h2>
+        <p><strong>Overall Status:</strong> <span id="diagnosisBadge" class="status-badge badge-green">Typical</span></p>
+        <p><strong>Rating:</strong> <span id="severityText">Standard</span></p>
 
-        <p><strong>Primary Classification:</strong> <span id="diagnosisBadge" class="status-badge badge-green">Typical Development</span></p>
-        <p><strong>Severity:</strong> <span id="severityText">Within Normal Limits</span></p>
-
-        
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; text-align: center;">
             <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
-                <div style="font-weight: bold; color: #2c3e50;">Dysgraphia Risk (Motor Stream)</div>
+                <div style="font-weight: bold; color: #2c3e50;">Movement Irregularity</div>
                 <div id="dysgraphiaRiskText" style="font-size: 26px; font-weight: bold; color: #27ae60; margin: 10px 0;">0%</div>
-                <small style="color: #7f8c8d;">Bi-LSTM Kinematic Instability Metric</small>
+                <small style="color: #7f8c8d;">Based on movement trajectory</small>
             </div>
             <div style="background: white; padding: 15px; border-radius: 8px; border: 1px solid #e0e0e0;">
-                <div style="font-weight: bold; color: #2c3e50;">Dyslexia Risk (Orthographic Stream)</div>
+                <div style="font-weight: bold; color: #2c3e50;">Spelling Variance</div>
                 <div id="dyslexiaRiskText" style="font-size: 26px; font-weight: bold; color: #27ae60; margin: 10px 0;">0%</div>
-                <small style="color: #7f8c8d;">Spelling Distance & Reversal Heuristic</small>
+                <small style="color: #7f8c8d;">Compared to target text</small>
             </div>
         </div>
 
         <div id="reversalAlertBox" style="display: none; margin-top: 15px; padding: 12px; background-color: #fce4ec; border-left: 4px solid #c2185b; color: #880e4f; border-radius: 4px;">
-            <strong>Orthographic Deficit:</strong> <span id="reversalAlertText"></span>
+            <strong>Letter Observation:</strong> <span id="reversalAlertText"></span>
         </div>
 
         <div style="margin-top: 15px; font-size: 14px; color: #555;">
-            <span><strong>Cognitive Initiation Latency:</strong> <span id="latencyText">0 ms</span></span>
-            <!-- <span id="latencyAlert" style="display: none; color: #c0392b; font-weight: bold; margin-left: 10px;">(Exceeds 1500 ms Clinical Working Memory Threshold)</span> -->
+            <span><strong>Start Delay:</strong> <span id="latencyText">0 ms</span></span>
         </div>
 
-        <hr>
-        <p><small><em>The heatmap on the canvas above highlights specific kinematic segments with elevated atypical probability (>80% confidence).</em></small></p>
+        <hr style="margin: 20px 0; border: none; border-top: 1px solid #e0e0e0;">
+        <p style="margin: 0;"><small style="color: #7f8c8d;">Highlighted marks on the canvas indicate segments with higher movement variability.</small></p>
     </div>
+</div>
 </div>
 
 <script>
@@ -149,30 +320,126 @@
     let isDrawing = false;
     let strokeData = [];
     
-    // Cognitive Latency Tracking
     let promptStartTime = Date.now();
     let hasStartedWriting = false;
     let latencyMs = 0;
+    let currentStrokeCount = 0;
 
-    // --- RESPONSIVE CANVAS LOGIC ---
+    // --- RESPONSIVE CANVAS ---
     function resizeCanvas() {
         const container = document.querySelector('.container');
-        // Set canvas to 100% of container width (minus padding)
         canvas.width = container.clientWidth - 40; 
-        // Set canvas height to 60% of the screen height
-        canvas.height = window.innerHeight * 0.60;
+        canvas.height = window.innerHeight * 0.58;
         clearCanvas();
     }
 
-    // Dengarkan saat layar diputar (potret/lanskap)
     window.addEventListener('resize', resizeCanvas);
 
-    // --- SCREENING MODE LOGIC ---
+    // --- EXPLICIT TABLET TOUCH SCROLLBAR LOGIC ---
+    const scrollContainer = document.querySelector('.app-scroll-container');
+    const scrollTrack = document.getElementById('tabletScrollTrack');
+    const scrollThumb = document.getElementById('tabletScrollThumb');
+    const quickScrollBtn = document.getElementById('quickScrollBtn');
+
+    let isDraggingScroll = false;
+
+    function updateThumbFromScroll() {
+        if (isDraggingScroll) return;
+        const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        if (maxScroll <= 10) {
+            scrollThumb.style.display = 'none';
+            quickScrollBtn.style.display = 'none';
+            return;
+        }
+        scrollThumb.style.display = 'flex';
+        quickScrollBtn.style.display = 'block';
+
+        const trackHeight = scrollTrack.clientHeight - scrollThumb.clientHeight - 20;
+        const progress = Math.max(0, Math.min(1, scrollContainer.scrollTop / maxScroll));
+        scrollThumb.style.top = `${10 + progress * trackHeight}px`;
+
+        if (progress > 0.4) {
+            quickScrollBtn.innerHTML = 'Top &#8593;';
+        } else {
+            quickScrollBtn.innerHTML = 'Results &#8595;';
+        }
+    }
+
+    scrollContainer.addEventListener('scroll', updateThumbFromScroll);
+    window.addEventListener('resize', updateThumbFromScroll);
+
+    function handleScrollTrackMove(clientY) {
+        const rect = scrollTrack.getBoundingClientRect();
+        const maxOffset = rect.height - scrollThumb.clientHeight - 20;
+        const offsetY = clientY - rect.top - (scrollThumb.clientHeight / 2) - 10;
+        const progress = Math.max(0, Math.min(1, offsetY / maxOffset));
+        const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        scrollContainer.scrollTop = progress * maxScroll;
+        scrollThumb.style.top = `${10 + progress * maxOffset}px`;
+    }
+
+    scrollTrack.addEventListener('pointerdown', (e) => {
+        isDraggingScroll = true;
+        scrollThumb.classList.add('dragging');
+        scrollTrack.setPointerCapture(e.pointerId);
+        handleScrollTrackMove(e.clientY);
+    });
+
+    scrollTrack.addEventListener('pointermove', (e) => {
+        if (isDraggingScroll) {
+            handleScrollTrackMove(e.clientY);
+        }
+    });
+
+    scrollTrack.addEventListener('pointerup', (e) => {
+        isDraggingScroll = false;
+        scrollThumb.classList.remove('dragging');
+        try { scrollTrack.releasePointerCapture(e.pointerId); } catch(err){}
+        updateThumbFromScroll();
+    });
+
+    scrollTrack.addEventListener('pointercancel', () => {
+        isDraggingScroll = false;
+        scrollThumb.classList.remove('dragging');
+    });
+
+    quickScrollBtn.addEventListener('click', () => {
+        const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        if (scrollContainer.scrollTop > maxScroll / 2) {
+            scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        } else {
+            const card = document.getElementById('transcriptionCard');
+            if (card && card.style.display !== 'none') {
+                card.scrollIntoView({ behavior: 'smooth' });
+            } else {
+                scrollContainer.scrollTo({ top: maxScroll, behavior: 'smooth' });
+            }
+        }
+    });
+
+    // Prevent mobile browser pull-to-refresh on downward drag from top of screen
+    let touchStartY = 0;
+    window.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches.length > 0) {
+            touchStartY = e.touches[0].clientY;
+        }
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (!e.touches || e.touches.length === 0) return;
+        const currentY = e.touches[0].clientY;
+        if (window.scrollY <= 0 && currentY > touchStartY && e.target !== canvas) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    // --- WRITING MODE LOGIC ---
     const modeFreeFlow = document.getElementById('modeFreeFlow');
     const modePrompted = document.getElementById('modePrompted');
     const promptSelectorContainer = document.getElementById('promptSelectorContainer');
     const promptSelect = document.getElementById('promptSelect');
     const promptDisplay = document.getElementById('promptDisplay');
+    const transcribeBtn = document.getElementById('transcribeBtn');
     const analyzeBtn = document.getElementById('analyzeBtn');
 
     function updateModeUI() {
@@ -180,12 +447,10 @@
             promptSelectorContainer.style.display = 'none';
             promptDisplay.innerText = '"Write freely on the canvas below"';
             promptDisplay.style.color = '#7f8c8d';
-            analyzeBtn.innerText = "Analyze Free Flow";
         } else {
             promptSelectorContainer.style.display = 'flex';
             promptDisplay.innerText = `"${promptSelect.value}"`;
             promptDisplay.style.color = '#34495e';
-            analyzeBtn.innerText = "Analyze Against Prompt";
         }
         clearCanvas();
     }
@@ -199,13 +464,10 @@
         }
     });
 
-    // --- EPFL ASSELBORN KINEMATICS TELEMETRY ---
-    let currentStrokeCount = 0;
-
-    function computeAsselbornKinematics() {
+    // --- MOVEMENT DYNAMICS TELEMETRY ---
+    function updateMovementMetrics() {
         if (strokeData.length < 5) return;
 
-        // Compute velocities and NIV (Number of Inversions of Velocity)
         let vels = [];
         let nivCount = 0;
         let lastAccel = 0;
@@ -233,13 +495,13 @@
 
         const statusEl = document.getElementById('telemetryStatus');
         if (nivCount > 55) {
-            statusEl.innerText = "Severe Tremor";
+            statusEl.innerText = "Hesitant";
             statusEl.style.color = "#e74c3c";
         } else if (nivCount > 30) {
-            statusEl.innerText = "Mild Disfluency";
+            statusEl.innerText = "Variable";
             statusEl.style.color = "#f39c12";
         } else {
-            statusEl.innerText = "Fluent";
+            statusEl.innerText = "Smooth";
             statusEl.style.color = "#27ae60";
         }
     }
@@ -251,11 +513,18 @@
         promptStartTime = Date.now();
         currentStrokeCount = 0;
         latencyMs = 0;
+
+        document.getElementById('transcriptionCard').style.display = 'none';
         document.getElementById('resultsDashboard').style.display = 'none';
+        const reversalNotice = document.getElementById('reversalNotice');
+        if (reversalNotice) {
+            reversalNotice.style.display = 'none';
+            reversalNotice.innerText = '';
+        }
         document.getElementById('telemetryLatency').innerText = "0 ms";
         document.getElementById('telemetryNIV').innerText = "0";
         document.getElementById('telemetryStrokes').innerText = "0";
-        document.getElementById('telemetryStatus').innerText = "Fluent";
+        document.getElementById('telemetryStatus').innerText = "Smooth";
         document.getElementById('telemetryStatus').style.color = "#27ae60";
         
         // Baseline guide
@@ -267,7 +536,6 @@
         ctx.stroke();
     }
 
-    // Panggil sekali saat pertama load
     resizeCanvas();
     updateModeUI();
 
@@ -310,7 +578,7 @@
         if (isDrawing) {
             isDrawing = false;
             recordPoint(e, 0);
-            computeAsselbornKinematics();
+            updateMovementMetrics();
         }
     });
 
@@ -318,35 +586,16 @@
         if (isDrawing) {
             isDrawing = false;
             recordPoint(e, 0);
-            computeAsselbornKinematics();
+            updateMovementMetrics();
         }
     });
 
     document.getElementById('clearBtn').addEventListener('click', clearCanvas);
 
-    // --- TRANSPARENT DIGITAL INK STROKE RECOGNIZER ---
-    async function transcribeDigitalInkStrokes(rawStrokes) {
-        // Group points by contiguous touching segments
-        const strokes = [];
-        let currentStroke = [];
-
-        rawStrokes.forEach(p => {
-            if (p.touching === 1 || p.touching === true) {
-                currentStroke.push(p);
-            } else {
-                if (currentStroke.length > 2) {
-                    strokes.push(currentStroke);
-                }
-                currentStroke = [];
-            }
-        });
-        if (currentStroke.length > 2) {
-            strokes.push(currentStroke);
-        }
-
+    // --- LOW-LEVEL GOOGLE DIGITAL INK QUERY ---
+    async function queryGoogleInk(strokes) {
         if (strokes.length === 0) return { winner: "?", candidates: [] };
 
-        // Structure as standard Google Ink JSON
         const inkData = strokes.map(s => [
             s.map(pt => Math.round(pt.x)),
             s.map(pt => Math.round(pt.y)),
@@ -380,14 +629,220 @@
                 };
             }
         } catch (err) {
-            console.warn("Digital ink recognition offline or unreachable, proceeding with fallback.");
+            console.warn("Digital ink recognition offline or unreachable.");
         }
-
         return { winner: "?", candidates: [] };
     }
 
-    // --- MAIN ANALYSIS HANDLER ---
-    document.getElementById('analyzeBtn').addEventListener('click', async () => {
+    // --- ALGORITHMIC HORIZONTAL REFLECTION TEST (UNIVERSAL MIRROR DETECTOR) ---
+    async function transcribeWithReflectionAnalysis(rawStrokes) {
+        const strokes = [];
+        let currentStroke = [];
+
+        rawStrokes.forEach(p => {
+            if (p.touching === 1 || p.touching === true) {
+                currentStroke.push(p);
+            } else {
+                if (currentStroke.length > 2) {
+                    strokes.push(currentStroke);
+                }
+                currentStroke = [];
+            }
+        });
+        if (currentStroke.length > 2) {
+            strokes.push(currentStroke);
+        }
+
+        if (strokes.length === 0) {
+            return { winner: "?", candidates: [], isReversal: false, notice: "" };
+        }
+
+        // Bounding box for horizontal reflection
+        const allPts = strokes.flat();
+        const xs = allPts.map(p => p.x);
+        const xMin = Math.min(...xs);
+        const xMax = Math.max(...xs);
+
+        // Compute horizontally mirrored strokes: x_mirrored = xMax - (x - xMin)
+        const mirroredStrokes = strokes.map(s => s.map(pt => ({
+            ...pt,
+            x: Math.round(xMax - (pt.x - xMin))
+        })));
+
+        // Run raw trajectory and horizontal reflection concurrently
+        const [rawResult, mirrorResult] = await Promise.all([
+            queryGoogleInk(strokes),
+            queryGoogleInk(mirroredStrokes)
+        ]);
+
+        const rawWinner = rawResult.winner;
+        const mirrorWinner = mirrorResult.winner;
+
+        // Clinical asymmetric reversal dictionary
+        const asymmetricReversible = {
+            'N': 'И', 'n': 'и',
+            'S': 'Ƨ', 's': 'ƨ',
+            'E': 'Ǝ', 'e': 'ɘ',
+            'B': 'ᙠ', 'D': 'ᗡ',
+            'b': 'd', 'd': 'b',
+            'p': 'q', 'q': 'p',
+            'C': 'Ɔ', 'c': 'ɔ',
+            'J': 'ᒐ', 'j': 'ϳ',
+            'Z': 'S',
+            '3': 'Ɛ',
+            '7': 'г'
+        };
+
+        let isReversal = false;
+        let displayWinner = rawWinner;
+        let notice = "";
+
+        const isPrompted = modePrompted.checked;
+        const promptTarget = promptSelect.value.toLowerCase().trim();
+        const rawUpper = rawWinner.toUpperCase();
+
+        // Letters with bilateral vertical symmetry cannot be mirror-reversed
+        const symmetricLetters = ['A', 'H', 'I', 'M', 'O', 'T', 'U', 'V', 'W', 'X', 'Y'];
+        const isSymmetric = symmetricLetters.includes(rawUpper);
+
+        if (!isSymmetric) {
+            // Case 1: Reciprocal letter pairs (b vs d, p vs q) - evaluate against prompt
+            if (isPrompted && ['b', 'd', 'p', 'q'].includes(promptTarget)) {
+                if (promptTarget === 'b' && (rawWinner === 'd' || mirrorWinner === 'b')) {
+                    isReversal = true;
+                    displayWinner = "d (Reversed b)";
+                    notice = "Letter Observation: Mirror reversal detected ('b' written as 'd').";
+                } else if (promptTarget === 'd' && (rawWinner === 'b' || mirrorWinner === 'd')) {
+                    isReversal = true;
+                    displayWinner = "b (Reversed d)";
+                    notice = "Letter Observation: Mirror reversal detected ('d' written as 'b').";
+                } else if (promptTarget === 'p' && (rawWinner === 'q' || mirrorWinner === 'p')) {
+                    isReversal = true;
+                    displayWinner = "q (Reversed p)";
+                    notice = "Letter Observation: Mirror reversal detected ('p' written as 'q').";
+                } else if (promptTarget === 'q' && (rawWinner === 'p' || mirrorWinner === 'q')) {
+                    isReversal = true;
+                    displayWinner = "p (Reversed q)";
+                    notice = "Letter Observation: Mirror reversal detected ('q' written as 'p').";
+                }
+            }
+            // Case 2: Non-character chiral reversals (N -> И, S -> Ƨ, E -> Ǝ, 3 -> Ɛ)
+            else if (mirrorWinner in asymmetricReversible && mirrorWinner.toUpperCase() !== rawUpper && !['B', 'D', 'b', 'd', 'p', 'q'].includes(mirrorWinner)) {
+                isReversal = true;
+                const symbol = asymmetricReversible[mirrorWinner] || `Reversed ${mirrorWinner}`;
+                displayWinner = `${symbol} (Reversed ${mirrorWinner})`;
+                notice = `Letter Observation: Mirror reversal detected (drawn as mirror image of '${mirrorWinner}').`;
+            }
+            // Case 3: Geometric verification fallback for inverted N
+            else {
+                const geom = inspectOrthographicReversals(rawStrokes, rawResult.candidates);
+                if (geom && geom.detected) {
+                    isReversal = true;
+                    displayWinner = geom.winner;
+                    notice = geom.notice;
+                }
+            }
+        }
+
+        return {
+            winner: displayWinner,
+            rawWinner: rawWinner,
+            mirrorWinner: mirrorWinner,
+            candidates: rawResult.candidates,
+            mirrorCandidates: mirrorResult.candidates,
+            isReversal: isReversal,
+            notice: notice
+        };
+    }
+
+    // --- GEOMETRIC TRAJECTORY INSPECTION (FALLBACK) ---
+    function inspectOrthographicReversals(rawStrokes, candidates) {
+        const pts = rawStrokes.filter(p => p.touching === 1 || p.touching === true);
+        if (pts.length < 8) return null;
+
+        const xs = pts.map(p => p.x);
+        const ys = pts.map(p => p.y);
+        const xMin = Math.min(...xs);
+        const xMax = Math.max(...xs);
+        const yMin = Math.min(...ys);
+        const yMax = Math.max(...ys);
+        const width = Math.max(xMax - xMin, 1);
+        const height = Math.max(yMax - yMin, 1);
+
+        const hasN = candidates.some(c => c === 'N' || c === 'n' || c === 'H' || c === 'M');
+        if (hasN && height > 25 && width > 15) {
+            const midPoints = pts.filter(p => p.x > xMin + 0.20 * width && p.x < xMax - 0.20 * width);
+            if (midPoints.length >= 2) {
+                const leftMid = midPoints.filter(p => p.x < xMin + 0.45 * width);
+                const rightMid = midPoints.filter(p => p.x > xMin + 0.55 * width);
+
+                if (leftMid.length > 0 && rightMid.length > 0) {
+                    const avgYLeft = leftMid.reduce((s, p) => s + p.y, 0) / leftMid.length;
+                    const avgYRight = rightMid.reduce((s, p) => s + p.y, 0) / rightMid.length;
+
+                    if (avgYLeft > avgYRight + 0.12 * height) {
+                        return {
+                            detected: true,
+                            winner: "И (Reversed N)",
+                            notice: "Letter Observation: Inverted 'N' detected (ascending diagonal from bottom-left to top-right)."
+                        };
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    // --- STEP 1: TRANSCRIBE TEXT (ISOLATED - NO BACKEND INFERENCE) ---
+    transcribeBtn.addEventListener('click', async () => {
+        const transcriptionCard = document.getElementById('transcriptionCard');
+        const decodedTextDisplay = document.getElementById('decodedTextDisplay');
+        const alternativeCandidates = document.getElementById('alternativeCandidates');
+        const reversalNotice = document.getElementById('reversalNotice');
+
+        if (strokeData.length === 0) {
+            alert("Please write something first.");
+            return;
+        }
+
+        transcribeBtn.innerText = "Transcribing...";
+        transcribeBtn.disabled = true;
+
+        try {
+            const result = await transcribeWithReflectionAnalysis(strokeData);
+
+            decodedTextDisplay.innerText = `"${result.winner}"`;
+            if (result.isReversal && result.notice) {
+                reversalNotice.innerText = result.notice;
+                reversalNotice.style.display = 'block';
+            } else {
+                reversalNotice.style.display = 'none';
+            }
+
+            if (result.candidates.length > 0) {
+                let text = `Alternative Guesses: ${result.candidates.join(" | ")}`;
+                if (result.mirrorWinner && result.mirrorWinner !== result.rawWinner) {
+                    text += ` (Mirror reflection: '${result.mirrorWinner}')`;
+                }
+                alternativeCandidates.innerText = text;
+            } else {
+                alternativeCandidates.innerText = `Alternative Guesses: [Uncertain Stroke]`;
+            }
+
+            transcriptionCard.style.display = 'block';
+            updateMovementMetrics();
+            transcriptionCard.scrollIntoView({ behavior: "smooth" });
+
+        } catch (error) {
+            alert("Could not transcribe text.");
+        } finally {
+            transcribeBtn.innerText = "Transcribe Text";
+            transcribeBtn.disabled = false;
+        }
+    });
+
+    // --- STEP 2: RUN ASSESSMENT (OPTIONAL SECONDARY ACTION) ---
+    analyzeBtn.addEventListener('click', async () => {
         const dashboard = document.getElementById('resultsDashboard');
         const diagBadge = document.getElementById('diagnosisBadge');
         const severityText = document.getElementById('severityText');
@@ -396,41 +851,49 @@
         const reversalAlertBox = document.getElementById('reversalAlertBox');
         const reversalAlertText = document.getElementById('reversalAlertText');
         const latencyText = document.getElementById('latencyText');
-        const latencyAlert = document.getElementById('latencyAlert');
-        const decodedTextDisplay = document.getElementById('decodedTextDisplay');
-        const alternativeCandidates = document.getElementById('alternativeCandidates');
 
         if (strokeData.length === 0) {
-            alert("Please draw or write something first!");
+            alert("Please write something first.");
             return;
         }
 
-        analyzeBtn.innerText = "Decoding Strokes...";
+        analyzeBtn.innerText = "Evaluating...";
         analyzeBtn.disabled = true;
 
         try {
-            // 1. Transparent Stroke-to-Text Transcription
-            const inkResult = await transcribeDigitalInkStrokes(strokeData);
-            decodedTextDisplay.innerText = `"${inkResult.winner}"`;
-            if (inkResult.candidates.length > 0) {
-                alternativeCandidates.innerText = `Raw Candidates: ${inkResult.candidates.join(" | ")}`;
-            } else {
-                alternativeCandidates.innerText = `Raw Candidates: [Uncertain / Inconclusive Stroke]`;
+            // First check if transcribed
+            let decoded = document.getElementById('decodedTextDisplay').innerText.replace(/"/g, '').trim();
+            if (decoded === "" || decoded === "..." || decoded === "?") {
+                const res = await transcribeWithReflectionAnalysis(strokeData);
+                decoded = res.winner;
+                document.getElementById('decodedTextDisplay').innerText = `"${decoded}"`;
+                if (res.isReversal && res.notice) {
+                    document.getElementById('reversalNotice').innerText = res.notice;
+                    document.getElementById('reversalNotice').style.display = 'block';
+                } else {
+                    document.getElementById('reversalNotice').style.display = 'none';
+                }
+                if (res.candidates.length > 0) {
+                    let text = `Alternative Guesses: ${res.candidates.join(" | ")}`;
+                    if (res.mirrorWinner && res.mirrorWinner !== res.rawWinner) {
+                        text += ` (Mirror reflection: '${res.mirrorWinner}')`;
+                    }
+                    document.getElementById('alternativeCandidates').innerText = text;
+                }
+                document.getElementById('transcriptionCard').style.display = 'block';
             }
-
-            analyzeBtn.innerText = "Running Kinematic Bi-LSTM...";
 
             const strokesWithLatency = strokeData.map(point => {
                 return { ...point, latency: latencyMs };
             });
 
             const isFreeFlow = modeFreeFlow.checked;
-            const targetPrompt = isFreeFlow ? inkResult.winner : promptSelect.value;
+            const targetPrompt = isFreeFlow ? decoded : promptSelect.value;
 
             const payload = {
                 strokes: strokesWithLatency,
                 prompt: targetPrompt,
-                decoded_text: inkResult.winner
+                decoded_text: decoded
             };
 
             const response = await fetch('/analyze', {
@@ -446,7 +909,7 @@
                 return;
             }
 
-            // Draw explainable AI heatmap for elevated motor segments
+            // Draw highlight marks for high-variability segments
             if (result.heatmap && result.heatmap.length > 0) {
                 result.heatmap.forEach((prob, index) => {
                     if (index < strokeData.length && prob > 0.80) {
@@ -461,9 +924,8 @@
 
             dashboard.style.display = 'block';
 
-            // Primary DSM-5 Diagnosis & Badges
-            diagBadge.innerText = result.dsm5_diagnosis || "Typical Development";
-            severityText.innerText = result.clinical_severity || "Within Normal Limits";
+            diagBadge.innerText = result.dsm5_diagnosis || "Typical";
+            severityText.innerText = result.clinical_severity || "Standard";
 
             if (result.is_dysgraphic || result.is_dyslexic) {
                 diagBadge.className = "status-badge badge-red";
@@ -471,7 +933,6 @@
                 diagBadge.className = "status-badge badge-green";
             }
 
-            // Risk Percentages
             const dysgraphiaPct = (result.dysgraphia_risk_percentage || 0).toFixed(1);
             const dyslexiaPct = (result.dyslexia_risk_percentage || 0).toFixed(1);
 
@@ -481,7 +942,6 @@
             dyslexiaRiskText.innerText = `${dyslexiaPct}%`;
             dyslexiaRiskText.style.color = result.is_dyslexic ? "#e74c3c" : "#27ae60";
 
-            // Letter Reversal Alert
             if (result.reversal_detected) {
                 reversalAlertBox.style.display = 'block';
                 reversalAlertText.innerText = result.reversal_description;
@@ -489,21 +949,13 @@
                 reversalAlertBox.style.display = 'none';
             }
 
-            // Cognitive Initiation Latency
             latencyText.innerText = `${Math.round(result.cognitive_latency_ms || 0)} ms`;
-            if (result.latency_exceeds_threshold) {
-                latencyAlert.style.display = 'inline';
-            } else {
-                latencyAlert.style.display = 'none';
-            }
-            
-            // Auto-scroll to results
             dashboard.scrollIntoView({ behavior: "smooth" });
 
         } catch (error) {
-            alert("Error communicating with AI Server.");
+            alert("Could not connect to analysis service.");
         } finally {
-            analyzeBtn.innerText = modeFreeFlow.checked ? "Analyze Free Flow" : "Analyze Against Prompt";
+            analyzeBtn.innerText = "Run Assessment";
             analyzeBtn.disabled = false;
         }
     });
@@ -511,4 +963,3 @@
 </script>
 </body>
 </html>
-
