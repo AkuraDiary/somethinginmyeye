@@ -412,14 +412,27 @@ function segmentIntoCharacterClusters(strokes) {
         const prevItem = currentCluster[currentCluster.length - 1];
         const currItem = strokeMeta[i];
 
+        const clusterXMin = Math.min(...currentCluster.map(m => m.xMin));
         const clusterXMax = Math.max(...currentCluster.map(m => m.xMax));
+        const clusterYMin = Math.min(...currentCluster.map(m => m.yMin));
+        const clusterYMax = Math.max(...currentCluster.map(m => m.yMax));
         const avgH = Math.max(...currentCluster.map(m => m.height));
 
         const gapX = currItem.xMin - clusterXMax;
         const timePause = Math.max(0, currItem.tStart - prevItem.tEnd);
 
-        // Group together if horizontal gap is small AND air-time pause is short
-        if (gapX <= 0.18 * avgH && (timePause < 300 || gapX <= 0)) {
+        // Calculate vertical overlap to prevent multi-stroke letters from splitting
+        const overlapY = Math.max(0, Math.min(clusterYMax, currItem.yMax) - Math.max(clusterYMin, currItem.yMin));
+        const minH = Math.min(clusterYMax - clusterYMin, currItem.height);
+        const verticalOverlapRatio = minH > 0 ? (overlapY / minH) : 0;
+
+        // Group together if:
+        // 1. Strokes have significant vertical overlap and are within the same glyph width (e.g. separated D or b)
+        // 2. OR horizontal gap is tiny AND pause is short
+        const isSameGlyphComponent = (gapX <= 0.35 * avgH) && (verticalOverlapRatio >= 0.30);
+        const isContiguousStroke = (gapX <= 0.18 * avgH) && (timePause < 300 || gapX <= 0);
+
+        if (isSameGlyphComponent || isContiguousStroke) {
             currentCluster.push(currItem);
         } else {
             clusters.push(currentCluster.map(m => m.stroke));
@@ -508,6 +521,10 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
     const isPrompted = modePrompted.checked;
     const promptTarget = promptSelect.value.trim();
 
+    // Contextual Domain Masking: Prevents numeral reversals (e.g. 6/9) from polluting alphabetic text
+    const isAlphabeticContext = isPrompted ? !/^\d+$/.test(promptTarget) : (rawWinner.length > 0 && /[a-zA-Z]/.test(rawWinner));
+    const numericReversalKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
     // Track 2: Kinematic Clustering into Characters
     const clusters = segmentIntoCharacterClusters(strokes);
 
@@ -555,10 +572,15 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
             }
             // Case 2: Asymmetric chiral reversals
             else if (mirrorWinner in asymmetricReversible && mirrorWinner.toUpperCase() !== rawUpper && !['b', 'd', 'p', 'q'].includes(mirrorWinner)) {
-                isReversal = true;
-                const symbol = asymmetricReversible[mirrorWinner] || mirrorWinner;
-                displayWinner = symbol;
-                notice = `Letter Observation: Mirror reversal detected (drawn as mirror image of '${mirrorWinner}').`;
+                // Apply alphabetical domain mask: digits (like '6', '9') cannot replace letters in an alphabetic context
+                if (isAlphabeticContext && numericReversalKeys.includes(mirrorWinner)) {
+                    // Suppress numeric false-positives on alphabetic handwriting
+                } else {
+                    isReversal = true;
+                    const symbol = asymmetricReversible[mirrorWinner] || mirrorWinner;
+                    displayWinner = symbol;
+                    notice = `Letter Observation: Mirror reversal detected (drawn as mirror image of '${mirrorWinner}').`;
+                }
             }
             // Case 3: Geometric verification fallback for inverted N
             else {
@@ -631,19 +653,24 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
                 const lWinner = localMirrorResult.winner;
 
                 if (lWinner in asymmetricReversible && !['b', 'd', 'p', 'q'].includes(lWinner)) {
-                    const currentChar = rawWinner[k] || '';
-                    if (lWinner.toUpperCase() !== currentChar.toUpperCase()) {
-                        isReversal = true;
-                        const symbol = asymmetricReversible[lWinner] || lWinner;
+                    // Suppress numeric false-positives on alphabetic words
+                    if (isAlphabeticContext && numericReversalKeys.includes(lWinner)) {
+                        // Skip digit reversal
+                    } else {
+                        const currentChar = rawWinner[k] || '';
+                        if (lWinner.toUpperCase() !== currentChar.toUpperCase()) {
+                            isReversal = true;
+                            const symbol = asymmetricReversible[lWinner] || lWinner;
 
-                        if (k < displayWinner.length) {
-                            displayWinner = displayWinner.substring(0, k) + symbol + displayWinner.substring(k + 1);
-                        } else {
-                            displayWinner += symbol;
+                            if (k < displayWinner.length) {
+                                displayWinner = displayWinner.substring(0, k) + symbol + displayWinner.substring(k + 1);
+                            } else {
+                                displayWinner += symbol;
+                            }
+
+                            notice = `Letter Observation: Mirror reversal detected at position ${k + 1} (drawn as mirror image of '${lWinner}').`;
+                            break;
                         }
-
-                        notice = `Letter Observation: Mirror reversal detected at position ${k + 1} (drawn as mirror image of '${lWinner}').`;
-                        break;
                     }
                 }
             }
