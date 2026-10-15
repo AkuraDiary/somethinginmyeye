@@ -5,3 +5,8 @@
 /val_datasets
 /elkinematic-journal
 **/__pycache__/
+agents/logs/
+*.db
+/le-conference-dyslexia/*
+/agents/*
+.agents/*

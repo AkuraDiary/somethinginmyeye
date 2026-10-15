@@ -13,7 +13,7 @@
 * **Background:** Keterlambatan deteksi Disgrafia karena kurangnya alat skrining awal yang objektif.
 * **Objective:** Membangun purwarupa sistem berbasis web yang ringan (*lightweight*) dan transparan (*explainable*).
 * **Methods:** Rapid Application Development (RAD) untuk membangun Bidirectional LSTM berbasis Kinematika (kecepatan, tekanan, jeda) dengan *TimeDistributed layer* sebagai jembatan *Explainable AI*.
-* **Results:** Akurasi validasi 95.95% pada 302 sampel, mengatasi *Shortcut Learning* (Data Leakage) yang ditemukan pada arsitektur konvensional.
+* **Results:** Akurasi validasi 92.17% pada dataset berjumlah 1,090 sampel (80/20 Hold-Out Split) dengan nilai ROC-AUC 0.9762, sekaligus berhasil memecahkan isu *Shortcut Learning* (Data Leakage) yang umum terjadi pada arsitektur konvensional.
 * **Conclusion:** Kinematika murni (tanpa visi komputer) dapat digunakan untuk skrining awal yang *lightweight* dan sangat akurat jika dipadukan dengan desain arsitektur yang tepat.
 
 ## 2. INTRODUCTION
