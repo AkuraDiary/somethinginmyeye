@@ -1,0 +1,162 @@
+"""
+Centralized Model Builder for Elkinematics.
+Single source of truth for all neural network architectures (V0 Baseline CNN, V1 CNN+XAI, V2 Bi-LSTM).
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+from pathlib import Path
+from typing import Optional
+
+# Ensure scripts dir on sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import tensorflow as tf
+from tensorflow.keras.layers import (
+    Bidirectional,
+    Concatenate,
+    Conv1D,
+    Dense,
+    Dropout,
+    GlobalAveragePooling1D,
+    Input,
+    LSTM,
+    MaxPooling1D,
+    RepeatVector,
+    TimeDistributed,
+)
+from tensorflow.keras.models import Model, Sequential, load_model
+
+from config import (
+    FEATURES,
+    LATENCY_DIM,
+    LEARNING_RATE,
+    MAX_TIMESTEPS,
+    MODEL_PATHS,
+    V0_CONV1_FILTERS,
+    V0_CONV2_FILTERS,
+    V0_DENSE_UNITS,
+    V0_DROPOUT,
+    V0_FEATURES,
+    V1_CONV1_FILTERS,
+    V1_CONV2_FILTERS,
+    V1_DENSE_UNITS,
+    V1_DROPOUT,
+    V2_DROPOUT,
+    V2_LSTM1_UNITS,
+    V2_LSTM2_UNITS,
+)
+
+
+def build_v0_baseline(learning_rate: float = LEARNING_RATE) -> Sequential:
+    """
+    V0: Standard spatial 1D-CNN with Global Average Pooling.
+    Input: (MAX_TIMESTEPS, 3) kinematics [velocity, dt, pressure].
+    Output: Binary classification scalar.
+    """
+    model = Sequential([
+        Input(shape=(MAX_TIMESTEPS, V0_FEATURES), name="kinematics_input"),
+        Conv1D(filters=V0_CONV1_FILTERS, kernel_size=3, activation="relu", name="conv1"),
+        MaxPooling1D(pool_size=2, name="maxpool1"),
+        Conv1D(filters=V0_CONV2_FILTERS, kernel_size=3, activation="relu", name="conv2"),
+        GlobalAveragePooling1D(name="gap"),
+        Dense(V0_DENSE_UNITS, activation="relu", name="dense1"),
+        Dropout(V0_DROPOUT, name="dropout"),
+        Dense(1, activation="sigmoid", name="classification_output"),
+    ], name="elkinematics_v0_baseline")
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+        loss="binary_crossentropy",
+        metrics=["accuracy", tf.keras.metrics.Recall(name="recall")],
+    )
+    return model
+
+
+def build_v1_xai(learning_rate: float = LEARNING_RATE) -> Model:
+    """
+    V1: Dual-input TimeDistributed CNN with Latency explicitly for Explainable AI (XAI).
+    Inputs:
+      - Kinematics sequence: (MAX_TIMESTEPS, 3)
+      - Latency scalar: (1,)
+    Output: TimeDistributed error probability heatmap (MAX_TIMESTEPS, 1).
+    """
+    seq_in = Input(shape=(MAX_TIMESTEPS, V0_FEATURES), name="kinematics_input")
+    x = Conv1D(filters=V1_CONV1_FILTERS, kernel_size=3, activation="relu", padding="same", name="conv1")(seq_in)
+    x = Conv1D(filters=V1_CONV2_FILTERS, kernel_size=3, activation="relu", padding="same", name="conv2")(x)
+
+    lat_in = Input(shape=(LATENCY_DIM,), name="latency_input")
+    lat_repeated = RepeatVector(MAX_TIMESTEPS, name="repeat_latency")(lat_in)
+
+    merged = Concatenate(name="concat_modalities")([x, lat_repeated])
+    y = TimeDistributed(Dense(V1_DENSE_UNITS, activation="relu"), name="td_dense")(merged)
+    y = Dropout(V1_DROPOUT, name="dropout")(y)
+    out = TimeDistributed(Dense(1, activation="sigmoid"), name="heatmap_output")(y)
+
+    model = Model(inputs=[seq_in, lat_in], outputs=out, name="elkinematics_v1_xai")
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+        loss="binary_crossentropy",
+        metrics=["accuracy", tf.keras.metrics.Recall(name="recall")],
+    )
+    return model
+
+
+def build_v2_bilstm(learning_rate: float = LEARNING_RATE) -> Model:
+    """
+    V2: Production Flagship Dual-input Bidirectional LSTM on 8 kinematic sequence + Latency.
+    Inputs:
+      - Kinematics sequence: (MAX_TIMESTEPS, 8)
+      - Latency scalar: (1,)
+    Output: TimeDistributed error probability heatmap per millisecond timestep (MAX_TIMESTEPS, 1).
+    """
+    seq_in = Input(shape=(MAX_TIMESTEPS, FEATURES), name="kinematics_input")
+    x = Bidirectional(LSTM(V2_LSTM1_UNITS, return_sequences=True), name="bilstm_1")(seq_in)
+    x = Dropout(V2_DROPOUT, name="dropout_1")(x)
+    x = Bidirectional(LSTM(V2_LSTM2_UNITS, return_sequences=True), name="bilstm_2")(x)
+    x = Dropout(V2_DROPOUT, name="dropout_2")(x)
+
+    lat_in = Input(shape=(LATENCY_DIM,), name="latency_input")
+    lat_repeated = RepeatVector(MAX_TIMESTEPS, name="repeat_latency")(lat_in)
+
+    merged = Concatenate(name="concat_modalities")([x, lat_repeated])
+    out = TimeDistributed(Dense(1, activation="sigmoid"), name="heatmap_output")(merged)
+
+    model = Model(inputs=[seq_in, lat_in], outputs=out, name="elkinematics_v2_bilstm")
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+        loss="binary_crossentropy",
+        metrics=["accuracy", tf.keras.metrics.Recall(name="recall")],
+    )
+    return model
+
+
+def build_model(version: str = "v2", learning_rate: float = LEARNING_RATE) -> Model:
+    """Factory function returning the compiled model for the specified version."""
+    v = version.lower().strip()
+    if v == "v0":
+        return build_v0_baseline(learning_rate=learning_rate)
+    elif v == "v1":
+        return build_v1_xai(learning_rate=learning_rate)
+    elif v == "v2":
+        return build_v2_bilstm(learning_rate=learning_rate)
+    else:
+        raise ValueError(f"Unknown model version: '{version}'. Must be 'v0', 'v1', or 'v2'.")
+
+
+def load_or_build_model(version: str = "v2", filepath: Optional[str] = None) -> Model:
+    """Load existing trained model from disk if available, otherwise build a fresh compiled instance."""
+    v = version.lower().strip()
+    target_path = filepath or MODEL_PATHS.get(v)
+
+    if target_path and os.path.exists(target_path):
+        try:
+            print(f"Loading existing {v.upper()} model weights from {target_path}...")
+            return load_model(target_path)
+        except Exception as e:
+            print(f"Warning: Could not load {target_path} ({e}). Building fresh instance.")
+
+    print(f"Building fresh compiled architecture for {v.upper()}...")
+    return build_model(version=v)

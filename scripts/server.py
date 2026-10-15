@@ -39,12 +39,12 @@ STATIC_DIR = os.path.join(PROJECT_ROOT, "data_collector")
 app = Flask(__name__, static_folder=STATIC_DIR)
 
 # Initialize Active Production Model (V2 Bi-LSTM)
-print("📥 Loading AI Model V2 (Bi-LSTM)...")
+print("Loading AI Model V2 (Bi-LSTM)...")
 try:
     model = tf.keras.models.load_model(MODEL_PATHS["v2"])
-    print(f"✅ Loaded Model V2 from {MODEL_PATHS['v2']}")
+    print(f"Loaded Model V2 from {MODEL_PATHS['v2']}")
 except Exception as e:
-    print(f"⚠️ Warning: Model V2 failed to load from {MODEL_PATHS['v2']}: {e}")
+    print(f"Warning: Model V2 failed to load from {MODEL_PATHS['v2']}: {e}")
     model = None
 
 os.makedirs(DATASET_DIR, exist_ok=True)
@@ -92,7 +92,7 @@ def save_data():
         with open(png_path, "wb") as f:
             f.write(img_data)
 
-    print(f"💾 Saved sample '{base_filename}' to datasets.")
+    print(f"Saved sample '{base_filename}' to datasets.")
     return jsonify({"message": "Successfully saved sample! Thank you for your contribution."})
 
 
@@ -116,7 +116,7 @@ def analyze_live():
             scaler_path=SCALER_PATH,
         )
     except Exception as e:
-        print(f"❌ Inference error: {e}")
+        print(f"Inference error: {e}")
         return jsonify({"error": f"Failed to run inference: {str(e)}"}), 500
 
     # Purge memory after inference to maintain low resource profile

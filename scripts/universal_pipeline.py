@@ -93,7 +93,7 @@ def load_and_scale_universal(
 
     os.makedirs(os.path.dirname(scaler_save_path), exist_ok=True)
     np.savez(scaler_save_path, means=feature_means, stds=feature_stds)
-    print(f"✅ Saved global feature scalers to: {scaler_save_path}")
+    print(f"Saved global feature scalers to: {scaler_save_path}")
 
     return X_seq_scaled, X_lat_scaled, y
 
@@ -163,7 +163,7 @@ def get_v1_data(X_seq_scaled: np.ndarray, X_lat_scaled: np.ndarray, y: np.ndarra
 
 
 def get_v2_data(X_seq_scaled: np.ndarray, X_lat_scaled: np.ndarray, y: np.ndarray):
-    """V2: Multi-input Golden 8 kinematic sequence + latency."""
+    """V2: Multi-input 8 standard kinematic sequence + latency."""
     X_v2_seq = X_seq_scaled[:, :, :8]
     y_time_distributed = np.repeat(np.expand_dims(y, axis=(1, 2)), MAX_TIMESTEPS, axis=1)
     return [X_v2_seq, X_lat_scaled], y_time_distributed

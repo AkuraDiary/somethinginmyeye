@@ -8,60 +8,14 @@ from universal_pipeline import load_and_scale_universal, get_v0_data, get_v1_dat
 from config import *
 
 # ====================================================
-# 1. MODEL ARCHITECTURES (TRUE SAVED VERSIONS)
+# 1. MODEL ARCHITECTURES (CENTRALIZED BUILDER)
 # ====================================================
-
-def build_v0_baseline():
-    """V0: Standard spatial CNN with GlobalAveragePooling"""
-    model = Sequential([
-        Input(shape=(MAX_TIMESTEPS, 3), name="kinematics_input"),
-        Conv1D(filters=32, kernel_size=3, activation='relu'),
-        MaxPooling1D(pool_size=2),
-        Conv1D(filters=64, kernel_size=3, activation='relu'),
-        GlobalAveragePooling1D(),
-        Dense(64, activation='relu'),
-        Dropout(0.5),
-        Dense(1, activation='sigmoid')
-    ], name="elkinematicsv0")
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.Recall(name='recall')])
-    return model
-
-def build_v1_xai():
-    """V1: TimeDistributed CNN with Latency explicitly for XAI"""
-    seq_in = Input(shape=(MAX_TIMESTEPS, 3), name="kinematics_input")
-    x = Conv1D(32, 3, activation='relu', padding='same')(seq_in)
-    x = Conv1D(64, 3, activation='relu', padding='same')(x)
-    
-    lat_in = Input(shape=(1,), name="latency_input")
-    lat_repeated = RepeatVector(MAX_TIMESTEPS)(lat_in)
-    
-    merged = Concatenate()([x, lat_repeated])
-    
-    y = TimeDistributed(Dense(64, activation='relu'))(merged)
-    y = Dropout(0.5)(y)
-    out = TimeDistributed(Dense(1, activation='sigmoid'))(y)
-    
-    model = Model(inputs=[seq_in, lat_in], outputs=out, name="elkinematicsv1")
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.Recall(name='recall')])
-    return model
-
-def build_v2_lstm():
-    """V2: TimeDistributed Bi-LSTM from Jupyter Notebook"""
-    seq_in = Input(shape=(MAX_TIMESTEPS, 8), name="kinematics_input")
-    x = Bidirectional(LSTM(64, return_sequences=True))(seq_in)
-    x = Dropout(0.3)(x)
-    x = Bidirectional(LSTM(32, return_sequences=True))(x)
-    x = Dropout(0.3)(x)
-    
-    lat_in = Input(shape=(1,), name="latency_input")
-    lat_repeated = RepeatVector(MAX_TIMESTEPS)(lat_in)
-    
-    merged = Concatenate()([x, lat_repeated])
-    out = TimeDistributed(Dense(1, activation='sigmoid'), name="heatmap_output")(merged)
-    
-    model = Model(inputs=[seq_in, lat_in], outputs=out, name='elkinematicsv2')
-    model.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy', tf.keras.metrics.Recall(name='recall')])
-    return model
+from model_builder import (
+    build_v0_baseline,
+    build_v1_xai,
+    build_v2_bilstm as build_v2_lstm,
+    build_model,
+)
 
 # ====================================================
 # 2. RUNNER (LOAD OR RETRAIN LOGIC)

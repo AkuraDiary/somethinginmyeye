@@ -1,7 +1,5 @@
-from unified_evaluator import build_v0_baseline, build_v1_xai, build_v2_lstm
+from model_builder import build_v0_baseline, build_v1_xai, build_v2_bilstm as build_v2_lstm
 from config import MODEL_PATHS
-from tensorflow.keras.models import load_model
-from config import *
 
 def main():
     print("\n" + "="*65)

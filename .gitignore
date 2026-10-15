@@ -10,3 +10,5 @@ agents/logs/
 /le-conference-dyslexia/*
 /agents/*
 .agents/*
+graphify-out/*
+AGENTS.md

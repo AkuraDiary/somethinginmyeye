@@ -24,21 +24,21 @@ def predict_sample(model_version: str, csv_filepath: str) -> None:
     version_key = model_version.lower()
     filepath = MODEL_PATHS.get(version_key)
     if not filepath or not os.path.exists(filepath):
-        print(f"❌ Error: Model '{model_version}' not found at: {filepath}")
+        print(f"Error: Model '{model_version}' not found at: {filepath}")
         return
 
-    print(f"📥 Loading Model ({model_version.upper()}) from: {filepath}")
+    print(f"Loading Model ({model_version.upper()}) from: {filepath}")
     try:
         model = tf.keras.models.load_model(filepath)
     except Exception as e:
-        print(f"❌ Error loading model: {e}")
+        print(f"Error loading model: {e}")
         return
 
-    print(f"📄 Analyzing handwriting stroke sample: {csv_filepath}")
+    print(f"Analyzing handwriting stroke sample: {csv_filepath}")
     try:
         df = pd.read_csv(csv_filepath)
     except Exception as e:
-        print(f"❌ Error reading CSV file: {e}")
+        print(f"Error reading CSV file: {e}")
         return
 
     try:
@@ -49,13 +49,13 @@ def predict_sample(model_version: str, csv_filepath: str) -> None:
             scaler_path=SCALER_PATH,
         )
     except Exception as e:
-        print(f"❌ Error during prediction inference: {e}")
+        print(f"Error during prediction inference: {e}")
         return
 
     confidence = global_score * 100.0
 
     print("\n" + "=" * 48)
-    print(f" 🔍 ELKINEMATICS AI SCREENING ({model_version.upper()})")
+    print(f" ELKINEMATICS AI SCREENING ({model_version.upper()})")
     print("=" * 48)
     print(f"Risk Score : {global_score:.4f}")
     if global_score > 0.5:
