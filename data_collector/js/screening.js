@@ -18,7 +18,7 @@ let currentStrokeCount = 0;
 // --- RESPONSIVE CANVAS ---
 function resizeCanvas() {
     const container = document.querySelector('.container');
-    canvas.width = container.clientWidth - 40; 
+    canvas.width = container.clientWidth - 40;
     canvas.height = window.innerHeight * 0.58;
     clearCanvas();
 }
@@ -84,7 +84,7 @@ scrollTrack.addEventListener('pointermove', (e) => {
 scrollTrack.addEventListener('pointerup', (e) => {
     isDraggingScroll = false;
     scrollThumb.classList.remove('dragging');
-    try { scrollTrack.releasePointerCapture(e.pointerId); } catch(err){}
+    try { scrollTrack.releasePointerCapture(e.pointerId); } catch (err) { }
     updateThumbFromScroll();
 });
 
@@ -220,7 +220,7 @@ function clearCanvas() {
     statusEl.innerText = "Smooth";
     statusEl.classList.remove('telemetry-value-variable', 'telemetry-value-hesitant');
     statusEl.classList.add('telemetry-value-smooth');
-    
+
     // Baseline guide
     ctx.beginPath();
     ctx.moveTo(canvas.width * 0.05, canvas.height * 0.75);
@@ -328,7 +328,113 @@ async function queryGoogleInk(strokes) {
     return { winner: "?", candidates: [] };
 }
 
-// --- ALGORITHMIC HORIZONTAL REFLECTION TEST (UNIVERSAL MIRROR DETECTOR) ---
+// --- KINEMATIC CHARACTER CLUSTERING & LIGATURE SPLITTING ---
+function segmentIntoCharacterClusters(strokes) {
+    if (!strokes || strokes.length === 0) return [];
+
+    // Step 1: Pre-process wide strokes with inflection point splitting (for unbroken cursive)
+    const refinedStrokes = [];
+    strokes.forEach(s => {
+        if (s.length < 15) {
+            refinedStrokes.push(s);
+            return;
+        }
+
+        const xs = s.map(p => p.x);
+        const ys = s.map(p => p.y);
+        const sW = Math.max(...xs) - Math.min(...xs);
+        const sH = Math.max(...ys) - Math.min(...ys);
+        const yMin = Math.min(...ys);
+
+        // If stroke is exceptionally wide (spans > 1.8x height), inspect ligature valleys
+        if (sW > 1.8 * Math.max(sH, 20)) {
+            const splitIndices = [];
+            const baselineThreshold = yMin + 0.55 * sH;
+
+            for (let i = 2; i < s.length - 2; i++) {
+                const prev = s[i - 1];
+                const curr = s[i];
+                const next = s[i + 1];
+
+                // Valley minimum: descending into ascending in the lower half of stroke
+                if (curr.y >= baselineThreshold && curr.y >= prev.y && curr.y >= next.y) {
+                    const lastSplitIdx = splitIndices.length > 0 ? splitIndices[splitIndices.length - 1] : 0;
+                    if (curr.x - s[lastSplitIdx].x > 0.40 * sH) {
+                        splitIndices.push(i);
+                    }
+                }
+            }
+
+            if (splitIndices.length > 0) {
+                let startIdx = 0;
+                splitIndices.forEach(splitIdx => {
+                    refinedStrokes.push(s.slice(startIdx, splitIdx + 1));
+                    startIdx = splitIdx;
+                });
+                if (startIdx < s.length - 1) {
+                    refinedStrokes.push(s.slice(startIdx));
+                }
+            } else {
+                refinedStrokes.push(s);
+            }
+        } else {
+            refinedStrokes.push(s);
+        }
+    });
+
+    // Step 2: Sort strokes by horizontal center
+    const strokeMeta = refinedStrokes.map(s => {
+        const xs = s.map(p => p.x);
+        const ys = s.map(p => p.y);
+        const ts = s.map(p => p.time);
+        const xMin = Math.min(...xs);
+        const xMax = Math.max(...xs);
+        const yMin = Math.min(...ys);
+        const yMax = Math.max(...ys);
+        return {
+            stroke: s,
+            xMin, xMax, yMin, yMax,
+            width: Math.max(xMax - xMin, 1),
+            height: Math.max(yMax - yMin, 1),
+            cx: (xMin + xMax) / 2,
+            tStart: Math.min(...ts),
+            tEnd: Math.max(...ts)
+        };
+    });
+
+    strokeMeta.sort((a, b) => a.xMin - b.xMin);
+
+    // Step 3: Cluster overlapping or temporally contiguous strokes
+    const clusters = [];
+    let currentCluster = [strokeMeta[0]];
+
+    for (let i = 1; i < strokeMeta.length; i++) {
+        const prevItem = currentCluster[currentCluster.length - 1];
+        const currItem = strokeMeta[i];
+
+        const clusterXMax = Math.max(...currentCluster.map(m => m.xMax));
+        const avgH = Math.max(...currentCluster.map(m => m.height));
+
+        const gapX = currItem.xMin - clusterXMax;
+        const timePause = Math.max(0, currItem.tStart - prevItem.tEnd);
+
+        // Group together if horizontal gap is small AND air-time pause is short
+        if (gapX <= 0.18 * avgH && (timePause < 300 || gapX <= 0)) {
+            currentCluster.push(currItem);
+        } else {
+            clusters.push(currentCluster.map(m => m.stroke));
+            currentCluster = [currItem];
+        }
+    }
+
+    if (currentCluster.length > 0) {
+        clusters.push(currentCluster.map(m => m.stroke));
+    }
+
+    return clusters;
+}
+
+// --- ALGORITHMIC HORIZONTAL REFLECTION TEST (DUAL-TRACK WORD & CHARACTER RECOGNITION) ---
 async function transcribeWithReflectionAnalysis(rawStrokes) {
     const strokes = [];
     let currentStroke = [];
@@ -351,91 +457,195 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
         return { winner: "?", candidates: [], isReversal: false, notice: "" };
     }
 
-    // Bounding box for horizontal reflection
-    const allPts = strokes.flat();
-    const xs = allPts.map(p => p.x);
-    const xMin = Math.min(...xs);
-    const xMax = Math.max(...xs);
-
-    // Compute horizontally mirrored strokes: x_mirrored = xMax - (x - xMin)
-    const mirroredStrokes = strokes.map(s => s.map(pt => ({
-        ...pt,
-        x: Math.round(xMax - (pt.x - xMin))
-    })));
-
-    // Run raw trajectory and horizontal reflection concurrently
-    const [rawResult, mirrorResult] = await Promise.all([
-        queryGoogleInk(strokes),
-        queryGoogleInk(mirroredStrokes)
-    ]);
-
+    // Track 1: Query full trajectory for global lexical context
+    const rawResult = await queryGoogleInk(strokes);
     const rawWinner = rawResult.winner;
-    const mirrorWinner = mirrorResult.winner;
     const rawCandidates = rawResult.candidates || [];
-    const mirrorCandidates = mirrorResult.candidates || [];
 
-    // Asymmetric reversal dictionary
+    // User-Updated Asymmetric Reversal Dictionary
     const asymmetricReversible = {
-        'N': 'И', 'n': 'и',
-        'S': 'Ƨ', 's': 'ƨ',
-        'E': 'Ǝ', 'e': 'ɘ',
-        'B': '𐤡', 'D': 'ᗡ',
+        // 1. Classic Horizontal Reversals (Left/Right)
+        // The most common visual presentation in early readers and persistent dyslexia
         'b': 'd', 'd': 'b',
         'p': 'q', 'q': 'p',
-        'C': 'Ɔ', 'c': 'ɔ',
-        'J': 'ᒐ', 'j': 'ϳ',
-        'Z': 'S',
-        '3': 'Ɛ',
-        '7': 'г'
+
+        // 2. Structural Horizontal Flips (Uppercase & Unique)
+        'B': 'ꓭ',             // Lisu Bha (better font support than Phoenician)
+        'D': 'ᗡ',             // Canadian Syllabics
+        'C': 'Ɔ', 'c': 'ɔ',   // Open O
+        'E': 'Ǝ', 'e': 'ɘ',   // Reversed E
+        'F': 'ꟻ',             // Epigraphic inverted F
+        'G': '⅁',             // Turned G
+        'J': 'ᒐ',             // Canadian Syllabics
+        'L': '⅃',             // Reversed L
+        'N': 'И', 'n': 'и',   // Cyrillic I
+        'P': 'ꟼ',             // Reversed P
+        'R': 'Я', 'r': 'ɿ',   // Cyrillic Ya / Reversed r
+        'S': 'Ƨ', 's': 'ƨ',   // Latin tone 2
+        'Z': 'S',             // Z and S are commonly cross-confused in handwriting
+
+        // 3. Rotational & Vertical Inversions (Top/Bottom)
+        // Often overlooked in apps, but highly prevalent in visual processing deficits
+        'm': 'w', 'w': 'm',
+        'u': 'n', 'n': 'u',   // Note: overrides the 'n':'и' above depending on testing goal
+        't': 'f', 'f': 't',   // Ascender/crossbar confusion
+
+        // 4. Numbers
+        '2': 'S',             // 2/S confusion is common
+        '3': 'Ɛ',             // Open E
+        '4': 'ᔭ',             // Canadian Syllabics
+        '5': 'Ƨ',             // 5/S or reversed 5
+        '6': '9', '9': '6',   // Rotational inversion
+        '7': 'г'              // Cyrillic Ghe
     };
 
     let isReversal = false;
     let displayWinner = rawWinner;
     let notice = "";
+    let mirrorWinner = "?";
+    let mirrorCandidates = [];
 
     const isPrompted = modePrompted.checked;
-    const promptTarget = promptSelect.value.toLowerCase().trim();
-    const rawUpper = rawWinner.toUpperCase();
+    const promptTarget = promptSelect.value.trim();
 
-    // Letters with bilateral vertical symmetry cannot be mirror-reversed
-    const symmetricLetters = ['A', 'H', 'I', 'M', 'O', 'T', 'U', 'V', 'W', 'X', 'Y'];
-    const isSymmetric = symmetricLetters.includes(rawUpper);
+    // Track 2: Kinematic Clustering into Characters
+    const clusters = segmentIntoCharacterClusters(strokes);
 
-    if (!isSymmetric) {
-        // Case 1: Reciprocal letter pairs (b vs d, p vs q) - evaluate against prompt
-        if (isPrompted && ['b', 'd', 'p', 'q'].includes(promptTarget)) {
-            if (promptTarget === 'b' && (rawWinner.toLowerCase() === 'd' || mirrorWinner.toLowerCase() === 'b')) {
+    // --- BRANCH A: SINGLE CHARACTER SCREENING ---
+    if (clusters.length <= 1 || rawWinner.length <= 1) {
+        const allPts = strokes.flat();
+        const xs = allPts.map(p => p.x);
+        const xMin = Math.min(...xs);
+        const xMax = Math.max(...xs);
+
+        const mirroredStrokes = strokes.map(s => s.map(pt => ({
+            ...pt,
+            x: Math.round(xMax - (pt.x - xMin))
+        })));
+
+        const mirrorResult = await queryGoogleInk(mirroredStrokes);
+        mirrorWinner = mirrorResult.winner;
+        mirrorCandidates = mirrorResult.candidates || [];
+
+        const rawUpper = rawWinner.toUpperCase();
+        const symmetricLetters = ['A', 'H', 'I', 'M', 'O', 'T', 'U', 'V', 'W', 'X', 'Y'];
+        const isSymmetric = symmetricLetters.includes(rawUpper);
+
+        if (!isSymmetric) {
+            // Case 1: Reciprocal letter pairs in prompted mode
+            if (isPrompted && ['b', 'd', 'p', 'q'].includes(promptTarget.toLowerCase())) {
+                const pLow = promptTarget.toLowerCase();
+                if (pLow === 'b' && (rawWinner.toLowerCase() === 'd' || mirrorWinner.toLowerCase() === 'b')) {
+                    isReversal = true;
+                    displayWinner = "d";
+                    notice = "Letter Observation: Mirror reversal detected ('b' written as 'd').";
+                } else if (pLow === 'd' && (rawWinner.toLowerCase() === 'b' || mirrorWinner.toLowerCase() === 'd')) {
+                    isReversal = true;
+                    displayWinner = "b";
+                    notice = "Letter Observation: Mirror reversal detected ('d' written as 'b').";
+                } else if (pLow === 'p' && (rawWinner.toLowerCase() === 'q' || mirrorWinner.toLowerCase() === 'p')) {
+                    isReversal = true;
+                    displayWinner = "q";
+                    notice = "Letter Observation: Mirror reversal detected ('p' written as 'q').";
+                } else if (pLow === 'q' && (rawWinner.toLowerCase() === 'p' || mirrorWinner.toLowerCase() === 'q')) {
+                    isReversal = true;
+                    displayWinner = "p";
+                    notice = "Letter Observation: Mirror reversal detected ('q' written as 'p').";
+                }
+            }
+            // Case 2: Asymmetric chiral reversals
+            else if (mirrorWinner in asymmetricReversible && mirrorWinner.toUpperCase() !== rawUpper && !['b', 'd', 'p', 'q'].includes(mirrorWinner)) {
                 isReversal = true;
-                displayWinner = "d (Reversed b)";
-                notice = "Letter Observation: Mirror reversal detected ('b' written as 'd').";
-            } else if (promptTarget === 'd' && (rawWinner.toLowerCase() === 'b' || mirrorWinner.toLowerCase() === 'd')) {
-                isReversal = true;
-                displayWinner = "b (Reversed d)";
-                notice = "Letter Observation: Mirror reversal detected ('d' written as 'b').";
-            } else if (promptTarget === 'p' && (rawWinner.toLowerCase() === 'q' || mirrorWinner.toLowerCase() === 'p')) {
-                isReversal = true;
-                displayWinner = "q (Reversed p)";
-                notice = "Letter Observation: Mirror reversal detected ('p' written as 'q').";
-            } else if (promptTarget === 'q' && (rawWinner.toLowerCase() === 'p' || mirrorWinner.toLowerCase() === 'q')) {
-                isReversal = true;
-                displayWinner = "p (Reversed q)";
-                notice = "Letter Observation: Mirror reversal detected ('q' written as 'p').";
+                const symbol = asymmetricReversible[mirrorWinner] || mirrorWinner;
+                displayWinner = symbol;
+                notice = `Letter Observation: Mirror reversal detected (drawn as mirror image of '${mirrorWinner}').`;
+            }
+            // Case 3: Geometric verification fallback for inverted N
+            else {
+                const geom = inspectOrthographicReversals(rawStrokes, rawCandidates);
+                if (geom && geom.detected) {
+                    isReversal = true;
+                    displayWinner = "И";
+                    notice = geom.notice;
+                }
             }
         }
-        // Case 2: Non-character chiral reversals (N -> И, S -> Ƨ, E -> Ǝ, B -> ᙠ, 3 -> Ɛ)
-        else if (mirrorWinner in asymmetricReversible && mirrorWinner.toUpperCase() !== rawUpper && !['b', 'd', 'p', 'q'].includes(mirrorWinner)) {
-            isReversal = true;
-            const symbol = asymmetricReversible[mirrorWinner] || `Reversed ${mirrorWinner}`;
-            displayWinner = `${symbol}`;//(Reversed ${mirrorWinner})`;
-            notice = `Letter Observation: Mirror reversal detected (drawn as mirror image of '${mirrorWinner}').`;
-        }
-        // Case 3: Geometric verification fallback for inverted N
-        else {
-            const geom = inspectOrthographicReversals(rawStrokes, rawCandidates);
-            if (geom && geom.detected) {
-                isReversal = true;
-                displayWinner = geom.winner;
-                notice = geom.notice;
+    }
+    // --- BRANCH B: MULTI-CHARACTER WORDS (e.g. 'bebek', '𐤡ebek') ---
+    else {
+        displayWinner = rawWinner;
+
+        // Perform local horizontal reflection on each individual character cluster
+        for (let k = 0; k < clusters.length; k++) {
+            const clusterStrokes = clusters[k];
+            const clusterPts = clusterStrokes.flat();
+            if (clusterPts.length < 4) continue;
+
+            const cXs = clusterPts.map(p => p.x);
+            const cXMin = Math.min(...cXs);
+            const cXMax = Math.max(...cXs);
+
+            const localMirroredStrokes = clusterStrokes.map(s => s.map(pt => ({
+                ...pt,
+                x: Math.round(cXMax - (pt.x - cXMin))
+            })));
+
+            // In Prompted Mode: compare against the expected character at this position
+            if (isPrompted && k < promptTarget.length) {
+                const expectedChar = promptTarget[k];
+                const expectedUpper = expectedChar.toUpperCase();
+
+                // If this position is prone to reversal or currently mismatches
+                const isReversibleTarget = (expectedChar in asymmetricReversible) || (expectedUpper in asymmetricReversible);
+                const currentRawChar = rawWinner[k] || '';
+
+                if (isReversibleTarget || currentRawChar.toLowerCase() !== expectedChar.toLowerCase()) {
+                    const localMirrorResult = await queryGoogleInk(localMirroredStrokes);
+                    const lWinner = localMirrorResult.winner;
+
+                    // Did the mirrored cluster match the expected target?
+                    if (lWinner.toLowerCase() === expectedChar.toLowerCase()) {
+                        isReversal = true;
+                        let revGlyph = expectedChar;
+                        if (expectedUpper in asymmetricReversible) {
+                            revGlyph = asymmetricReversible[expectedUpper];
+                        } else if (expectedChar in asymmetricReversible) {
+                            revGlyph = asymmetricReversible[expectedChar];
+                        }
+
+                        // Substitute clean reversed glyph at character position k
+                        if (k < displayWinner.length) {
+                            displayWinner = displayWinner.substring(0, k) + revGlyph + displayWinner.substring(k + 1);
+                        } else {
+                            displayWinner += revGlyph;
+                        }
+
+                        notice = `Letter Observation: Mirror reversal detected at position ${k + 1} (drawn as mirror image of '${expectedChar}').`;
+                        break;
+                    }
+                }
+            }
+            // In Free Writing Mode: test if any cluster mirrors into an asymmetric chiral letter
+            else {
+                const localMirrorResult = await queryGoogleInk(localMirroredStrokes);
+                const lWinner = localMirrorResult.winner;
+
+                if (lWinner in asymmetricReversible && !['b', 'd', 'p', 'q'].includes(lWinner)) {
+                    const currentChar = rawWinner[k] || '';
+                    if (lWinner.toUpperCase() !== currentChar.toUpperCase()) {
+                        isReversal = true;
+                        const symbol = asymmetricReversible[lWinner] || lWinner;
+
+                        if (k < displayWinner.length) {
+                            displayWinner = displayWinner.substring(0, k) + symbol + displayWinner.substring(k + 1);
+                        } else {
+                            displayWinner += symbol;
+                        }
+
+                        notice = `Letter Observation: Mirror reversal detected at position ${k + 1} (drawn as mirror image of '${lWinner}').`;
+                        break;
+                    }
+                }
             }
         }
     }
@@ -599,7 +809,7 @@ analyzeBtn.addEventListener('click', async () => {
         });
 
         const result = await response.json();
-        
+
         if (result.error) {
             alert(result.error);
             return;

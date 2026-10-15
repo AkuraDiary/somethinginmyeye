@@ -1,7 +1,7 @@
 """
-Specific Learning Disorder (SLD) Clinical Differential Integrator.
+Specific Learning Disorder (SLD) Differential Integrator.
 Synthesizes Kinematic Motoric Stream (Bi-LSTM), Orthographic Decoder (Reversals & Spelling),
-and Cognitive Latency to output calibrated differential screening assessments grounded in DSM-5.
+and Cognitive Latency to output calibrated differential screening assessments in DSM-5.
 """
 
 from __future__ import annotations
