@@ -12,3 +12,4 @@ agents/logs/
 .agents/*
 graphify-out/*
 AGENTS.md
+ujipendatasets/*
