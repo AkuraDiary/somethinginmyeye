@@ -327,5 +327,36 @@ In children with motor dysgraphia or visuospatial integration deficits, writing 
   - Loop to the left of stem $\to$ **`d`**
   This completely eliminates false `'l'` transcriptions caused by pediatric motor segmentation.
 
+---
+
+## 22. Writing Speed Invariance & The Equi-Affine Velocity Dilemma in SLD
+
+### The Problem: Velocity Profile Fluctuation
+Pediatric handwriting—especially in Specific Learning Disorders (SLD) like motor dysgraphia and dyslexia—displays high velocity variance. Fast writers produce sparse, elongated stroke samples, while hesitant writers produce dense clusters with tremors and local velocity inversions (NIVs).
+* *The Failure Mode:* Naive segmentation that relies on temporal time windows ($dt < 300\text{ms}$) or raw Euclidean point distances ($\Delta x > \text{threshold}$) splits slow, hesitant strokes into fragments or merges fast, continuous phrases into a single bounding box.
+* *The Clinical Principle (2/3 Power Law):* Human motor control couples velocity nonlinearly to curvature ($v(t) \propto \kappa(t)^{-1/3}$). Raw velocity fluctuates unpredictably across children.
+* *The Solution (Arc-Length Parameterization):*
+  1. Spatially resample all strokes to uniform arc-length increments ($ds = 3\text{px}$) before clustering.
+  2. Normalize horizontal and vertical gap tolerances strictly relative to character height ($H = y_{\text{max}} - y_{\text{min}}$).
+  3. Detect cursive ligature splitting points using curvature extrema ($\kappa_{\text{extrema}}$) at the baseline rather than raw velocity drops.
+
+---
+
+## 23. The Dual-Track Hybrid Resolver Architecture
+
+When decoding handwriting in clinical screening, two distinct requirements conflict:
+1. **Lexical Context:** Whole words require dictionary priors to resolve ambiguous cursive ligatures.
+2. **Clinical Anomaly Detection:** Orthographic mirror reversals (e.g., $D \to ᗡ$, $B \to ꓭ$) are actively suppressed by standard language models, which misclassify them as valid standard letters (e.g., reading $ᗡ$ as `I` or `|`).
+
+### The Architecture:
+* **Track 1 (Lexical Backbone):** Google Digital Ink evaluates global stroke flow to provide word context (`candidates[0]`).
+* **Track 2 (Clinical Kinematic Inspector):** The In-House Dual-Head ONNX Classifier independently evaluates each isolated stroke cluster $(1, 64, 8)$ for:
+  - Head 1: 62-class alphanumeric identity ($p_{\text{char}}$)
+  - Head 2: Binary reversal detection ($p_{\text{rev}} \ge 0.50$)
+* **The Resolver:**
+  - If Head 2 flags a reversal ($p_{\text{rev}} \ge 0.50$), the resolver overrides the lexical engine at that character index, mapping the recognized canonical letter to its exact mirror glyph (e.g., $D \to ᗡ$, $B \to ꓭ$, $b \to d$, $E \to Ǝ$, $N \to И$).
+  - If normal ($p_{\text{rev}} < 0.50$), the resolver retains the lexical engine's output.
+
+
 
 

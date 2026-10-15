@@ -78,12 +78,33 @@
                 <button class="btn-secondary" id="analyzeBtn">Run Assessment</button>
             </div>
 
+            <!-- Visualization & Transparency Controls -->
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; margin-bottom: 5px; font-size: 13px; color: #475569;">
+                <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="toggleBoundingBoxes" checked style="cursor: pointer; width: 16px; height: 16px; accent-color: #3b82f6;">
+                    <span><strong>Show Segmented Character Bounding Boxes</strong></span>
+                </label>
+                <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
+                    <input type="checkbox" id="togglePhraseBox" style="cursor: pointer; width: 15px; height: 15px; accent-color: #64748b;">
+                    <span>Show Whole Word Box</span>
+                </label>
+            </div>
+
             <!-- Transcription Box -->
             <div id="transcriptionCard" class="transcription-card">
                 <div class="transcription-label">Recognized Text</div>
                 <div id="decodedTextDisplay" class="decoded-text-display">"..."</div>
                 <div id="alternativeCandidates" class="alternative-candidates">Alternative Guesses: —</div>
                 <div id="reversalNotice" class="reversal-notice"></div>
+            </div>
+
+            <!-- Model Transparency & Diagnostics Drawer (Always Dedicated Container) -->
+            <div id="modelDiagnosticsCard" class="model-diagnostics-card" style="display: none;">
+                <div class="diagnostics-header">
+                    <span>Individual Character Inference (ONNX Dual-Head)</span>
+                    <span id="diagnosticsSummaryTag" class="diag-tag diag-tag-normal">OK</span>
+                </div>
+                <div id="diagnosticsDetails" class="diagnostics-details"></div>
             </div>
 
             <!-- Assessment Summary -->

@@ -198,8 +198,160 @@ function updateMovementMetrics() {
     }
 }
 
-function clearCanvas() {
+let lastSegmentationDiagnostics = null;
+const toggleBoundingBoxes = document.getElementById('toggleBoundingBoxes');
+
+function redrawCanvasBase() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Baseline guide
+    ctx.beginPath();
+    ctx.moveTo(canvas.width * 0.05, canvas.height * 0.75);
+    ctx.lineTo(canvas.width * 0.95, canvas.height * 0.75);
+    ctx.strokeStyle = "#ecf0f1";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+}
+
+function redrawAllUserStrokes() {
+    redrawCanvasBase();
+    if (strokeData.length === 0) return;
+
+    let inStroke = false;
+    for (let i = 0; i < strokeData.length; i++) {
+        const pt = strokeData[i];
+        if (pt.touching === 1 || pt.touching === true) {
+            if (!inStroke) {
+                ctx.beginPath();
+                ctx.moveTo(pt.x, pt.y);
+                inStroke = true;
+            } else {
+                ctx.lineWidth = Math.max((pt.pressure || 0.5) * 5, 2.5);
+                ctx.strokeStyle = "#2c3e50";
+                ctx.lineTo(pt.x, pt.y);
+                ctx.stroke();
+            }
+        } else {
+            inStroke = false;
+        }
+    }
+}
+
+const togglePhraseBox = document.getElementById('togglePhraseBox');
+
+function renderBoundingBoxesOverlay() {
+    if (!lastSegmentationDiagnostics || lastSegmentationDiagnostics.length === 0) return;
+
+    redrawAllUserStrokes();
+
+    const showIndividualBoxes = toggleBoundingBoxes ? toggleBoundingBoxes.checked : true;
+    const showPhraseBox = togglePhraseBox ? togglePhraseBox.checked : false;
+
+    // Optional: Draw whole phrase bounding box only if explicitly checked
+    if (showPhraseBox && lastSegmentationDiagnostics.length > 1) {
+        const allXs = lastSegmentationDiagnostics.map(d => [d.bbox.x, d.bbox.x + d.bbox.w]).flat();
+        const allYs = lastSegmentationDiagnostics.map(d => [d.bbox.y, d.bbox.y + d.bbox.h]).flat();
+        const pXMin = Math.min(...allXs) - 14;
+        const pYMin = Math.min(...allYs) - 14;
+        const pW = (Math.max(...allXs) - Math.min(...allXs)) + 28;
+        const pH = (Math.max(...allYs) - Math.min(...allYs)) + 28;
+
+        ctx.save();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = "#94a3b8";
+        ctx.setLineDash([4, 4]);
+        ctx.strokeRect(pXMin, pYMin, pW, pH);
+        ctx.fillStyle = "#64748b";
+        ctx.font = "italic 11px -apple-system, sans-serif";
+        ctx.fillText(`Whole Phrase (${lastSegmentationDiagnostics.length} clusters)`, pXMin + 6, pYMin - 4);
+        ctx.restore();
+    }
+
+    if (!showIndividualBoxes) return;
+
+    const CLUSTER_PALETTE = [
+        { border: "#2563eb", fill: "rgba(37, 99, 235, 0.12)", stroke: "#1d4ed8" }, // Blue
+        { border: "#059669", fill: "rgba(5, 150, 105, 0.12)", stroke: "#047857" }, // Emerald
+        { border: "#d97706", fill: "rgba(217, 119, 6, 0.12)", stroke: "#b45309" }, // Amber
+        { border: "#7c3aed", fill: "rgba(124, 58, 237, 0.12)", stroke: "#6d28d9" }, // Violet
+        { border: "#0891b2", fill: "rgba(8, 145, 178, 0.12)", stroke: "#0e7490" }, // Cyan
+        { border: "#db2777", fill: "rgba(219, 39, 119, 0.12)", stroke: "#be185d" }, // Pink
+    ];
+
+    const padding = 8;
+    lastSegmentationDiagnostics.forEach((d, idx) => {
+        if (!d.bbox) return;
+
+        const bx = Math.max(0, d.bbox.x - padding);
+        const by = Math.max(0, d.bbox.y - padding);
+        const bw = d.bbox.w + (padding * 2);
+        const bh = d.bbox.h + (padding * 2);
+
+        const isRev = d.isReversed;
+        const palette = CLUSTER_PALETTE[idx % CLUSTER_PALETTE.length];
+        const boxColor = isRev ? "rgba(220, 38, 38, 0.95)" : palette.border;
+        const boxFill = isRev ? "rgba(254, 226, 226, 0.22)" : palette.fill;
+
+        // Draw bounding box rectangle
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = boxColor;
+        ctx.setLineDash([6, 3]);
+        ctx.strokeRect(bx, by, bw, bh);
+
+        ctx.fillStyle = boxFill;
+        ctx.fillRect(bx, by, bw, bh);
+
+        // Header label badge on top of the bounding box
+        const labelText = `C#${d.clusterIndex}: '${d.onnxCanonicalChar}' → ${d.resolvedGlyph} (${d.onnxCharConfidence}%)`;
+        ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, sans-serif";
+        const textWidth = ctx.measureText(labelText).width;
+        const badgeW = textWidth + 14;
+        const badgeH = 20;
+        const badgeY = Math.max(2, by - badgeH - 2);
+
+        ctx.setLineDash([]);
+        ctx.fillStyle = boxColor;
+        ctx.fillRect(bx, badgeY, badgeW, badgeH);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(labelText, bx + 7, badgeY + 14);
+
+        // Sub-badge at bottom showing reversal score
+        const revText = isRev ? `REVERSED ${d.reversalProbability}%` : `NORMAL ${d.reversalProbability}%`;
+        ctx.font = "600 11px -apple-system, BlinkMacSystemFont, sans-serif";
+        const revWidth = ctx.measureText(revText).width;
+        const subBadgeW = revWidth + 10;
+        const subBadgeH = 17;
+        const subBadgeY = by + bh + 3;
+
+        ctx.fillStyle = isRev ? "#991b1b" : "#334155";
+        ctx.fillRect(bx, subBadgeY, subBadgeW, subBadgeH);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(revText, bx + 5, subBadgeY + 12);
+
+        ctx.restore();
+    });
+}
+
+if (toggleBoundingBoxes) {
+    toggleBoundingBoxes.addEventListener('change', () => {
+        if (lastSegmentationDiagnostics && lastSegmentationDiagnostics.length > 0) {
+            renderBoundingBoxesOverlay();
+        }
+    });
+}
+if (togglePhraseBox) {
+    togglePhraseBox.addEventListener('change', () => {
+        if (lastSegmentationDiagnostics && lastSegmentationDiagnostics.length > 0) {
+            renderBoundingBoxesOverlay();
+        }
+    });
+}
+
+function clearCanvas() {
+    lastSegmentationDiagnostics = null;
+    redrawCanvasBase();
     strokeData = [];
     hasStartedWriting = false;
     promptStartTime = Date.now();
@@ -208,6 +360,22 @@ function clearCanvas() {
 
     document.getElementById('transcriptionCard').style.display = 'none';
     document.getElementById('resultsDashboard').style.display = 'none';
+
+    // Clear and hide Model Diagnostics & Inference Cards
+    const diagCard = document.getElementById('modelDiagnosticsCard');
+    const diagDetails = document.getElementById('diagnosticsDetails');
+    const diagSummaryTag = document.getElementById('diagnosticsSummaryTag');
+    if (diagCard) {
+        diagCard.style.display = 'none';
+    }
+    if (diagDetails) {
+        diagDetails.innerHTML = '';
+    }
+    if (diagSummaryTag) {
+        diagSummaryTag.className = 'diag-tag diag-tag-normal';
+        diagSummaryTag.innerText = 'OK';
+    }
+
     const reversalNotice = document.getElementById('reversalNotice');
     if (reversalNotice) {
         reversalNotice.style.display = 'none';
@@ -220,14 +388,6 @@ function clearCanvas() {
     statusEl.innerText = "Smooth";
     statusEl.classList.remove('telemetry-value-variable', 'telemetry-value-hesitant');
     statusEl.classList.add('telemetry-value-smooth');
-
-    // Baseline guide
-    ctx.beginPath();
-    ctx.moveTo(canvas.width * 0.05, canvas.height * 0.75);
-    ctx.lineTo(canvas.width * 0.95, canvas.height * 0.75);
-    ctx.strokeStyle = "#ecf0f1";
-    ctx.lineWidth = 3;
-    ctx.stroke();
 }
 
 resizeCanvas();
@@ -332,9 +492,55 @@ async function queryGoogleInk(strokes) {
 function segmentIntoCharacterClusters(strokes) {
     if (!strokes || strokes.length === 0) return [];
 
-    // Step 1: Pre-process wide strokes with inflection point splitting (for unbroken cursive)
+    // Filter out accidental micro-taps (< 3 points and dimensions < 5px)
+    const cleanStrokes = strokes.filter(s => {
+        if (s.length >= 3) return true;
+        const xs = s.map(p => p.x), ys = s.map(p => p.y);
+        return (Math.max(...xs) - Math.min(...xs) > 5) || (Math.max(...ys) - Math.min(...ys) > 5);
+    });
+
+    if (cleanStrokes.length === 0) return strokes;
+
+    // Helper: Resample a single stroke by equidistant spatial arc length (e.g. step = 3.5px)
+    // This decouples the stroke geometry entirely from writing velocity and sampling frequency fluctuations.
+    function resampleStrokeEquidistant(strokePts, stepSize = 3.5) {
+        if (!strokePts || strokePts.length < 2) return strokePts;
+        const cumDist = [0];
+        for (let i = 1; i < strokePts.length; i++) {
+            const d = Math.hypot(strokePts[i].x - strokePts[i - 1].x, strokePts[i].y - strokePts[i - 1].y);
+            cumDist.push(cumDist[i - 1] + d);
+        }
+        const totalL = cumDist[cumDist.length - 1];
+        if (totalL < stepSize) return strokePts;
+
+        const numSteps = Math.max(Math.floor(totalL / stepSize), 2);
+        const resampled = [];
+        for (let j = 0; j <= numSteps; j++) {
+            const targetDist = (j / numSteps) * totalL;
+            let idx = cumDist.findIndex(d => d >= targetDist);
+            if (idx <= 0) {
+                resampled.push({ ...strokePts[0] });
+            } else {
+                const p0 = strokePts[idx - 1];
+                const p1 = strokePts[idx];
+                const segmentSpan = cumDist[idx] - cumDist[idx - 1];
+                const t = segmentSpan > 1e-5 ? (targetDist - cumDist[idx - 1]) / segmentSpan : 0;
+                resampled.push({
+                    x: p0.x + t * (p1.x - p0.x),
+                    y: p0.y + t * (p1.y - p0.y),
+                    pressure: p0.pressure + t * ((p1.pressure || 0.5) - (p0.pressure || 0.5)),
+                    time: p0.time + t * (p1.time - p0.time),
+                    touching: p0.touching
+                });
+            }
+        }
+        return resampled;
+    }
+
+    // Step 1: Resample strokes uniformly to arc-length coordinates, then inspect cursive ligatures
     const refinedStrokes = [];
-    strokes.forEach(s => {
+    cleanStrokes.forEach(rawS => {
+        const s = resampleStrokeEquidistant(rawS, 3.5);
         if (s.length < 15) {
             refinedStrokes.push(s);
             return;
@@ -346,20 +552,25 @@ function segmentIntoCharacterClusters(strokes) {
         const sH = Math.max(...ys) - Math.min(...ys);
         const yMin = Math.min(...ys);
 
-        // If stroke is exceptionally wide (spans > 1.8x height), inspect ligature valleys
-        if (sW > 1.8 * Math.max(sH, 20)) {
+        // If stroke is exceptionally wide (spans > 1.6x height), inspect spatial ligature valleys
+        if (sW > 1.6 * Math.max(sH, 22)) {
             const splitIndices = [];
-            const baselineThreshold = yMin + 0.55 * sH;
+            const baselineThreshold = yMin + 0.45 * sH;
 
-            for (let i = 2; i < s.length - 2; i++) {
-                const prev = s[i - 1];
+            // Using 5-point spatial window on equidistant points
+            for (let i = 3; i < s.length - 3; i++) {
+                const prev2 = s[i - 2], prev1 = s[i - 1];
                 const curr = s[i];
-                const next = s[i + 1];
+                const next1 = s[i + 1], next2 = s[i + 2];
 
-                // Valley minimum: descending into ascending in the lower half of stroke
-                if (curr.y >= baselineThreshold && curr.y >= prev.y && curr.y >= next.y) {
+                // Geometric valley: local y-maximum (towards bottom baseline in canvas coordinates)
+                const isLocalValley = curr.y >= baselineThreshold &&
+                                      curr.y >= prev1.y && curr.y >= prev2.y &&
+                                      curr.y >= next1.y && curr.y >= next2.y;
+
+                if (isLocalValley) {
                     const lastSplitIdx = splitIndices.length > 0 ? splitIndices[splitIndices.length - 1] : 0;
-                    if (curr.x - s[lastSplitIdx].x > 0.40 * sH) {
+                    if (curr.x - s[lastSplitIdx].x > 0.35 * sH) {
                         splitIndices.push(i);
                     }
                 }
@@ -382,7 +593,7 @@ function segmentIntoCharacterClusters(strokes) {
         }
     });
 
-    // Step 2: Sort strokes by horizontal center
+    // Step 2: Sort strokes by horizontal bounding box
     const strokeMeta = refinedStrokes.map(s => {
         const xs = s.map(p => p.x);
         const ys = s.map(p => p.y);
@@ -401,6 +612,11 @@ function segmentIntoCharacterClusters(strokes) {
             tEnd: Math.max(...ts)
         };
     });
+
+    // Step 2b: If prompt is single letter, keep unified. Otherwise, always run kinematic clustering
+    if (strokeMeta.length === 1) {
+        return [cleanStrokes];
+    }
 
     strokeMeta.sort((a, b) => a.xMin - b.xMin);
 
@@ -421,18 +637,16 @@ function segmentIntoCharacterClusters(strokes) {
         const gapX = currItem.xMin - clusterXMax;
         const timePause = Math.max(0, currItem.tStart - prevItem.tEnd);
 
-        // Calculate vertical overlap to prevent multi-stroke letters from splitting
         const overlapY = Math.max(0, Math.min(clusterYMax, currItem.yMax) - Math.max(clusterYMin, currItem.yMin));
         const minH = Math.min(clusterYMax - clusterYMin, currItem.height);
         const verticalOverlapRatio = minH > 0 ? (overlapY / minH) : 0;
 
-        // Group together if:
-        // 1. Strokes have significant vertical overlap and are within the same glyph width (e.g. separated D or b)
-        // 2. OR horizontal gap is tiny AND pause is short
-        const isSameGlyphComponent = (gapX <= 0.35 * avgH) && (verticalOverlapRatio >= 0.30);
-        const isContiguousStroke = (gapX <= 0.18 * avgH) && (timePause < 300 || gapX <= 0);
+        const isDot = currItem.height < 18 && currItem.width < 18;
+        // Two strokes belong to the same character if they overlap horizontally (gapX <= 0)
+        // or have significant horizontal overlap and vertical proximity (like the stem and bowl of 'b' or 'd')
+        const isSameCharacter = isDot || (gapX <= 0.25 * avgH && verticalOverlapRatio >= 0.20) || (gapX < 0);
 
-        if (isSameGlyphComponent || isContiguousStroke) {
+        if (isSameCharacter) {
             currentCluster.push(currItem);
         } else {
             clusters.push(currentCluster.map(m => m.stroke));
@@ -594,7 +808,7 @@ function resampleClusterTo64x8(clusterStrokes) {
 async function evaluateClusterWithONNX(clusterStrokes) {
     const session = await initReversalModel();
     if (!session) {
-        return { isReversed: false, reversalProb: 0.0, topChar: '?' };
+        return { isReversed: false, reversalProb: 0.0, topChar: '?', topProb: 0, top3: [] };
     }
 
     const flatFeats = resampleClusterTo64x8(clusterStrokes);
@@ -618,23 +832,26 @@ async function evaluateClusterWithONNX(clusterStrokes) {
             }
         }
 
-        let maxIdx = 0, maxVal = -1e9;
+        const candidates = [];
         for (let i = 0; i < charData.length; i++) {
-            if (charData[i] > maxVal) {
-                maxVal = charData[i];
-                maxIdx = i;
-            }
+            candidates.push({ char: VOCABULARY_62[i] || '?', prob: charData[i] });
         }
-        const topChar = VOCABULARY_62[maxIdx] || '?';
+        candidates.sort((a, b) => b.prob - a.prob);
+
+        const topChar = candidates[0].char;
+        const topProb = candidates[0].prob;
+        const top3 = candidates.slice(0, 3);
 
         return {
             isReversed: revProb >= 0.50,
             reversalProb: revProb,
-            topChar: topChar
+            topChar: topChar,
+            topProb: topProb,
+            top3: top3
         };
     } catch (e) {
         console.warn("ONNX inference failed on cluster:", e);
-        return { isReversed: false, reversalProb: 0.0, topChar: '?' };
+        return { isReversed: false, reversalProb: 0.0, topChar: '?', topProb: 0, top3: [] };
     }
 }
 
@@ -658,7 +875,7 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
     }
 
     if (strokes.length === 0) {
-        return { winner: "?", rawWinner: "?", candidates: [], isReversal: false, notice: "" };
+        return { winner: "?", rawWinner: "?", candidates: [], isReversal: false, notice: "", diagnostics: [], clustersCount: 0 };
     }
 
     // Track 1: Query Google Digital Ink ONCE for global lexical word context
@@ -683,33 +900,78 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
     // Evaluate each cluster locally using the In-House ONNX Reversal Model (1-2ms per cluster)
     const reversedPositions = [];
     const displayChars = rawWinner.split('');
+    const diagnostics = [];
 
     for (let k = 0; k < clusters.length; k++) {
         const clusterStrokes = clusters[k];
         const onnxRes = await evaluateClusterWithONNX(clusterStrokes);
 
+        // Identify intended canonical letter:
+        // Priority 1: In Prompted Mode, the expected letter from promptTarget (e.g. "D" or "b")
+        // Priority 2: In Free Writing, the In-House ONNX Head 1 predicted letter (e.g. "D", "B", "b")
+        // Priority 3: Google Digital Ink's raw letter
+        const canonicalChar = (isPrompted && k < promptTarget.length) 
+            ? promptTarget[k] 
+            : (onnxRes.topChar || rawWinner[k] || '');
+
+        let revSymbol = canonicalChar;
+        let clusterIsReversed = false;
+
         if (onnxRes.isReversed) {
-            const rawChar = rawWinner[k] || (isPrompted && k < promptTarget.length ? promptTarget[k] : '');
-            
             // Domain mask check: suppress numeric reversals in alphabetic context
-            if (isAlphabeticContext && numericReversalKeys.includes(rawChar)) {
-                continue;
-            }
+            if (!(isAlphabeticContext && numericReversalKeys.includes(canonicalChar))) {
+                clusterIsReversed = true;
+                isReversal = true;
+                reversedPositions.push({
+                    index: k + 1,
+                    prob: onnxRes.reversalProb,
+                    rawChar: rawWinner[k] || '?',
+                    onnxChar: onnxRes.topChar
+                });
 
-            isReversal = true;
-            reversedPositions.push({
-                index: k + 1,
-                prob: onnxRes.reversalProb,
-                rawChar: rawChar,
-                onnxChar: onnxRes.topChar
-            });
+                // Map to the canonical reversed glyph: e.g. D -> ᗡ, B -> ꓭ, b -> d, E -> Ǝ, N -> И, S -> Ƨ
+                revSymbol = asymmetricReversible[canonicalChar] || 
+                            asymmetricReversible[canonicalChar.toUpperCase()] || 
+                            asymmetricReversible[canonicalChar.toLowerCase()] || 
+                            canonicalChar;
 
-            // Map to clean display glyph
-            let revSymbol = asymmetricReversible[rawChar] || asymmetricReversible[rawChar.toUpperCase()] || onnxRes.topChar;
-            if (k < displayChars.length) {
-                displayChars[k] = revSymbol;
+                if (k < displayChars.length) {
+                    displayChars[k] = revSymbol;
+                } else {
+                    displayChars.push(revSymbol);
+                }
             }
         }
+
+        const resolvedGlyph = clusterIsReversed ? revSymbol : (displayChars[k] || canonicalChar);
+
+        const allClusterPts = clusterStrokes.flat();
+        const cXs = allClusterPts.map(p => p.x);
+        const cYs = allClusterPts.map(p => p.y);
+        const boxXMin = Math.min(...cXs);
+        const boxXMax = Math.max(...cXs);
+        const boxYMin = Math.min(...cYs);
+        const boxYMax = Math.max(...cYs);
+
+        diagnostics.push({
+            clusterIndex: k + 1,
+            strokeCount: clusterStrokes.length,
+            pointCount: clusterStrokes.reduce((s, st) => s + st.length, 0),
+            bbox: {
+                x: boxXMin,
+                y: boxYMin,
+                w: Math.max(boxXMax - boxXMin, 1),
+                h: Math.max(boxYMax - boxYMin, 1)
+            },
+            clusterStrokes: clusterStrokes,
+            googleInkChar: rawWinner[k] || '?',
+            onnxCanonicalChar: onnxRes.topChar,
+            onnxCharConfidence: (onnxRes.topProb * 100).toFixed(1),
+            onnxTop3: onnxRes.top3,
+            reversalProbability: (onnxRes.reversalProb * 100).toFixed(1),
+            isReversed: clusterIsReversed,
+            resolvedGlyph: resolvedGlyph
+        });
     }
 
     if (isReversal) {
@@ -723,7 +985,9 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
         rawWinner: rawWinner,
         candidates: rawCandidates,
         isReversal: isReversal,
-        notice: notice
+        notice: notice,
+        diagnostics: diagnostics,
+        clustersCount: clusters.length
     };
 }
 
@@ -733,6 +997,9 @@ transcribeBtn.addEventListener('click', async () => {
     const decodedTextDisplay = document.getElementById('decodedTextDisplay');
     const alternativeCandidates = document.getElementById('alternativeCandidates');
     const reversalNotice = document.getElementById('reversalNotice');
+    const diagCard = document.getElementById('modelDiagnosticsCard');
+    const diagDetails = document.getElementById('diagnosticsDetails');
+    const diagSummaryTag = document.getElementById('diagnosticsSummaryTag');
 
     if (strokeData.length === 0) {
         alert("Please write something first.");
@@ -763,11 +1030,64 @@ transcribeBtn.addEventListener('click', async () => {
             alternativeCandidates.innerText = `Alternative Guesses: [Uncertain Stroke]`;
         }
 
+        // Render Model Transparency & Pipeline Diagnostics Drawer
+        if (diagCard && diagDetails && result.diagnostics) {
+            diagCard.style.display = 'block';
+            if (diagSummaryTag) {
+                diagSummaryTag.className = result.isReversal ? 'diag-tag diag-tag-reversed' : 'diag-tag diag-tag-normal';
+                diagSummaryTag.innerText = result.isReversal ? 'REVERSAL FLAGGED' : 'CANONICAL NORMAL';
+            }
+
+            let html = `<div style="margin-bottom:8px; font-size:12px;"><strong>Clusters Found:</strong> ${result.clustersCount} | <strong>Google Ink Output:</strong> "${result.rawWinner}" | <strong>Final Rendered Text:</strong> "${result.winner}"</div>`;
+
+            result.diagnostics.forEach(d => {
+                const tagClass = d.isReversed ? 'diag-tag diag-tag-reversed' : 'diag-tag diag-tag-normal';
+                const tagText = d.isReversed ? `REVERSED (${d.reversalProbability}%)` : `NORMAL (${(100 - parseFloat(d.reversalProbability)).toFixed(1)}%)`;
+                const top3Str = d.onnxTop3 ? d.onnxTop3.map(c => `'${c.char}': ${(c.prob*100).toFixed(1)}%`).join(' | ') : '';
+
+                const routingBadge = `<span style="background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:3px; font-weight:600; font-size:11px;">Tensor Input: (1, 64, 8)</span>`;
+
+                html += `
+                <div class="diagnostics-cluster-row" style="margin-bottom:12px; padding:10px 12px; border-left: 4px solid ${d.isReversed ? '#dc2626' : '#2563eb'};">
+                    <div class="diagnostics-cluster-title" style="margin-bottom:6px;">
+                        <span style="font-size:14px;">Character #${d.clusterIndex} (Bounding Box: ${Math.round(d.bbox.w)}×${Math.round(d.bbox.h)}px | ${d.strokeCount} stroke(s), ${d.pointCount} pts)</span>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            ${routingBadge}
+                            <span class="${tagClass}">${tagText}</span>
+                        </div>
+                    </div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-top:6px; background:#f1f5f9; padding:8px; border-radius:4px; font-size:12px;">
+                        <div>
+                            <div><strong>Head 1 (Character Identity):</strong></div>
+                            <div style="font-size:14px; font-weight:700; color:#1e293b; margin:2px 0;">'${d.onnxCanonicalChar}' <span style="font-size:12px; font-weight:400; color:#475569;">(${d.onnxCharConfidence}%)</span></div>
+                            <div style="color:#64748b;">Top-3 Candidates: ${top3Str}</div>
+                        </div>
+                        <div>
+                            <div><strong>Head 2 (Clinical Reversal):</strong></div>
+                            <div style="font-size:14px; font-weight:700; color:${d.isReversed ? '#dc2626' : '#166534'}; margin:2px 0;">${d.reversalProbability}% Reversal Probability</div>
+                            <div style="color:#64748b;">Status: ${d.isReversed ? 'Mirror / Inverted' : 'Authentic Canonical'}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top:6px; font-size:12px; display:flex; justify-content:space-between; align-items:center;">
+                        <span><strong>Lexical Reference (Google Ink):</strong> '${d.googleInkChar}'</span>
+                        <span><strong>Resolved Output Glyph:</strong> <span style="font-weight:bold; color:${d.isReversed ? '#b91c1c' : '#15803d'}; font-size:18px;">'${d.resolvedGlyph}'</span></span>
+                    </div>
+                </div>`;
+            });
+            diagDetails.innerHTML = html;
+        }
+
         transcriptionCard.style.display = 'block';
         updateMovementMetrics();
+
+        // Render bounding boxes directly on canvas for immediate visual transparency
+        lastSegmentationDiagnostics = result.diagnostics || [];
+        renderBoundingBoxesOverlay();
+
         transcriptionCard.scrollIntoView({ behavior: "smooth" });
 
     } catch (error) {
+        console.error("Transcription error:", error);
         alert("Could not transcribe text.");
     } finally {
         transcribeBtn.innerText = "Transcribe Text";
