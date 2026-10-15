@@ -1,0 +1,407 @@
+/*
+ * Elkinematics Live Screening Interface Stylesheet
+ * Strict Zero-Emoji Policy Enforced
+ */
+
+html, body { 
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    position: fixed;
+    background-color: #f4f7f6;
+    touch-action: none;
+}
+
+.app-scroll-container { 
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    padding: 15px 44px 60px 15px;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+}
+
+/* Explicit Tablet Touch Scrollbar */
+.tablet-scrollbar-track {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 36px;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.05);
+    border-left: 1px solid #dcdde1;
+    z-index: 1000;
+    touch-action: none;
+    display: flex;
+    justify-content: center;
+    user-select: none;
+}
+
+.tablet-scrollbar-thumb {
+    position: absolute;
+    top: 10px;
+    width: 24px;
+    height: 90px;
+    background: #7f8c8d;
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    touch-action: none;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tablet-scrollbar-thumb:active, 
+.tablet-scrollbar-thumb.dragging {
+    background: #2c3e50;
+    width: 28px;
+}
+
+.tablet-scrollbar-thumb::after {
+    content: "";
+    width: 10px;
+    height: 16px;
+    border-top: 2px solid rgba(255, 255, 255, 0.8);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.8);
+}
+
+.quick-nav-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 48px;
+    z-index: 999;
+    background: #2c3e50;
+    color: white;
+    border: none;
+    padding: 10px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    opacity: 0.9;
+    transition: 0.2s;
+}
+
+.quick-nav-btn:hover {
+    opacity: 1;
+    background: #1a252f;
+}
+
+.container { 
+    width: 95%; 
+    max-width: 1400px; 
+    margin: auto; 
+    background: white; 
+    padding: 20px; 
+    border-radius: 12px; 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
+}
+
+h1 { 
+    color: #2c3e50; 
+    font-size: 26px; 
+    margin-bottom: 5px; 
+    margin-top: 5px;
+}
+
+p { 
+    color: #555; 
+    margin-top: 5px; 
+    font-size: 16px; 
+}
+
+canvas { 
+    border: 2px dashed #bdc3c7; 
+    border-radius: 8px; 
+    background-color: #fafafa; 
+    cursor: crosshair; 
+    touch-action: none; 
+    margin-top: 10px; 
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.controls { 
+    margin-top: 25px; 
+    display: flex; 
+    justify-content: center; 
+    gap: 15px; 
+    flex-wrap: wrap;
+}
+
+button { 
+    padding: 14px 28px; 
+    font-size: 17px; 
+    font-weight: bold; 
+    border: none; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    transition: 0.3s; 
+    color: white; 
+}
+
+.btn-transcribe { 
+    background-color: #2980b9; 
+    min-width: 200px; 
+}
+
+.btn-transcribe:hover { 
+    background-color: #1f618d; 
+}
+
+.btn-clear { 
+    background-color: #e74c3c; 
+    min-width: 140px; 
+}
+
+.btn-clear:hover { 
+    background-color: #c0392b; 
+}
+
+.btn-secondary { 
+    background-color: #7f8c8d; 
+    min-width: 180px; 
+}
+
+.btn-secondary:hover { 
+    background-color: #636e72; 
+}
+
+/* Mode Selection */
+.mode-selection-container {
+    margin: 15px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    background: #eef2f5;
+    padding: 10px;
+    border-radius: 8px;
+    max-width: 650px;
+}
+
+.mode-label {
+    cursor: pointer;
+}
+
+/* Target Word Selector */
+.prompt-selector-container {
+    display: none;
+    margin: 10px auto;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.prompt-select {
+    padding: 8px 12px;
+    font-size: 16px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+}
+
+.instruction { 
+    font-size: 24px; 
+    font-weight: bold; 
+    margin-bottom: 5px; 
+    color: #34495e; 
+}
+
+.prompt-display-free {
+    color: #7f8c8d;
+    font-size: 20px;
+    font-style: italic;
+}
+
+.prompt-display-target {
+    color: #34495e;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+/* Movement Dynamics Telemetry Grid */
+.telemetry-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    max-width: 1000px;
+    margin: 15px auto 5px auto;
+    font-size: 14px;
+}
+
+.telemetry-card {
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px;
+}
+
+.telemetry-label {
+    color: #7f8c8d;
+    font-size: 12px;
+}
+
+.telemetry-value {
+    font-weight: bold;
+    font-size: 18px;
+    color: #2c3e50;
+}
+
+.telemetry-value-smooth {
+    color: #27ae60;
+}
+
+.telemetry-value-variable {
+    color: #f39c12;
+}
+
+.telemetry-value-hesitant {
+    color: #e74c3c;
+}
+
+/* Transcription Card */
+.transcription-card {
+    display: none;
+    margin: 20px auto 0 auto;
+    max-width: 1000px;
+    background: #e8f4fd;
+    border-left: 5px solid #2980b9;
+    padding: 15px 20px;
+    border-radius: 8px;
+    text-align: left;
+}
+
+.transcription-label {
+    font-size: 13px;
+    color: #555;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.decoded-text-display {
+    font-size: 34px;
+    font-weight: bold;
+    color: #2c3e50;
+    font-family: monospace;
+    margin: 6px 0;
+}
+
+.alternative-candidates {
+    font-size: 14px;
+    color: #555;
+}
+
+.reversal-notice {
+    display: none;
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: #fde8e8;
+    border-radius: 6px;
+    color: #c0392b;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+/* Assessment Dashboard */
+.dashboard { 
+    margin: 20px auto 0 auto; 
+    max-width: 1000px;
+    padding: 20px; 
+    border-radius: 8px; 
+    display: none; 
+    background-color: #f8f9fa; 
+    border-left: 5px solid #27ae60; 
+    text-align: left; 
+}
+
+.dashboard-heading {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+.status-badge { 
+    display: inline-block; 
+    padding: 6px 14px; 
+    border-radius: 18px; 
+    font-size: 15px; 
+    font-weight: bold; 
+    color: white;
+}
+
+.badge-red { 
+    background-color: #e74c3c; 
+}
+
+.badge-green { 
+    background-color: #27ae60; 
+}
+
+.risk-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 15px;
+    text-align: center;
+}
+
+.risk-card {
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.risk-title {
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.risk-percentage {
+    font-size: 26px;
+    font-weight: bold;
+    color: #27ae60;
+    margin: 10px 0;
+}
+
+.risk-footnote {
+    color: #7f8c8d;
+}
+
+.reversal-alert-box {
+    display: none;
+    margin-top: 15px;
+    padding: 12px;
+    background-color: #fce4ec;
+    border-left: 4px solid #c2185b;
+    color: #880e4f;
+    border-radius: 4px;
+}
+
+.meta-latency {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #555;
+}
+
+.dashboard-divider {
+    margin: 20px 0;
+    border: none;
+    border-top: 1px solid #e0e0e0;
+}
+
+.dashboard-footer-note {
+    margin: 0;
+    color: #7f8c8d;
+    font-size: 13px;
+}

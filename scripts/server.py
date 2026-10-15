@@ -38,7 +38,7 @@ tf.config.threading.set_inter_op_parallelism_threads(1)
 tf.get_logger().setLevel("ERROR")
 
 STATIC_DIR = os.path.join(PROJECT_ROOT, "data_collector")
-app = Flask(__name__, static_folder=STATIC_DIR)
+app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 
 # Initialize Active Production Model (V2 Bi-LSTM)
 print("Loading AI Model V2 (Bi-LSTM)...")
