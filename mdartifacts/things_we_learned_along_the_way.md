@@ -305,4 +305,27 @@ When applying horizontal reflection testing, we uncovered a fundamental mathemat
   - *The Trap:* Naively flagging every 'd' whose mirror is 'b' as a "reversed b" causes 100% false-positive reversal rates on regular, correct writing.
   - *The Solution:* In unprompted free-writing, reciprocal pairs must only be evaluated if a prompt is specified (e.g., user was asked to write 'b' but produced 'd'), or through stroke formation directionality (e.g., whether the circular loop was formed clockwise vs. counter-clockwise relative to the vertical stem).
 
+---
+
+## 21. Deep Candidate Pool Matching & Spatial Disconnect in Pediatric Dysgraphia
+
+### The Top-1 Winner Bias in Online OCR
+Standard handwriting decoders optimize for maximum-likelihood character sequences under a standard dictionary prior. When a child draws an orthographic reversal such as a mirrored capital **B** (ᙠ), the decoder's language prior actively suppresses the non-standard glyph in `candidates[0]`, preferring visually similar standard symbols (such as `"8"` or `"3"` or `"E"`). 
+* *The Finding:* The correct mirrored character (`"B"`) almost always exists within the top 5 alternative candidates (`candidates[0..4]`) of the horizontally reflected stroke.
+* *The Solution:* Deep Candidate Pool Search across the top 5 mirror candidates ensures autonomous recovery of chiral reversals without requiring human chip-selection.
+
+### Capital 'B' vs Lowercase 'b' Asymmetry Invariant
+* While lowercase `b` and `d` are reciprocal characters (where mirroring produces another valid Latin letter), **capital `B` and `D` are strictly non-reciprocal**.
+* A mirrored capital `B` (ᙠ) is an asymmetric chiral reversal, not a `D`.
+* Deterministic geometric spine-direction testing ($x_{\text{spine}} \approx x_{\text{max}}$ with left-bulging loops vs. $x_{\text{spine}} \approx x_{\text{min}}$ with right-bulging loops) provides mathematical ground truth that overrides cloud OCR ambiguity.
+
+### Spatial Segmentation Disconnect (The b/d vs l Deficit)
+In children with motor dysgraphia or visuospatial integration deficits, writing characters with ascenders and loops (`b`, `d`, `p`, `q`) often involves a pen lift and a spatial pause between drawing the vertical stem and drawing the circular loop:
+* *The OCR Failure:* When a spatial gap separates the stem and loop, online stroke clustering frequently isolates the tall vertical stem, transcribing it as `'l'`, `'1'`, or `'I'`, and dropping or splitting the loop into noise (`'lo'`, `'cl'`).
+* *The Autonomous Consolidator:* By evaluating the geometric relationship between a tall vertical stroke ($h/w \ge 1.5, h \ge 0.55 H$) and an adjacent lower lobe ($cy > y_{min} + 0.25 H$), the decoder autonomously binds the components:
+  - Loop to the right of stem $\to$ **`b`**
+  - Loop to the left of stem $\to$ **`d`**
+  This completely eliminates false `'l'` transcriptions caused by pediatric motor segmentation.
+
+
 

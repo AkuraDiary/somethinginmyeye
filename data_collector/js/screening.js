@@ -371,13 +371,15 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
 
     const rawWinner = rawResult.winner;
     const mirrorWinner = mirrorResult.winner;
+    const rawCandidates = rawResult.candidates || [];
+    const mirrorCandidates = mirrorResult.candidates || [];
 
-    // Clinical asymmetric reversal dictionary
+    // Asymmetric reversal dictionary
     const asymmetricReversible = {
         'N': 'И', 'n': 'и',
         'S': 'Ƨ', 's': 'ƨ',
         'E': 'Ǝ', 'e': 'ɘ',
-        'B': 'ᙠ', 'D': 'ᗡ',
+        'B': '𐤡', 'D': 'ᗡ',
         'b': 'd', 'd': 'b',
         'p': 'q', 'q': 'p',
         'C': 'Ɔ', 'c': 'ɔ',
@@ -402,34 +404,34 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
     if (!isSymmetric) {
         // Case 1: Reciprocal letter pairs (b vs d, p vs q) - evaluate against prompt
         if (isPrompted && ['b', 'd', 'p', 'q'].includes(promptTarget)) {
-            if (promptTarget === 'b' && (rawWinner === 'd' || mirrorWinner === 'b')) {
+            if (promptTarget === 'b' && (rawWinner.toLowerCase() === 'd' || mirrorWinner.toLowerCase() === 'b')) {
                 isReversal = true;
                 displayWinner = "d (Reversed b)";
                 notice = "Letter Observation: Mirror reversal detected ('b' written as 'd').";
-            } else if (promptTarget === 'd' && (rawWinner === 'b' || mirrorWinner === 'd')) {
+            } else if (promptTarget === 'd' && (rawWinner.toLowerCase() === 'b' || mirrorWinner.toLowerCase() === 'd')) {
                 isReversal = true;
                 displayWinner = "b (Reversed d)";
                 notice = "Letter Observation: Mirror reversal detected ('d' written as 'b').";
-            } else if (promptTarget === 'p' && (rawWinner === 'q' || mirrorWinner === 'p')) {
+            } else if (promptTarget === 'p' && (rawWinner.toLowerCase() === 'q' || mirrorWinner.toLowerCase() === 'p')) {
                 isReversal = true;
                 displayWinner = "q (Reversed p)";
                 notice = "Letter Observation: Mirror reversal detected ('p' written as 'q').";
-            } else if (promptTarget === 'q' && (rawWinner === 'p' || mirrorWinner === 'q')) {
+            } else if (promptTarget === 'q' && (rawWinner.toLowerCase() === 'p' || mirrorWinner.toLowerCase() === 'q')) {
                 isReversal = true;
                 displayWinner = "p (Reversed q)";
                 notice = "Letter Observation: Mirror reversal detected ('q' written as 'p').";
             }
         }
-        // Case 2: Non-character chiral reversals (N -> И, S -> Ƨ, E -> Ǝ, 3 -> Ɛ)
-        else if (mirrorWinner in asymmetricReversible && mirrorWinner.toUpperCase() !== rawUpper && !['B', 'D', 'b', 'd', 'p', 'q'].includes(mirrorWinner)) {
+        // Case 2: Non-character chiral reversals (N -> И, S -> Ƨ, E -> Ǝ, B -> ᙠ, 3 -> Ɛ)
+        else if (mirrorWinner in asymmetricReversible && mirrorWinner.toUpperCase() !== rawUpper && !['b', 'd', 'p', 'q'].includes(mirrorWinner)) {
             isReversal = true;
             const symbol = asymmetricReversible[mirrorWinner] || `Reversed ${mirrorWinner}`;
-            displayWinner = `${symbol} (Reversed ${mirrorWinner})`;
+            displayWinner = `${symbol}`;//(Reversed ${mirrorWinner})`;
             notice = `Letter Observation: Mirror reversal detected (drawn as mirror image of '${mirrorWinner}').`;
         }
         // Case 3: Geometric verification fallback for inverted N
         else {
-            const geom = inspectOrthographicReversals(rawStrokes, rawResult.candidates);
+            const geom = inspectOrthographicReversals(rawStrokes, rawCandidates);
             if (geom && geom.detected) {
                 isReversal = true;
                 displayWinner = geom.winner;
@@ -442,14 +444,14 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
         winner: displayWinner,
         rawWinner: rawWinner,
         mirrorWinner: mirrorWinner,
-        candidates: rawResult.candidates,
-        mirrorCandidates: mirrorResult.candidates,
+        candidates: rawCandidates,
+        mirrorCandidates: mirrorCandidates,
         isReversal: isReversal,
         notice: notice
     };
 }
 
-// --- GEOMETRIC TRAJECTORY INSPECTION (FALLBACK) ---
+// --- GEOMETRIC TRAJECTORY INSPECTION: INVERTED 'N' ---
 function inspectOrthographicReversals(rawStrokes, candidates) {
     const pts = rawStrokes.filter(p => p.touching === 1 || p.touching === true);
     if (pts.length < 8) return null;
@@ -477,7 +479,7 @@ function inspectOrthographicReversals(rawStrokes, candidates) {
                 if (avgYLeft > avgYRight + 0.12 * height) {
                     return {
                         detected: true,
-                        winner: "И (Reversed N)",
+                        winner: "И",
                         notice: "Letter Observation: Inverted 'N' detected (ascending diagonal from bottom-left to top-right)."
                     };
                 }
