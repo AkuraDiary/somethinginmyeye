@@ -14,11 +14,93 @@ import numpy as np
 import pandas as pd
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
-from config import DATASET_DIR, MAX_TIMESTEPS, SCALER_PATH, VAL_DATASET_DIR
+from config import DATASET_DIR, MAX_TIMESTEPS, SAMPLING_RATE_HZ, SCALER_PATH, VAL_DATASET_DIR
 
 
-def extract_universal_features(df: pd.DataFrame) -> np.ndarray:
+def resample_stroke_trajectory(df: pd.DataFrame, target_hz: float = SAMPLING_RATE_HZ) -> pd.DataFrame:
+    """Harmonize multi-hardware stroke trajectories by temporally resampling on-surface
+    strokes onto a uniform time grid (default 60 Hz = 16.67 ms).
+    Decouples sequence length and derivative calculations from hardware polling fluctuations.
+    """
+    if len(df) < 2 or "time" not in df.columns or "x" not in df.columns or "y" not in df.columns:
+        return df.copy()
+
+    df_clean = df.copy()
+
+    # Clamp and normalize pressure to [0.0, 1.0]
+    if "pressure" in df_clean.columns:
+        p_raw = df_clean["pressure"].values.astype(float)
+        p_raw = np.where(p_raw > 1.0, np.minimum(1.0, p_raw / 2.5), p_raw)
+        df_clean["pressure"] = np.clip(p_raw, 0.0, 1.0)
+    else:
+        df_clean["pressure"] = 0.5
+
+    for col in ["tiltX", "tiltY", "touching"]:
+        if col not in df_clean.columns:
+            df_clean[col] = 0.0 if "tilt" in col else True
+
+    time_ms = df_clean["time"].values.astype(float)
+    touching = df_clean["touching"].values.astype(bool)
+
+    dt_raw = np.diff(time_ms, prepend=time_ms[0])
+    stroke_breaks = (~touching) | (dt_raw > 200.0)
+    stroke_ids = np.cumsum(stroke_breaks)
+
+    target_dt_ms = 1000.0 / target_hz
+    resampled_rows = []
+
+    for _, group in df_clean.groupby(stroke_ids):
+        g_len = len(group)
+        if g_len == 0:
+            continue
+
+        g_time = group["time"].values.astype(float)
+        g_x = group["x"].values.astype(float)
+        g_y = group["y"].values.astype(float)
+        g_p = group["pressure"].values.astype(float)
+        g_tx = group["tiltX"].values.astype(float)
+        g_ty = group["tiltY"].values.astype(float)
+
+        duration = g_time[-1] - g_time[0]
+        if duration < target_dt_ms or g_len < 2:
+            for _, r in group.iterrows():
+                resampled_rows.append(r.to_dict())
+            continue
+
+        new_time = np.arange(g_time[0], g_time[-1], target_dt_ms)
+        if len(new_time) < 1:
+            new_time = np.array([g_time[0]])
+
+        new_x = np.interp(new_time, g_time, g_x)
+        new_y = np.interp(new_time, g_time, g_y)
+        new_p = np.interp(new_time, g_time, g_p)
+        new_tx = np.interp(new_time, g_time, g_tx)
+        new_ty = np.interp(new_time, g_time, g_ty)
+
+        lat_val = group["latency"].iloc[0] if "latency" in group.columns else 0.0
+        for i in range(len(new_time)):
+            resampled_rows.append({
+                "time": new_time[i],
+                "x": new_x[i],
+                "y": new_y[i],
+                "pressure": new_p[i],
+                "tiltX": new_tx[i],
+                "tiltY": new_ty[i],
+                "touching": True,
+                "latency": lat_val
+            })
+
+    if not resampled_rows:
+        return df_clean
+
+    return pd.DataFrame(resampled_rows)
+
+
+def extract_universal_features(df: pd.DataFrame, resample: bool = True) -> np.ndarray:
     """Extract physical and kinematic properties from raw stroke events."""
+    if resample and len(df) >= 2:
+        df = resample_stroke_trajectory(df)
+
     if "touching" not in df.columns:
         df["touching"] = True
     for col in ["tiltX", "tiltY", "latency"]:

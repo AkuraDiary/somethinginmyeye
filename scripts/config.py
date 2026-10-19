@@ -29,6 +29,7 @@ TFLITE_PATH = os.path.join(MODEL_DIR, "elkinematicliteV2.tflite")
 
 # Feature Dimensions & Sequences
 MAX_TIMESTEPS = 500
+SAMPLING_RATE_HZ = 60.0  # Standardized temporal polling rate for hardware-agnostic resampling
 FEATURES = 8             # 8 Features : delta_x, delta_y, pressure, tiltX, tiltY, velocity, acceleration, jerk
 V0_FEATURES = 3          # Baseline: velocity, dt, pressure
 LATENCY_DIM = 1          # Milliseconds latency between prompt and first pen stroke

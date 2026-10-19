@@ -353,12 +353,33 @@ function clearCanvas() {
     strokeData = [];
 }
 
+function normalizePressure(raw) {
+    if (raw === undefined || raw === null || Number.isNaN(raw)) return 0.5;
+    let p = Number(raw);
+    if (p > 1.0) {
+        // Guard against uncalibrated Android/Huawei drivers emitting values exceeding standard 1.0
+        p = Math.min(1.0, p / 2.5);
+    }
+    return Math.min(1.0, Math.max(0.0, p));
+}
+
+function getDeviceMetadata() {
+    return {
+        user_agent: navigator.userAgent,
+        platform: navigator.platform || 'unknown',
+        screen_width: window.innerWidth,
+        screen_height: window.innerHeight,
+        device_pixel_ratio: window.devicePixelRatio || 1.0,
+        max_touch_points: navigator.maxTouchPoints || 0
+    };
+}
+
 function recordPoint(e, isTouching) {
     strokeData.push({
         time: e.timeStamp,
         x: e.offsetX,
         y: e.offsetY,
-        pressure: e.pressure || 0.5,
+        pressure: normalizePressure(e.pressure),
         tiltX: e.tiltX || 0,
         tiltY: e.tiltY || 0,
         touching: isTouching
@@ -439,7 +460,8 @@ async function postSample({ dataset, mode, label, annotator, metadata }) {
             annotator,
             prompt: label,
             client_timestamp: timestamp,
-            ui_language: currentLang
+            ui_language: currentLang,
+            device: getDeviceMetadata()
         }
     };
 

@@ -520,3 +520,35 @@ Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (
 * **Companion Metadata Manifest (`.meta.json`):**
   - All extended clinical fields (session ID, task tier, execution mode, language code, cognitive latency, raw stroke count) are written synchronously as a companion `.meta.json` sidecar alongside the CSV and PNG, enabling rich longitudinal cohort analytics without altering legacy binary parsers.
 
+---
+
+## 27. Hardware-Agnostic Digitizer Normalization & Cross-Device Generalization
+
+### 1. The Multi-Hardware Discrepancy Problem
+* **Empirical Observation:** Comparing samples across high-end active digitizers (iPad + Apple Pencil) versus budget capacitive hardware (Huawei tablet + generic stylus) reveals four critical sensor discrepancies:
+  1. *Temporal Polling Discrepancy:* iPad records at $\approx 120\text{Hz}$ ($\approx 360$ points per 3-second stroke), while budget hardware records at $\approx 25\text{Hz}$ ($\approx 75$ points per 3-second stroke).
+  2. *Sequence Length & Zero-Padding Bias:* Under fixed sequence input (`MAX_TIMESTEPS = 500`), the budget sample contains $425$ padded zeros, whereas the iPad sample contains only $140$ padded zeros. Neural classifiers rapidly learn to discriminate the hardware polling rate rather than neuromuscular pathology.
+  3. *Sensor Channel Invariance (Tilt):* Active digitizers report continuous dual-axis tilt (`tiltX`, `tiltY`), while passive capacitive styluses report constant $0.00$.
+  4. *Uncalibrated Pressure Ranges:* Certain Android drivers emit uncalibrated raw pressure values exceeding the standard $1.00$ maximum (e.g. up to $2.20$), resulting in extreme z-score outliers ($z > 5.0$) against pre-fitted standard scalers.
+
+### 2. Standardized Temporal Resampling ($\Delta t = 16.67\text{ms}$, $60\text{Hz}$)
+* **Mathematical Invariant:**
+  To decouple sequence length and derivative calculations from hardware polling fluctuations, stroke trajectories are resampled onto an equidistant temporal grid:
+  $$t_{\text{grid}} = [t_0, t_0 + \Delta t, t_0 + 2\Delta t, \dots, t_{\text{end}}], \quad \Delta t = \frac{1000.0}{\text{SAMPLING\_RATE\_HZ}} = 16.67\text{ms}$$
+* Continuous spatial coordinates $(x, y)$, pressure ($p$), and tilt channels are interpolated linearly:
+  $$x(t) = x_k + \frac{t - t_k}{t_{k+1} - t_k} (x_{k+1} - x_k)$$
+* **Outcome:** A 3-second handwriting stroke produces exactly $180$ timesteps regardless of whether recorded on an iPad ($120\text{Hz}$ downsampled) or a budget tablet ($25\text{Hz}$ upsampled), preserving identical kinematic derivative scales and eliminating zero-padding shortcut learning.
+
+### 3. Client-Side Pressure Normalization & Device Auditing
+* **Pressure Clamping:**
+  Raw pressure readings are guarded on input:
+  $$p_{\text{norm}} = \text{clip}\left(\begin{cases} \frac{p_{\text{raw}}}{2.5} & \text{if } p_{\text{raw}} > 1.0 \\ p_{\text{raw}} & \text{otherwise} \end{cases}, 0.0, 1.0\right)$$
+* **Automated Device Auditing:** Every collected sample records client hardware parameters (`navigator.userAgent`, screen dimensions, `devicePixelRatio`, `maxTouchPoints`) in the companion `.meta.json` sidecar.
+
+### 4. Cross-Hardware Experimental Strategy for Academic Publishing
+* **Preserving Existing Data:** Data collected across different hardware must **not** be discarded. It provides empirical proof of real-world generalization:
+  * *Benchmark 1 (Cross-Hardware Zero-Shot Evaluation):* Train on iPad reference data, evaluate generalization performance on budget Android tablets without re-training.
+  * *Benchmark 2 (Mixed Cohort Training):* Harmonize iPad and Huawei samples into a unified training distribution, demonstrating robustness across hardware tiers.
+  * *Golden Invariant:* Ensure diagnostic labels (`Normal` vs `Dyslexia`/`Dysgraphia`) are never completely segregated by hardware device.
+
+
