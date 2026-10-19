@@ -1,7 +1,334 @@
 /**
  * Kinematic Handwriting Data Collector & Diagnostic Client
+ *
+ * Two collection pathways share one canvas:
+ *  - Moderated Guided Collection (default): semi-gamified, pseudorandom Indonesian stimulus sessions.
+ *  - Free Data Collection: manual label / prompt entry.
+ *
+ * Full Bilingual Support (ID / EN) synchronized via localStorage.
+ * Saved filenames keep the legacy schema consumed by scripts/universal_pipeline.py:
+ *   ${dataset}_${mode}_${label}_${annotator}_${timestamp}
  */
 
+const EXTERNAL_TTS_API_URL = "";
+
+// ---------------------------------------------------------------------------
+// BILINGUAL TRANSLATION DICTIONARY
+// ---------------------------------------------------------------------------
+const COLLECTOR_TRANSLATIONS = {
+    id: {
+        collectorTitle: "Kinematic Handwriting Data Collector",
+        subPill: "Platform Riset Elkinematics",
+        navToScreening: "Live Screening →",
+        tabGuided: "Moderated Guided Collection",
+        tabFree: "Free Data Collection",
+        guideTag: "PANDUAN RISET / RESEARCH GUIDE",
+        guideTitle: "Panduan Penggunaan Pengumpulan Data:",
+        guide1: "Pilih <strong>Jenis Dataset</strong> (Train/Validation) dan isikan <strong>Nama Anda</strong> di field <strong>Anotator</strong>.",
+        guide2: "Pilih <strong>Mode (klasifikasi)</strong> (Normal/Dyslexia/Dysgraphia) dan isikan <strong>Label</strong> sesuai dengan data yang akan dikumpulkan.",
+        guide3: "Klik tombol <strong>Start Writing</strong> sebelum Anda mulai menulis untuk menghitung waktu jeda kognitif (<strong>cognitive latency</strong>).",
+        guide4: "<strong>Tuliskan huruf/kata</strong> pada area kanvas di bawah (disarankan menggunakan stylus/pen tablet). Kanvas akan mengumpulkan data terkait: <strong>arah coretan, kecepatan, tekanan, dan jeda antar-coretan</strong>.",
+        guide5: "Jika tulisan dirasa sudah selesai, klik <strong>Save Sample (In Server)</strong>. Aplikasi akan secara otomatis menyimpan data tulisan dan data kinematic di server.",
+        guide6: "Gunakan tombol <strong>Clear Canvas</strong> untuk membersihkan layar dan mengulang tulisan (sekaligus mengulang pencatat waktu).",
+
+        labelAnnotator: "Anotator:",
+        labelDataset: "Dataset:",
+        labelClassification: "Klasifikasi:",
+        labelExecutionMode: "Mode Eksekusi:",
+        labelItemCount: "Jumlah Item:",
+        labelReference: "Label:",
+
+        optTrain: "Train",
+        optValidation: "Validation",
+        optNormal: "Normal",
+        optDyslexia: "Dyslexia",
+        optDysgraphia: "Dysgraphia",
+        optVisualCopying: "Visual Copying (Salin Teks)",
+        optSpokenDictation: "Spoken Dictation (Dikte Suara)",
+
+        btnStartGuided: "Mulai Sesi Terpandu",
+        btnReplayAudio: "Putar Ulang Suara",
+        btnStartWriting: "Start Writing",
+        btnSaveSample: "Save Sample (In Server)",
+        btnClearCanvas: "Clear Canvas",
+        btnSaveAndNext: "Save Sample (Next →)",
+        btnSkip: "Skip",
+        btnEndSession: "End Session",
+
+        freePromptDesc: "Prompt: Tulis teks acuan sesuai Label (huruf, kata, atau kalimat)",
+        latencyWaiting: "Latency: menunggu...",
+        latencyMeasuring: "Latency: mengukur jeda...",
+        latencyWaitingToStart: "Latency: Menunggu mulai...",
+        latencyTimingDelay: "Latency: Mengukur jeda kognitif...",
+        dictationInstruction: "Dengarkan suara, lalu tulis yang Anda dengar",
+
+        alertNeedAnnotator: "Isi nama Anotator terlebih dahulu.",
+        alertNeedDrawing: "Tulis sesuatu pada kanvas terlebih dahulu.",
+        alertSaveError: "Gagal menyimpan ke server. Coba lagi.",
+        confirmSwitchTab: "Sesi terpandu sedang berjalan. Akhiri sesi dan beralih ke mode bebas?",
+
+        summaryTitle: "Sesi Selesai",
+        summarySaved: "Sampel tersimpan:",
+        summaryAvgLatency: "Rata-rata latency:",
+        summarySessionId: "ID Sesi:"
+    },
+    en: {
+        collectorTitle: "Kinematic Handwriting Data Collector",
+        subPill: "Elkinematics Research Platform",
+        navToScreening: "Live Screening →",
+        tabGuided: "Moderated Guided Collection",
+        tabFree: "Free Data Collection",
+        guideTag: "PANDUAN RISET / RESEARCH GUIDE",
+        guideTitle: "Data Collection User Guide:",
+        guide1: "Select <strong>Dataset Type</strong> (Train/Validation) and enter your name in the <strong>Annotator</strong> field.",
+        guide2: "Select <strong>Classification Mode</strong> (Normal/Dyslexia/Dysgraphia) and specify the <strong>Label</strong> matching your collected data.",
+        guide3: "Click <strong>Start Writing</strong> before writing to measure cognitive reaction time (<strong>cognitive latency</strong>).",
+        guide4: "<strong>Write the letters/words</strong> on the canvas below (active stylus/pen tablet recommended). The canvas records: <strong>stroke direction, velocity, pressure, and inter-stroke hesitation</strong>.",
+        guide5: "When finished writing, click <strong>Save Sample (In Server)</strong>. The system automatically stores kinematic trajectories and stroke images on the server.",
+        guide6: "Use <strong>Clear Canvas</strong> to wipe the drawing area and restart latency timing for the current item.",
+
+        labelAnnotator: "Annotator:",
+        labelDataset: "Dataset:",
+        labelClassification: "Classification:",
+        labelExecutionMode: "Execution Mode:",
+        labelItemCount: "Session Items:",
+        labelReference: "Label:",
+
+        optTrain: "Train",
+        optValidation: "Validation",
+        optNormal: "Normal",
+        optDyslexia: "Dyslexia",
+        optDysgraphia: "Dysgraphia",
+        optVisualCopying: "Visual Copying (Show Target)",
+        optSpokenDictation: "Spoken Dictation (Audio Only)",
+
+        btnStartGuided: "Start Guided Session",
+        btnReplayAudio: "Replay Audio",
+        btnStartWriting: "Start Writing",
+        btnSaveSample: "Save Sample (In Server)",
+        btnClearCanvas: "Clear Canvas",
+        btnSaveAndNext: "Save Sample (Next →)",
+        btnSkip: "Skip",
+        btnEndSession: "End Session",
+
+        freePromptDesc: "Prompt: Write the reference text according to Label (letters, words, or sentences)",
+        latencyWaiting: "Latency: waiting...",
+        latencyMeasuring: "Latency: timing reaction delay...",
+        latencyWaitingToStart: "Latency: Waiting to start...",
+        latencyTimingDelay: "Latency: Timing cognitive delay...",
+        dictationInstruction: "Listen to the spoken audio and write what you hear",
+
+        alertNeedAnnotator: "Please enter Annotator name first.",
+        alertNeedDrawing: "Please draw something on the canvas first.",
+        alertSaveError: "Failed to save to server. Please try again.",
+        confirmSwitchTab: "Guided session is active. End current session and switch to free mode?",
+
+        summaryTitle: "Session Completed",
+        summarySaved: "Samples saved:",
+        summaryAvgLatency: "Average latency:",
+        summarySessionId: "Session ID:"
+    }
+};
+
+let currentLang = localStorage.getItem('elkinematics_lang') || 'id';
+
+function switchLanguage(lang) {
+    if (!COLLECTOR_TRANSLATIONS[lang]) return;
+    currentLang = lang;
+    localStorage.setItem('elkinematics_lang', lang);
+
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+        const key = el.getAttribute('data-i18n');
+        if (COLLECTOR_TRANSLATIONS[lang][key]) {
+            el.innerHTML = COLLECTOR_TRANSLATIONS[lang][key];
+        }
+    });
+
+    const btnId = document.getElementById('langIdBtn');
+    const btnEn = document.getElementById('langEnBtn');
+    if (btnId && btnEn) {
+        btnId.classList.toggle('active', lang === 'id');
+        btnEn.classList.toggle('active', lang === 'en');
+    }
+
+    if (guidedState.running) {
+        updateHud();
+        const item = guidedState.plan[guidedState.index];
+        if (item) setPromptHeader(item);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TTS ENGINES
+// ---------------------------------------------------------------------------
+class BrowserTTSEngine {
+    speak(text) {
+        return new Promise((resolve) => {
+            if (!('speechSynthesis' in window)) return resolve();
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = currentLang === 'en' ? 'en-US' : 'id-ID';
+            utter.rate = 0.85;
+            utter.onend = () => resolve();
+            utter.onerror = () => resolve();
+            window.speechSynthesis.speak(utter);
+        });
+    }
+
+    cancel() {
+        if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    }
+}
+
+class ExternalTTSEngine {
+    constructor(apiUrl) {
+        this.apiUrl = apiUrl;
+        this.currentAudio = null;
+        this.fallback = new BrowserTTSEngine();
+    }
+
+    base64ToBlob(base64, mimeType) {
+        const byteCharacters = atob(base64);
+        const bytes = new Uint8Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            bytes[i] = byteCharacters.charCodeAt(i);
+        }
+        return new Blob([bytes], { type: mimeType });
+    }
+
+    async speak(text) {
+        try {
+            this.cancel();
+            const response = await fetch(`${this.apiUrl}/text-to-speech`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text, lang: currentLang })
+            });
+            const data = await response.json();
+            const base64Audio = data.audioContent || (data.data && data.data.audioContent) || data.audio;
+            if (!base64Audio) throw new Error('TTS API returned no audioContent.');
+
+            const audioUrl = URL.createObjectURL(this.base64ToBlob(base64Audio, 'audio/mpeg'));
+            this.currentAudio = new Audio(audioUrl);
+            return await new Promise((resolve) => {
+                this.currentAudio.onended = () => resolve();
+                this.currentAudio.onerror = () => resolve();
+                this.currentAudio.play().catch(() => resolve());
+            });
+        } catch (error) {
+            console.warn('External TTS failed, falling back to browser speech:', error);
+            return this.fallback.speak(text);
+        }
+    }
+
+    cancel() {
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            this.currentAudio.currentTime = 0;
+            this.currentAudio = null;
+        }
+        this.fallback.cancel();
+    }
+}
+
+const ttsEngine = EXTERNAL_TTS_API_URL
+    ? new ExternalTTSEngine(EXTERNAL_TTS_API_URL)
+    : new BrowserTTSEngine();
+
+// ---------------------------------------------------------------------------
+// INDONESIAN STIMULUS POOLS (task level tiers justified by Danna et al. 2023)
+// ---------------------------------------------------------------------------
+const STIMULUS_POOLS = {
+    L1: {
+        label: { id: 'Level 1: Huruf & Angka Kiral', en: 'Level 1: Chiral Letters & Digits' },
+        items: ['b', 'd', 'p', 'q', 'B', 'D', 'E', 'S', 'N', '3', '6', '9'],
+        share: 0.25
+    },
+    L2A: {
+        label: { id: 'Level 2A: Kata Reguler Frekuensi Tinggi', en: 'Level 2A: High-Frequency Regular Words' },
+        items: ['bebek', 'kucing', 'buku', 'dadu', 'pohon', 'meja', 'kopi', 'pintu', 'ayam', 'sapi'],
+        share: 0.35
+    },
+    L2B: {
+        label: { id: 'Level 2B: Kata Rawan Migrasi Huruf', en: 'Level 2B: Letter Migration Anagram Words' },
+        items: ['batu', 'buta', 'kursi', 'lampu', 'bulan', 'tangan', 'lari', 'tari'],
+        share: 0.20
+    },
+    L3: {
+        label: { id: 'Level 3: Kalimat Pendek', en: 'Level 3: Short Standardized Sentences' },
+        items: [
+            'Saya suka baca buku.',
+            'Ibu masak nasi di dapur.',
+            'Baju baru adik warna biru.',
+            'Kucing itu tidur di bawah meja.'
+        ],
+        share: 0.20
+    }
+};
+
+function fisherYates(array) {
+    const arr = array.slice();
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function drawFromPool(items, count) {
+    const out = [];
+    let bag = [];
+    while (out.length < count) {
+        if (bag.length === 0) bag = fisherYates(items);
+        out.push(bag.pop());
+    }
+    return out;
+}
+
+function generateSessionPlan(total) {
+    const keys = Object.keys(STIMULUS_POOLS);
+    const counts = {};
+    let assigned = 0;
+    keys.forEach((k) => {
+        counts[k] = Math.max(1, Math.round(total * STIMULUS_POOLS[k].share));
+        assigned += counts[k];
+    });
+    while (assigned > total) {
+        const k = keys.reduce((a, b) => (counts[a] >= counts[b] ? a : b));
+        counts[k]--;
+        assigned--;
+    }
+    while (assigned < total) {
+        const k = keys.reduce((a, b) => (counts[a] <= counts[b] ? a : b));
+        counts[k]++;
+        assigned++;
+    }
+
+    let plan = [];
+    keys.forEach((k) => {
+        drawFromPool(STIMULUS_POOLS[k].items, counts[k]).forEach((prompt) => {
+            plan.push({ tier: k, labelObj: STIMULUS_POOLS[k].label, prompt });
+        });
+    });
+
+    plan = fisherYates(plan);
+    for (let i = 1; i < plan.length; i++) {
+        const clash = (a, b) => a.tier === b.tier || a.prompt === b.prompt;
+        if (clash(plan[i], plan[i - 1])) {
+            for (let j = i + 1; j < plan.length; j++) {
+                if (!clash(plan[j], plan[i - 1]) && (i + 1 >= plan.length || !clash(plan[j], plan[i + 1] || {}))) {
+                    [plan[i], plan[j]] = [plan[j], plan[i]];
+                    break;
+                }
+            }
+        }
+    }
+    return plan;
+}
+
+// ---------------------------------------------------------------------------
+// CANVAS & POINTER DYNAMICS TRACKER
+// ---------------------------------------------------------------------------
 const canvas = document.getElementById('drawCanvas');
 const ctx = canvas.getContext('2d');
 ctx.lineWidth = 4;
@@ -18,13 +345,6 @@ function clearCanvas() {
     strokeData = [];
 }
 
-document.getElementById('startTimerBtn').addEventListener('click', () => {
-    promptStartTime = Date.now();
-    hasStartedWriting = false;
-    document.getElementById('latencyDisplay').innerText = "Latency: Timing cognitive delay...";
-    clearCanvas();
-});
-
 function recordPoint(e, isTouching) {
     strokeData.push({
         time: e.timeStamp,
@@ -37,14 +357,20 @@ function recordPoint(e, isTouching) {
     });
 }
 
-// Canvas Drawing Listeners
-canvas.addEventListener('pointerdown', (e) => {
+function onFirstTouchLatency() {
     if (promptStartTime > 0 && !hasStartedWriting) {
         latencyMs = Date.now() - promptStartTime;
         hasStartedWriting = true;
-        document.getElementById('latencyDisplay').innerText = `Latency: ${latencyMs} ms`;
+        const text = `Latency: ${latencyMs} ms`;
+        const freeEl = document.getElementById('latencyDisplay');
+        const liveEl = document.getElementById('liveLatencyDisplay');
+        if (freeEl) freeEl.innerText = text;
+        if (liveEl) liveEl.innerText = text;
     }
+}
 
+canvas.addEventListener('pointerdown', (e) => {
+    onFirstTouchLatency();
     isDrawing = true;
     ctx.beginPath();
     ctx.moveTo(e.offsetX, e.offsetY);
@@ -74,110 +400,279 @@ canvas.addEventListener('pointerout', (e) => {
     }
 });
 
-// Controls & Server Transmission
+// ---------------------------------------------------------------------------
+// SERVER PAYLOAD & FILE CONVENTION
+// ---------------------------------------------------------------------------
+function sanitizeLabel(text) {
+    return (text || 'UnknownSubj').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').substring(0, 40) || 'UnknownSubj';
+}
+
+async function postSample({ dataset, mode, label, annotator, metadata }) {
+    const timestamp = Date.now();
+    const prefix = `${dataset}_${mode}_${sanitizeLabel(label)}_${annotator}_${timestamp}`;
+    const payload = {
+        mode: mode,
+        prefix: prefix,
+        strokes: strokeData.map((point) => ({ ...point, latency: latencyMs })),
+        image: canvas.toDataURL('image/png'),
+        metadata: {
+            ...metadata,
+            latency_ms: latencyMs,
+            dataset,
+            mode,
+            annotator,
+            prompt: label,
+            client_timestamp: timestamp,
+            ui_language: currentLang
+        }
+    };
+
+    const response = await fetch('/save_data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    return response.json();
+}
+
+// ---------------------------------------------------------------------------
+// FREE DATA COLLECTION
+// ---------------------------------------------------------------------------
+document.getElementById('startTimerBtn').addEventListener('click', () => {
+    promptStartTime = Date.now();
+    hasStartedWriting = false;
+    document.getElementById('latencyDisplay').innerText = COLLECTOR_TRANSLATIONS[currentLang].latencyTimingDelay;
+    clearCanvas();
+});
+
 document.getElementById('downloadBtn').addEventListener('click', async () => {
     const resultText = document.getElementById('resultText');
 
     if (strokeData.length === 0) {
-        resultText.style.color = "orange";
-        resultText.innerText = "Please draw something on the canvas first.";
+        resultText.style.color = '#d97706';
+        resultText.innerText = COLLECTOR_TRANSLATIONS[currentLang].alertNeedDrawing;
         return;
     }
 
-    const dataset = document.getElementById('datasetSelect').value;
-    const mode = document.getElementById('modeSelect').value;
-    const label = document.getElementById('labelInput').value || 'UnknownSubj';
-    const annotator = document.getElementById('annotatorInput').value || 'UnknownAnno';
-    const timestamp = Date.now();
-
-    const prefix = `${dataset}_${mode}_${label}_${annotator}_${timestamp}`;
-    const imageBase64 = canvas.toDataURL("image/png");
-    const strokesWithLatency = strokeData.map(point => ({
-        ...point,
-        latency: latencyMs
-    }));
-
-    const payload = {
-        mode: mode,
-        prefix: prefix,
-        strokes: strokesWithLatency,
-        image: imageBase64
-    };
-
     try {
-        const response = await fetch('/save_data', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+        const result = await postSample({
+            dataset: document.getElementById('datasetSelect').value,
+            mode: document.getElementById('modeSelect').value,
+            label: document.getElementById('labelInput').value || 'UnknownSubj',
+            annotator: document.getElementById('annotatorInput').value || 'UnknownAnno',
+            metadata: { collection_type: 'free', task_level: 'free', execution_mode: 'free' }
         });
-
-        const result = await response.json();
         alert(result.message);
         clearCanvas();
-
     } catch (error) {
-        alert("Error saving data to server.");
+        alert(COLLECTOR_TRANSLATIONS[currentLang].alertSaveError);
     }
 });
 
 document.getElementById('clearBtn').addEventListener('click', clearCanvas);
 
-// Optional Model Inference Listener
-const analyzeBtn = document.getElementById('analyzeBtn');
-if (analyzeBtn) {
-    analyzeBtn.addEventListener('click', async () => {
-        const resultText = document.getElementById('resultText');
+// ---------------------------------------------------------------------------
+// MODERATED GUIDED SESSION
+// ---------------------------------------------------------------------------
+const guidedState = {
+    running: false,
+    saving: false,
+    plan: [],
+    index: 0,
+    sessionId: '',
+    config: null,
+    savedCount: 0,
+    latencies: [],
+    presentToken: 0
+};
 
-        if (strokeData.length === 0) {
-            resultText.style.color = "orange";
-            resultText.innerText = "Please draw something on the canvas first.";
-            return;
-        }
+const el = (id) => document.getElementById(id);
 
-        resultText.style.color = "black";
-        resultText.innerText = "Analyzing kinematics...";
-
-        try {
-            const strokesWithLatency = strokeData.map(point => ({
-                time: point.time,
-                x: point.x,
-                y: point.y,
-                pressure: point.pressure,
-                touching: point.touching,
-                latency: latencyMs
-            }));
-
-            const response = await fetch('/analyze', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(strokesWithLatency)
-            });
-
-            const result = await response.json();
-            const confidence = (result.probability * 100).toFixed(1);
-
-            if (result.heatmap && result.heatmap.length > 0) {
-                result.heatmap.forEach((prob, index) => {
-                    if (index < strokeData.length && prob > 0.80) {
-                        const point = strokeData[index];
-                        ctx.beginPath();
-                        ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
-                        ctx.fillStyle = "rgba(255, 0, 0, 0.1)";
-                        ctx.fill();
-                    }
-                });
-            }
-
-            if (result.is_dyslexic || result.is_dysgraphic) {
-                resultText.style.color = "red";
-                resultText.innerText = `Atypical Pattern Detected (${confidence}% confidence)`;
-            } else {
-                resultText.style.color = "green";
-                resultText.innerText = `Typical Pattern (${(100 - confidence).toFixed(1)}% confidence)`;
-            }
-        } catch (error) {
-            resultText.style.color = "red";
-            resultText.innerText = "Error connecting to AI server.";
-        }
-    });
+function setPromptHeader(item) {
+    const header = el('promptDisplayHeader');
+    const replayBtn = el('replayAudioBtn');
+    if (guidedState.config.execution === 'spoken_dictation') {
+        header.innerText = COLLECTOR_TRANSLATIONS[currentLang].dictationInstruction;
+        header.className = 'prompt-header prompt-header-masked';
+        replayBtn.style.display = 'inline-block';
+    } else {
+        header.innerText = item.prompt;
+        header.className = 'prompt-header';
+        replayBtn.style.display = 'none';
+    }
 }
+
+function updateHud() {
+    if (!guidedState.running || !guidedState.plan.length) return;
+    const total = guidedState.plan.length;
+    const item = guidedState.plan[guidedState.index];
+    el('sessionProgressText').innerText = `Item ${guidedState.index + 1} of ${total}`;
+    el('sessionLevelText').innerText = item.labelObj[currentLang] || item.labelObj.id;
+    el('sessionProgressBar').style.width = `${(guidedState.index / total) * 100}%`;
+}
+
+async function presentCurrentItem() {
+    const item = guidedState.plan[guidedState.index];
+    clearCanvas();
+    latencyMs = 0;
+    hasStartedWriting = false;
+    promptStartTime = 0;
+    el('liveLatencyDisplay').innerText = COLLECTOR_TRANSLATIONS[currentLang].latencyWaiting;
+    setPromptHeader(item);
+
+    if (guidedState.config.execution === 'spoken_dictation') {
+        const token = ++guidedState.presentToken;
+        await ttsEngine.speak(item.prompt);
+        if (token !== guidedState.presentToken || !guidedState.running) return;
+    }
+    promptStartTime = Date.now();
+    el('liveLatencyDisplay').innerText = COLLECTOR_TRANSLATIONS[currentLang].latencyMeasuring;
+}
+
+function showGuidedUi(active) {
+    el('sessionSetupCard').style.display = active ? 'none' : 'block';
+    el('sessionHud').style.display = active ? 'block' : 'none';
+    el('guidedControls').style.display = active ? 'flex' : 'none';
+}
+
+function startGuidedSession() {
+    const annotator = el('modAnnotatorInput').value.trim();
+    if (!annotator) {
+        alert(COLLECTOR_TRANSLATIONS[currentLang].alertNeedAnnotator);
+        return;
+    }
+
+    const total = parseInt(el('modSessionLength').value, 10);
+    guidedState.config = {
+        annotator,
+        dataset: el('modDatasetSelect').value,
+        mode: el('modModeSelect').value,
+        execution: el('modExecutionMode').value
+    };
+    guidedState.plan = generateSessionPlan(total);
+    guidedState.index = 0;
+    guidedState.savedCount = 0;
+    guidedState.latencies = [];
+    guidedState.sessionId = `sess_${Date.now()}`;
+    guidedState.running = true;
+
+    el('sessionSummaryCard').style.display = 'none';
+    el('resultText').innerText = '';
+    showGuidedUi(true);
+    updateHud();
+    presentCurrentItem();
+}
+
+function finishGuidedSession() {
+    guidedState.running = false;
+    guidedState.presentToken++;
+    ttsEngine.cancel();
+    clearCanvas();
+    showGuidedUi(false);
+
+    const lats = guidedState.latencies.filter((v) => v > 0);
+    const avg = lats.length ? Math.round(lats.reduce((a, b) => a + b, 0) / lats.length) : 0;
+    const card = el('sessionSummaryCard');
+    const t = COLLECTOR_TRANSLATIONS[currentLang];
+    card.style.display = 'block';
+    card.innerHTML = `<strong>${t.summaryTitle}</strong><br>` +
+        `${t.summarySaved} ${guidedState.savedCount} / ${guidedState.plan.length}<br>` +
+        `${t.summaryAvgLatency} ${avg} ms<br>` +
+        `${t.summarySessionId} ${guidedState.sessionId}`;
+}
+
+function advanceGuidedItem() {
+    guidedState.index++;
+    if (guidedState.index >= guidedState.plan.length) {
+        el('sessionProgressBar').style.width = '100%';
+        finishGuidedSession();
+        return;
+    }
+    updateHud();
+    presentCurrentItem();
+}
+
+async function saveAndNext() {
+    if (!guidedState.running || guidedState.saving) return;
+    if (strokeData.length === 0) {
+        el('resultText').style.color = '#d97706';
+        el('resultText').innerText = COLLECTOR_TRANSLATIONS[currentLang].alertNeedDrawing;
+        return;
+    }
+
+    guidedState.saving = true;
+    el('saveAndNextBtn').disabled = true;
+    const item = guidedState.plan[guidedState.index];
+    const cfg = guidedState.config;
+
+    try {
+        await postSample({
+            dataset: cfg.dataset,
+            mode: cfg.mode,
+            label: item.prompt,
+            annotator: cfg.annotator,
+            metadata: {
+                collection_type: 'moderated',
+                language: 'id',
+                task_tier: item.tier,
+                task_level: item.labelObj.en,
+                execution_mode: cfg.execution,
+                session_id: guidedState.sessionId,
+                item_index: guidedState.index + 1,
+                total_items: guidedState.plan.length
+            }
+        });
+        guidedState.savedCount++;
+        guidedState.latencies.push(latencyMs);
+        el('resultText').innerText = '';
+        advanceGuidedItem();
+    } catch (error) {
+        el('resultText').style.color = '#dc2626';
+        el('resultText').innerText = COLLECTOR_TRANSLATIONS[currentLang].alertSaveError;
+    } finally {
+        guidedState.saving = false;
+        el('saveAndNextBtn').disabled = false;
+    }
+}
+
+el('startSessionBtn').addEventListener('click', startGuidedSession);
+el('saveAndNextBtn').addEventListener('click', saveAndNext);
+el('guidedClearBtn').addEventListener('click', () => {
+    if (guidedState.running) presentCurrentItem();
+});
+el('skipBtn').addEventListener('click', () => {
+    if (guidedState.running && !guidedState.saving) advanceGuidedItem();
+});
+el('endSessionBtn').addEventListener('click', () => {
+    if (guidedState.running) finishGuidedSession();
+});
+el('replayAudioBtn').addEventListener('click', () => {
+    if (guidedState.running) {
+        const item = guidedState.plan[guidedState.index];
+        ttsEngine.speak(item.prompt);
+    }
+});
+
+// ---------------------------------------------------------------------------
+// TAB SWITCHING
+// ---------------------------------------------------------------------------
+function switchTab(toGuided) {
+    if (guidedState.running && !toGuided) {
+        if (!confirm(COLLECTOR_TRANSLATIONS[currentLang].confirmSwitchTab)) return;
+        finishGuidedSession();
+    }
+    el('tabGuided').classList.toggle('tab-active', toGuided);
+    el('tabFree').classList.toggle('tab-active', !toGuided);
+    el('guidedPanel').style.display = toGuided ? 'block' : 'none';
+    el('freePanel').style.display = toGuided ? 'none' : 'block';
+    el('freeControls').style.display = toGuided ? 'none' : 'flex';
+    el('guidedControls').style.display = toGuided && guidedState.running ? 'flex' : 'none';
+    clearCanvas();
+    el('resultText').innerText = '';
+}
+
+el('tabGuided').addEventListener('click', () => switchTab(true));
+el('tabFree').addEventListener('click', () => switchTab(false));
+
+// Apply language on initial load
+switchLanguage(currentLang);

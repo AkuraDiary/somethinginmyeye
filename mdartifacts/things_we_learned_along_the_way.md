@@ -400,3 +400,71 @@ Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (
 * **Level 1 (Isolated Letters & Shapes - Copying/Recall):** Evaluates motor automaticity and early visuospatial chiral reversals (`Dual-Head ONNX` + `Bi-LSTM`) with **zero multi-character segmentation ambiguity**.
 * **Level 2 (Real Words, Pseudowords, & Migration Words - Copying vs. Dictation):** Isolates Motor/Spatial Dysgraphia from Dyslexic Dysgraphia using `Bi-LSTM` kinematics + Latency/In-Air pauses + deterministic **Damerau-Levenshtein edit distance** against the known target prompt.
 * **Level 3 (Fixed Short Sentences - Copying/Dictation):** Evaluates sustained graphomotor endurance, word spacing, baseline drift, and Word Error Rate (WER).
+
+---
+
+## 25. Mathematical Formulations & Parameter Justifications
+
+### 1. Equidistant Arc-Length Parameterization & Cursive Splitting
+* **The Problem:** Raw temporal coordinates ($p_i = (x_i, y_i, t_i)$) cause segmentation to fail when children write at varying speeds. Fast writing yields large Euclidean gaps between consecutive samples ($\Delta s > 15\text{px}$), causing premature stroke cuts. Slow or hesitant writing yields dense point clusters ($\Delta s < 1\text{px}$), causing noise spikes and false cursive splits.
+* **Continuous Cumulative Arc-Length:**
+  $$S_0 = 0, \quad S_i = S_{i-1} + \sqrt{(x_i - x_{i-1})^2 + (y_i - y_{i-1})^2}$$
+* **Resampled Equidistant Trajectory ($\Delta s = 3.5\text{px}$):**
+  $$P(s) = P_k + \frac{s - S_k}{S_{k+1} - S_k} (P_{k+1} - P_k), \quad s \in [0, S_{\text{total}}]$$
+* **Spatial Moving-Average Smoothing (3-point window):**
+  $$\tilde{x}_i = \frac{x_{i-1} + 2x_i + x_{i+1}}{4}, \quad \tilde{y}_i = \frac{y_{i-1} + 2y_i + y_{i+1}}{4}$$
+* **Cursive Ligature Valley Splitting Criterion:**
+  A cursive stroke connecting two characters is split at index $k$ if and only if:
+  $$\tilde{y}_k \ge \tilde{y}_{\text{baseline}} - 0.35 H, \quad \tilde{y}_k > \tilde{y}_{k-1}, \quad \tilde{y}_k > \tilde{y}_{k+1}$$
+  $$\text{and } \min(\text{width}(\text{body}_1), \text{width}(\text{body}_2)) \ge 0.30 H$$
+  where $H = y_{\text{max}} - y_{\text{min}}$ is the word bounding-box height.
+* **Academic Grounding:** Plamondon & Srihari (2000, *IEEE TPAMI*); Fallah et al. (2025, *PLOS One*); Ramlan et al. (2024, *Data in Brief*).
+
+### 2. Damerau-Levenshtein Optimal String Alignment (OSA) for Orthographic Deficit
+* **The Problem:** Standard Levenshtein distance only accounts for insertions, deletions, and substitutions. In dyslexic dysgraphia, a pathognomonic marker is **Letter Position Dyslexia (LPD)** or character migration (e.g. *smile* $\leftrightarrow$ *slime*, *tried* $\leftrightarrow$ *tired*, Friedmann & Rahamim, 2014; Daniel et al., 2025). Standard Levenshtein scores a transposition as 2 operations (1 deletion + 1 insertion), misrepresenting cognitive-linguistic distance.
+* **Formulation:**
+  Given expected prompt string $A$ of length $M$ and recognized string $B$ of length $N$:
+  $$D(i, j) = \min \begin{cases}
+  D(i-1, j) + 1 & \text{(Deletion)} \\
+  D(i, j-1) + 1 & \text{(Insertion)} \\
+  D(i-1, j-1) + \mathbb{I}(A_i \ne B_j) & \text{(Substitution)} \\
+  D(i-2, j-2) + 1 & \text{if } i,j > 1 \text{ and } A_i = B_{j-1} \text{ and } A_{i-1} = B_j \text{ (Adjacent Transposition)}
+  \end{cases}$$
+* **Normalized Orthographic Error Score ($E_{\text{ortho}}$):**
+  $$E_{\text{ortho}} = \frac{D(M, N)}{\max(M, N)} \in [0.0, 1.0]$$
+* **Academic Grounding:** Damerau (1964); Levenshtein (1966); Daniel et al. (2025, *Annals of Dyslexia*); Andrade et al. (2015, *Frontiers in Psychology*).
+
+### 3. Multi-Dimensional Specific Learning Disorder (SLD) Risk Scoring Formulation
+* **The Problem:** Motor dysgraphia and dyslexic dysorthographia have distinct pathophysiological roots (cerebellar/visuomotor motor control vs. phonological-orthographic retrieval). A single classification score confounds the two disorders.
+* **Motor Dysgraphia Risk ($R_{\text{dysgraphia}}$):**
+  Evaluated strictly on the 8 standardized kinematic features via the Bi-LSTM network:
+  $$R_{\text{dysgraphia}} = P_{\text{Bi-LSTM}}(\mathbf{X}_{1:T}) \times 100\% \quad (\text{Threshold } \ge 50\%)$$
+* **Dyslexic Dysgraphia (Dysorthographia) Risk ($R_{\text{dyslexia}}$):**
+  Evaluated from the orthographic error, character reversal incidence, and cognitive latency:
+  $$R_{\text{dyslexia}} = \min\Big(100\%, \big(0.40 \cdot E_{\text{ortho}} + 0.40 \cdot F_{\text{rev}} + 0.20 \cdot L_{\text{risk}}\big) \times 100\%\Big)$$
+  Where:
+  - $E_{\text{ortho}} = \frac{D_{\text{OSA}}(\text{target}, \text{recognized})}{\max(M, N)}$
+  - $F_{\text{rev}} = \min\left(1.0, \frac{\text{Count}(\text{reversals})}{N_{\text{reversible\_letters}}}\right)$
+  - $L_{\text{risk}} = \text{clip}\left(\frac{\text{Latency}_{\text{ms}} - 1200}{2800}, 0.0, 1.0\right)$ (Latency baseline $1200\text{ms}$, severe delay $\ge 4000\text{ms}$)
+* **DSM-5 Subtype Dissociation Matrix:**
+  $$\text{Diagnosis} = \begin{cases}
+  \text{"Combined Dyslexia \& Dysgraphia"} & \text{if } R_{\text{dysgraphia}} \ge 50\% \text{ and } R_{\text{dyslexia}} \ge 50\% \\
+  \text{"Motor Dysgraphia"} & \text{if } R_{\text{dysgraphia}} \ge 50\% \text{ and } R_{\text{dyslexia}} < 50\% \\
+  \text{"Dyslexic Dysgraphia (Dysorthographia)"} & \text{if } R_{\text{dysgraphia}} < 50\% \text{ and } R_{\text{dyslexia}} \ge 50\% \\
+  \text{"Typical Development"} & \text{otherwise}
+  \end{cases}$$
+* **Academic Grounding:** DSM-5 Specific Learning Disorder criteria (APA, 2013); Chung et al. (2020); Andrade et al. (2015); Daniel et al. (2025).
+
+### 4. Dual-Track Hybrid Resolver Arbitration Logic
+* **Formulation:**
+  For character cluster $k \in \{1, \dots, K\}$:
+  Let $y_{\text{lexical}}[k]$ be the character predicted by Google Digital Ink.
+  Let $(c_1, p_{\text{char}}), p_{\text{rev}}$ be the predictions of the In-House Dual-Head ONNX Classifier.
+  $$\text{ResolvedGlyph}[k] = \begin{cases}
+  \text{MirrorMap}(c_{\text{expected}}) & \text{if } p_{\text{rev}} \ge 0.50 \text{ and isPrompted} \\
+  \text{MirrorMap}(c_1) & \text{if } p_{\text{rev}} \ge 0.50 \text{ and isFreeWriting} \\
+  y_{\text{lexical}}[k] & \text{if } p_{\text{rev}} < 0.50 \text{ and } y_{\text{lexical}}[k] \ne \text{empty} \\
+  c_1 & \text{otherwise}
+  \end{cases}$$
+  *Domain Mask Invariant:* Numeral reversals ($6 \leftrightarrow 9$) are suppressed when the expected prompt context is alphabetic ($[a\text{-}zA\text{-}Z]$).
+* **Academic Grounding:** Murnani et al. (2025); Hussein et al. (2024); Patil et al. (2024).

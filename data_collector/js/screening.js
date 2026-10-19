@@ -4,6 +4,136 @@
  * Strict Zero-Emoji Policy Enforced
  */
 
+// ---------------------------------------------------------------------------
+// BILINGUAL TRANSLATION DICTIONARY (SCREENING)
+// ---------------------------------------------------------------------------
+const SCREENING_TRANSLATIONS = {
+    id: {
+        screenTitle: "Kanvas Tulisan Tangan",
+        subPillScreen: "Antarmuka Skrining & Diagnostik Langsung",
+        navToCollector: "← Pengumpul Data",
+        screenSubtitle: "Tulis secara bebas pada kanvas atau ikuti acuan untuk transkripsi teks dan pemantauan dinamika gerak.",
+        labelMode: "Mode:",
+        modeFreeWriting: "Tulisan Bebas",
+        modePromptedWriting: "Tulisan Terpandu",
+        labelEvaluatorRef: "Acuan Evaluator:",
+        optVisCopying: "Salin Visual (Tampilkan Target)",
+        optVisDictation: "Dikte Evaluator (Sembunyikan Target)",
+        telemStartDelay: "Jeda Inisiasi",
+        telemDirChanges: "Perubahan Arah",
+        telemStrokeCount: "Jumlah Coretan",
+        telemSmoothness: "Kelancaran Gerak",
+        smoothStatus: "Lancar",
+        variableStatus: "Variatif",
+        hesitantStatus: "Ragu-ragu",
+        btnClear: "Hapus",
+        btnTranscribe: "Transkripsi Teks",
+        btnTranscribing: "Mentranskripsi...",
+        btnRunAssessment: "Jalankan Penilaian",
+        btnEvaluating: "Mengevaluasi...",
+        toggleShowBoxes: "Tampilkan Bounding Box Huruf Tersegmentasi",
+        toggleShowWholeWord: "Tampilkan Kotak Kata Utuh",
+        transcriptionLabel: "Teks Terbaca",
+        altGuessesEmpty: "Tebakan Alternatif: —",
+        altGuessesPrefix: "Tebakan Alternatif:",
+        altUncertainStroke: "Tebakan Alternatif: [Coretan Tidak Pasti]",
+        reversalNoticePrefix: "Observasi Karakter: Pembalikan cermin / rotasi terdeteksi pada",
+        reversalClinicalFlag: "(ONNX Lokal: Pembalikan klinis terdeteksi)",
+        diagHeader: "Inferensi Karakter Individual (ONNX Dual-Head)",
+        dashHeading: "Ringkasan Penilaian",
+        dashOverallStatus: "Status Keseluruhan:",
+        dashRating: "Peringkat:",
+        badgeTypical: "Tipikal",
+        badgeAtypical: "Atipikal",
+        ratingStandard: "Standar",
+        riskDysgraphiaTitle: "Ketidakteraturan Gerak",
+        riskDysgraphiaFootnote: "Berdasarkan trajektori gerakan",
+        riskDyslexiaTitle: "Variansi Ejaan",
+        riskDyslexiaFootnote: "Dibandingkan teks target",
+        reversalObservation: "Observasi Huruf:",
+        dashFooterNote: "Tanda sorotan pada kanvas menunjukkan segmen dengan variabilitas gerakan lebih tinggi.",
+        freePromptDisplay: '"Tulis secara bebas pada kanvas di bawah"',
+        dictationPromptDisplay: '"Tuliskan huruf atau kata yang diucapkan evaluator"',
+        alertNeedWriting: "Silakan tulis sesuatu terlebih dahulu.",
+        alertTranscribeFail: "Tidak dapat mentranskripsi teks.",
+        alertAnalysisFail: "Tidak dapat terhubung ke layanan analisis."
+    },
+    en: {
+        screenTitle: "Handwriting Canvas",
+        subPillScreen: "Live Screening & Diagnostic Interface",
+        navToCollector: "← Data Collector",
+        screenSubtitle: "Write freely on the canvas or follow a prompt to transcribe text and monitor movement dynamics.",
+        labelMode: "Mode:",
+        modeFreeWriting: "Free Writing",
+        modePromptedWriting: "Prompted Writing",
+        labelEvaluatorRef: "Evaluator Reference:",
+        optVisCopying: "Visual Copying (Show Target)",
+        optVisDictation: "Evaluator Dictation (Hide Target from Child)",
+        telemStartDelay: "Start Delay",
+        telemDirChanges: "Direction Changes",
+        telemStrokeCount: "Stroke Count",
+        telemSmoothness: "Movement Smoothness",
+        smoothStatus: "Smooth",
+        variableStatus: "Variable",
+        hesitantStatus: "Hesitant",
+        btnClear: "Clear",
+        btnTranscribe: "Transcribe Text",
+        btnTranscribing: "Transcribing...",
+        btnRunAssessment: "Run Assessment",
+        btnEvaluating: "Evaluating...",
+        toggleShowBoxes: "Show Segmented Character Bounding Boxes",
+        toggleShowWholeWord: "Show Whole Word Box",
+        transcriptionLabel: "Recognized Text",
+        altGuessesEmpty: "Alternative Guesses: —",
+        altGuessesPrefix: "Alternative Guesses:",
+        altUncertainStroke: "Alternative Guesses: [Uncertain Stroke]",
+        reversalNoticePrefix: "Letter Observation: Mirror / rotational reversal detected at",
+        reversalClinicalFlag: "(Local ONNX:  reversal flagged)",
+        diagHeader: "Individual Character Inference (ONNX Dual-Head)",
+        dashHeading: "Assessment Summary",
+        dashOverallStatus: "Overall Status:",
+        dashRating: "Rating:",
+        badgeTypical: "Typical",
+        badgeAtypical: "Atypical",
+        ratingStandard: "Standard",
+        riskDysgraphiaTitle: "Movement Irregularity",
+        riskDysgraphiaFootnote: "Based on movement trajectory",
+        riskDyslexiaTitle: "Spelling Variance",
+        riskDyslexiaFootnote: "Compared to target text",
+        reversalObservation: "Letter Observation:",
+        dashFooterNote: "Highlighted marks on the canvas indicate segments with higher movement variability.",
+        freePromptDisplay: '"Write freely on the canvas below"',
+        dictationPromptDisplay: '"Write the letter or word spoken by the evaluator"',
+        alertNeedWriting: "Please write something first.",
+        alertTranscribeFail: "Could not transcribe text.",
+        alertAnalysisFail: "Could not connect to analysis service."
+    }
+};
+
+let currentScreeningLang = localStorage.getItem('elkinematics_lang') || 'id';
+
+function switchScreeningLanguage(lang) {
+    if (!SCREENING_TRANSLATIONS[lang]) return;
+    currentScreeningLang = lang;
+    localStorage.setItem('elkinematics_lang', lang);
+
+    document.querySelectorAll('[data-i18n]').forEach((el) => {
+        const key = el.getAttribute('data-i18n');
+        if (SCREENING_TRANSLATIONS[lang][key]) {
+            el.innerHTML = SCREENING_TRANSLATIONS[lang][key];
+        }
+    });
+
+    const btnId = document.getElementById('langIdBtn');
+    const btnEn = document.getElementById('langEnBtn');
+    if (btnId && btnEn) {
+        btnId.classList.toggle('active', lang === 'id');
+        btnEn.classList.toggle('active', lang === 'en');
+    }
+
+    refreshPromptDisplayText();
+}
+
 const canvas = document.getElementById('drawingCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -141,16 +271,17 @@ function getEvaluatorPrompt() {
 }
 
 function refreshPromptDisplayText() {
+    const t = SCREENING_TRANSLATIONS[currentScreeningLang] || SCREENING_TRANSLATIONS.id;
     if (modeFreeFlow.checked) {
         promptSelectorContainer.style.display = 'none';
-        promptDisplay.innerText = '"Write freely on the canvas below"';
+        promptDisplay.innerText = t.freePromptDisplay;
         promptDisplay.className = 'instruction prompt-display-free';
         if (promptInput) promptInput.classList.remove('prompt-text-input-masked');
     } else {
         promptSelectorContainer.style.display = 'flex';
         const isDictation = visDictation && visDictation.checked;
         if (isDictation) {
-            promptDisplay.innerText = '"Write the letter or word spoken by the evaluator"';
+            promptDisplay.innerText = t.dictationPromptDisplay;
             promptDisplay.className = 'instruction prompt-display-free';
             if (promptInput) promptInput.classList.add('prompt-text-input-masked');
         } else {
@@ -216,14 +347,15 @@ function updateMovementMetrics() {
     const statusEl = document.getElementById('telemetryStatus');
     statusEl.classList.remove('telemetry-value-smooth', 'telemetry-value-variable', 'telemetry-value-hesitant');
 
+    const t = SCREENING_TRANSLATIONS[currentScreeningLang] || SCREENING_TRANSLATIONS.id;
     if (nivCount > 55) {
-        statusEl.innerText = "Hesitant";
+        statusEl.innerText = t.hesitantStatus;
         statusEl.classList.add('telemetry-value-hesitant');
     } else if (nivCount > 30) {
-        statusEl.innerText = "Variable";
+        statusEl.innerText = t.variableStatus;
         statusEl.classList.add('telemetry-value-variable');
     } else {
-        statusEl.innerText = "Smooth";
+        statusEl.innerText = t.smoothStatus;
         statusEl.classList.add('telemetry-value-smooth');
     }
 }
@@ -1168,12 +1300,13 @@ transcribeBtn.addEventListener('click', async () => {
     const diagDetails = document.getElementById('diagnosticsDetails');
     const diagSummaryTag = document.getElementById('diagnosticsSummaryTag');
 
+    const t = SCREENING_TRANSLATIONS[currentScreeningLang] || SCREENING_TRANSLATIONS.id;
     if (strokeData.length === 0) {
-        alert("Please write something first.");
+        alert(t.alertNeedWriting);
         return;
     }
 
-    transcribeBtn.innerText = "Transcribing...";
+    transcribeBtn.innerText = t.btnTranscribing;
     transcribeBtn.disabled = true;
 
     try {
@@ -1188,13 +1321,13 @@ transcribeBtn.addEventListener('click', async () => {
         }
 
         if (result.candidates.length > 0) {
-            let text = `Alternative Guesses: ${result.candidates.join(" | ")}`;
+            let text = `${t.altGuessesPrefix} ${result.candidates.join(" | ")}`;
             if (result.isReversal) {
-                text += ` (Local ONNX: Clinical reversal flagged)`;
+                text += ` ${t.reversalClinicalFlag}`;
             }
             alternativeCandidates.innerText = text;
         } else {
-            alternativeCandidates.innerText = `Alternative Guesses: [Uncertain Stroke]`;
+            alternativeCandidates.innerText = t.altUncertainStroke;
         }
 
         // Render Model Transparency & Pipeline Diagnostics Drawer
@@ -1230,7 +1363,7 @@ transcribeBtn.addEventListener('click', async () => {
                             <div style="color:#64748b;">Top-3 Candidates: ${top3Str}</div>
                         </div>
                         <div>
-                            <div><strong>Head 2 (Clinical Reversal):</strong></div>
+                            <div><strong>Head 2 (Reversal):</strong></div>
                             <div style="font-size:14px; font-weight:700; color:${d.isReversed ? '#dc2626' : '#166534'}; margin:2px 0;">${d.reversalProbability}% Reversal Probability</div>
                             <div style="color:#64748b;">Status: ${d.isReversed ? 'Mirror / Inverted' : 'Authentic Canonical'}</div>
                         </div>
@@ -1273,12 +1406,13 @@ analyzeBtn.addEventListener('click', async () => {
     const reversalAlertText = document.getElementById('reversalAlertText');
     const latencyText = document.getElementById('latencyText');
 
+    const t = SCREENING_TRANSLATIONS[currentScreeningLang] || SCREENING_TRANSLATIONS.id;
     if (strokeData.length === 0) {
-        alert("Please write something first.");
+        alert(t.alertNeedWriting);
         return;
     }
 
-    analyzeBtn.innerText = "Evaluating...";
+    analyzeBtn.innerText = t.btnEvaluating;
     analyzeBtn.disabled = true;
 
     try {
@@ -1295,9 +1429,9 @@ analyzeBtn.addEventListener('click', async () => {
                 document.getElementById('reversalNotice').style.display = 'none';
             }
             if (res.candidates.length > 0) {
-                let text = `Alternative Guesses: ${res.candidates.join(" | ")}`;
+                let text = `${t.altGuessesPrefix} ${res.candidates.join(" | ")}`;
                 if (res.isReversal) {
-                    text += ` (Local ONNX: Clinical reversal flagged)`;
+                    text += ` ${t.reversalClinicalFlag}`;
                 }
                 document.getElementById('alternativeCandidates').innerText = text;
             }
@@ -1345,8 +1479,8 @@ analyzeBtn.addEventListener('click', async () => {
 
         dashboard.style.display = 'block';
 
-        diagBadge.innerText = result.dsm5_diagnosis || "Typical";
-        severityText.innerText = result.clinical_severity || "Standard";
+        diagBadge.innerText = result.dsm5_diagnosis || (currentScreeningLang === 'id' ? "Tipikal" : "Typical");
+        severityText.innerText = result.clinical_severity || (currentScreeningLang === 'id' ? "Standar" : "Standard");
 
         if (result.is_dysgraphic || result.is_dyslexic) {
             diagBadge.className = "status-badge badge-red";
@@ -1374,9 +1508,13 @@ analyzeBtn.addEventListener('click', async () => {
         dashboard.scrollIntoView({ behavior: "smooth" });
 
     } catch (error) {
-        alert("Could not connect to analysis service.");
+        alert(t.alertAnalysisFail);
     } finally {
-        analyzeBtn.innerText = "Run Assessment";
+        analyzeBtn.innerText = t.btnRunAssessment;
         analyzeBtn.disabled = false;
     }
 });
+
+// Apply language on initial load
+switchScreeningLanguage(currentScreeningLang);
+

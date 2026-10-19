@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -7,55 +7,157 @@
     <link rel="stylesheet" href="css/index.css">
 </head>
 <body>
-    <h2>Kinematic Handwriting Data Collector</h2>
+    <div class="top-header-bar">
+        <div class="header-branding">
+            <h2 data-i18n="collectorTitle">Kinematic Handwriting Data Collector</h2>
+            <span class="sub-pill" data-i18n="subPill">Elkinematics Research Platform</span>
+        </div>
+        <div class="header-actions">
+            <a href="screening.html" class="nav-link-btn" data-i18n="navToScreening">Live Screening &#8594;</a>
+            <div class="lang-switch" role="group" aria-label="Language selection">
+                <button type="button" class="lang-btn active" id="langIdBtn" onclick="switchLanguage('id')">ID</button>
+                <button type="button" class="lang-btn" id="langEnBtn" onclick="switchLanguage('en')">EN</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- Mode Selector Tabs -->
+    <div class="tab-bar">
+        <button id="tabGuided" class="tab-btn tab-active" type="button" data-i18n="tabGuided">Moderated Guided Collection</button>
+        <button id="tabFree" class="tab-btn" type="button" data-i18n="tabFree">Free Data Collection</button>
+    </div>
+
+    <!-- Comprehensive 6-Point Research Guide (Universal Box) -->
     <div class="panduan">
-        <h4>Panduan Penggunaan Pengumpulan Data:</h4>
-        <ol>
-            <li>Pilih <strong>Jenis Dataset</strong> (Train/Test) dan isikan <strong>Nama Anda</strong> di field <strong>Anotator</strong>.</li>
-            <li>Pilih <strong>Mode (klasifikasi)</strong> (Normal/Dysgraphia) dan isikan <strong>Label</strong> sesuai dengan data yang akan dikumpulkan.</li>
-            <li>Klik tombol <strong>Start Writing</strong> sebelum Anda mulai menulis untuk menghitung waktu jeda inisiasi (cognitive latency).</li>
-            <li><strong>Tuliskan huruf</strong> pada area kanvas di bawah (disarankan menggunakan stylus/pen tablet). Kanvas akan mengumpulkan data terkait arah coretan, kecepatan, tekanan, dan jeda antar coretan.</li>
-            <li>Jika tulisan dirasa sudah selesai, klik <strong>Save Sample (In Server)</strong>. Aplikasi akan secara otomatis menyimpan data tulisan dan data kinematic di server.</li>
-            <li>Gunakan tombol <strong>Clear Canvas</strong> untuk membersihkan layar dan mengulang tulisan.</li>
+        <div class="panduan-header">
+            <span class="panduan-tag" data-i18n="guideTag">PANDUAN RISET / RESEARCH GUIDE</span>
+            <h4 data-i18n="guideTitle">Panduan Penggunaan Pengumpulan Data:</h4>
+        </div>
+        <ol class="panduan-list">
+            <li>
+                <span data-i18n="guide1">Pilih <strong>Jenis Dataset</strong> (Train/Validation) dan isikan <strong>Nama Anda</strong> di field <strong>Anotator</strong>.</span>
+            </li>
+            <li>
+                <span data-i18n="guide2">Pilih <strong>Mode (klasifikasi)</strong> (Normal/Dyslexia/Dysgraphia) dan isikan <strong>Label</strong> sesuai dengan data yang akan dikumpulkan.</span>
+            </li>
+            <li>
+                <span data-i18n="guide3">Klik tombol <strong>Start Writing</strong> sebelum Anda mulai menulis untuk menghitung waktu jeda kognitif (<strong>cognitive latency</strong>).</span>
+            </li>
+            <li>
+                <span data-i18n="guide4"><strong>Tuliskan huruf/kata</strong> pada area kanvas di bawah (disarankan menggunakan stylus/pen tablet). Kanvas akan mengumpulkan data terkait: <strong>arah coretan, kecepatan, tekanan, dan jeda antar-coretan</strong>.</span>
+            </li>
+            <li>
+                <span data-i18n="guide5">Jika tulisan dirasa sudah selesai, klik <strong>Save Sample (In Server)</strong>. Aplikasi akan secara otomatis menyimpan data tulisan dan data kinematic di server.</span>
+            </li>
+            <li>
+                <span data-i18n="guide6">Gunakan tombol <strong>Clear Canvas</strong> untuk membersihkan layar dan mengulang tulisan (sekaligus mengulang pencatat waktu).</span>
+            </li>
         </ol>
+    </div>
+
+    <!-- ===================== MODERATED GUIDED PANEL ===================== -->
+    <div id="guidedPanel">
+        <!-- Session setup card -->
+        <div id="sessionSetupCard" class="session-card">
+            <div class="controls">
+                <label for="modAnnotatorInput"><strong data-i18n="labelAnnotator">Anotator:</strong></label>
+                <input type="text" id="modAnnotatorInput" placeholder="e.g. Seta" style="width: 110px;">
+
+                <label for="modDatasetSelect"><strong data-i18n="labelDataset">Dataset:</strong></label>
+                <select id="modDatasetSelect">
+                    <option value="Train" data-i18n="optTrain">Train</option>
+                    <option value="Validation" data-i18n="optValidation">Validation</option>
+                </select>
+
+                <label for="modModeSelect"><strong data-i18n="labelClassification">Klasifikasi:</strong></label>
+                <select id="modModeSelect">
+                    <option value="normal" data-i18n="optNormal">Normal</option>
+                    <option value="dyslexia" data-i18n="optDyslexia">Dyslexia</option>
+                    <option value="dysgraphia" data-i18n="optDysgraphia">Dysgraphia</option>
+                </select>
+            </div>
+            <div class="controls">
+                <label for="modExecutionMode"><strong data-i18n="labelExecutionMode">Mode Eksekusi:</strong></label>
+                <select id="modExecutionMode">
+                    <option value="visual_copying" data-i18n="optVisualCopying">Visual Copying (Salin Teks)</option>
+                    <option value="spoken_dictation" data-i18n="optSpokenDictation">Spoken Dictation (Dikte Suara)</option>
+                </select>
+
+                <label for="modSessionLength"><strong data-i18n="labelItemCount">Jumlah Item:</strong></label>
+                <select id="modSessionLength">
+                    <option value="5">5</option>
+                    <option value="10" selected>10</option>
+                    <option value="15">15</option>
+                    <option value="20">20</option>
+                </select>
+
+                <button id="startSessionBtn" type="button" class="btn-primary" data-i18n="btnStartGuided">Mulai Sesi Terpandu</button>
+            </div>
+        </div>
+
+        <!-- Active session HUD -->
+        <div id="sessionHud" class="session-card" style="display: none;">
+            <div class="hud-top">
+                <span id="sessionProgressText" class="hud-pill">Item 0 of 0</span>
+                <span id="sessionLevelText" class="hud-pill hud-pill-level">-</span>
+                <span id="liveLatencyDisplay" class="hud-pill hud-pill-latency" data-i18n="latencyWaiting">Latency: menunggu...</span>
+            </div>
+            <div class="progress-track"><div id="sessionProgressBar" class="progress-fill"></div></div>
+            <div id="promptDisplayHeader" class="prompt-header">-</div>
+            <button id="replayAudioBtn" type="button" class="btn-audio" style="display: none;" data-i18n="btnReplayAudio">Putar Ulang Suara</button>
+        </div>
+
+        <div id="sessionSummaryCard" class="session-card summary-card" style="display: none;"></div>
+    </div>
+
+    <!-- ===================== FREE PANEL ===================== -->
+    <div id="freePanel" style="display: none;">
+        <div id="promptArea" class="prompt-area-box">
+            <h3 data-i18n="freePromptDesc">Prompt: Tulis teks acuan sesuai Label (huruf, kata, atau kalimat)</h3>
+            <button id="startTimerBtn" class="btn-timer" data-i18n="btnStartWriting">Start Writing</button>
+            <span id="latencyDisplay" class="latency-display-text" data-i18n="latencyWaitingToStart">Latency: Menunggu mulai...</span>
+        </div>
+
+        <div class="controls">
+            <label for="datasetSelect"><strong data-i18n="labelDataset">Dataset:</strong></label>
+            <select id="datasetSelect">
+                <option value="Train" data-i18n="optTrain">Train</option>
+                <option value="Validation" data-i18n="optValidation">Validation</option>
+            </select>
+
+            <label for="annotatorInput"><strong data-i18n="labelAnnotator">Anotator:</strong></label>
+            <input type="text" id="annotatorInput" placeholder="e.g. Seta" style="width: 100px;">
+
+            <label for="modeSelect"><strong data-i18n="labelClassification">Mode:</strong></label>
+            <select id="modeSelect">
+                <option value="normal" data-i18n="optNormal">Normal</option>
+                <option value="dyslexia" data-i18n="optDyslexia">Dyslexia</option>
+                <option value="dysgraphia" data-i18n="optDysgraphia">Dysgraphia</option>
+            </select>
+
+            <label for="labelInput"><strong data-i18n="labelReference">Label:</strong></label>
+            <input type="text" id="labelInput" placeholder="e.g., bebek">
+        </div>
     </div>
 
     <button id="analyzeBtn" style="display: none; background-color: #4CAF50; color: white;">Analyze Handwriting</button>
     <h3 id="resultText"></h3>
 
-    <div id="promptArea" style="margin-bottom: 10px; padding: 15px; background-color: #f0f0f0; border-radius: 8px;">
-        <h3>Prompt: Tulis huruf antara A - Z atau a - z (individual)</h3>
-        <button id="startTimerBtn" style="background-color: #007bff; color: white; padding: 10px;">Start Writing</button>
-        <span id="latencyDisplay" style="margin-left: 15px; font-weight: bold;">Latency: Waiting to start...</span>
-    </div>
-
-    <div class="controls">
-        <label for="datasetSelect">Dataset:</label>
-        <select id="datasetSelect">
-            <option value="Train">Train</option>
-            <option value="Test">Test</option>
-        </select>
-
-        <label for="annotatorInput">Annotator:</label>
-        <input type="text" id="annotatorInput" placeholder="e.g. Seta" style="width: 80px;">
-
-        <label for="modeSelect">Mode:</label>
-        <select id="modeSelect">
-            <option value="normal">Normal</option>
-            <option value="dysgraphia">Dysgraphia</option>
-        </select>
-
-        <label for="labelInput">Label:</label>
-        <input type="text" id="labelInput" placeholder="e.g., A">
-    </div>
-
-    <!-- Drawing Canvas -->
+    <!-- Shared Drawing Canvas -->
     <canvas id="drawCanvas" width="1000" height="450"></canvas>
 
-    <div class="controls">
-        <button id="downloadBtn">Save Sample (In Server)</button>
-        <button id="clearBtn">Clear Canvas</button>
+    <!-- Free mode action controls -->
+    <div id="freeControls" class="controls" style="display: none;">
+        <button id="downloadBtn" data-i18n="btnSaveSample">Save Sample (In Server)</button>
+        <button id="clearBtn" data-i18n="btnClearCanvas">Clear Canvas</button>
+    </div>
+
+    <!-- Guided mode action controls -->
+    <div id="guidedControls" class="controls" style="display: none;">
+        <button id="saveAndNextBtn" type="button" class="btn-save" data-i18n="btnSaveAndNext">Save Sample (Next)</button>
+        <button id="guidedClearBtn" type="button" data-i18n="btnClearCanvas">Clear Canvas</button>
+        <button id="skipBtn" type="button" data-i18n="btnSkip">Skip</button>
+        <button id="endSessionBtn" type="button" data-i18n="btnEndSession">End Session</button>
     </div>
 
     <script src="js/index.js"></script>

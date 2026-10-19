@@ -7,6 +7,7 @@ from __future__ import annotations
 import base64
 import csv
 import gc
+import json
 import os
 import sys
 import time
@@ -93,6 +94,15 @@ def save_data():
         png_path = os.path.join(DATASET_DIR, f"{base_filename}.png")
         with open(png_path, "wb") as f:
             f.write(img_data)
+
+    metadata = data.get("metadata")
+    if isinstance(metadata, dict):
+        metadata = dict(metadata)
+        metadata["server_timestamp"] = timestamp
+        metadata["base_filename"] = base_filename
+        meta_path = os.path.join(DATASET_DIR, f"{base_filename}.meta.json")
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(metadata, f, ensure_ascii=False, indent=2)
 
     print(f"Saved sample '{base_filename}' to datasets.")
     return jsonify({"message": "Successfully saved sample! Thank you for your contribution."})

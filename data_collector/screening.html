@@ -6,7 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Handwriting Canvas</title>
     <link rel="stylesheet" href="css/screening.css">
-
 </head>
 
 <body>
@@ -19,26 +18,40 @@
 
     <div class="app-scroll-container">
         <div class="container">
-            <h1>Handwriting Canvas</h1>
-            <p>Write freely on the canvas or follow a prompt to transcribe text and monitor movement dynamics.</p>
+            <!-- Top Screening Header with Bilingual Selector -->
+            <div class="screening-header-bar">
+                <div class="screening-branding">
+                    <h1 data-i18n="screenTitle">Handwriting Canvas</h1>
+                    <span class="sub-pill" data-i18n="subPillScreen">Live Screening & Diagnostic Interface</span>
+                </div>
+                <div class="header-actions">
+                    <a href="index.html" class="nav-link-btn" data-i18n="navToCollector">&#8592; Data Collector</a>
+                    <div class="lang-switch" role="group" aria-label="Language selection">
+                        <button type="button" class="lang-btn active" id="langIdBtn" onclick="switchScreeningLanguage('id')">ID</button>
+                        <button type="button" class="lang-btn" id="langEnBtn" onclick="switchScreeningLanguage('en')">EN</button>
+                    </div>
+                </div>
+            </div>
+
+            <p data-i18n="screenSubtitle">Write freely on the canvas or follow a prompt to transcribe text and monitor movement dynamics.</p>
 
             <!-- Mode Selection -->
             <div class="mode-selection-container">
-                <label><strong>Mode:</strong></label>
+                <label><strong data-i18n="labelMode">Mode:</strong></label>
                 <label class="mode-label">
                     <input type="radio" name="screeningMode" value="freeflow" checked id="modeFreeFlow">
-                    <strong>Free Writing</strong>
+                    <strong data-i18n="modeFreeWriting">Free Writing</strong>
                 </label>
                 <label class="mode-label">
                     <input type="radio" name="screeningMode" value="prompted" id="modePrompted">
-                    Prompted Writing
+                    <span data-i18n="modePromptedWriting">Prompted Writing</span>
                 </label>
             </div>
 
             <!-- Evaluator Reference & Display Mode (Visible in Prompted Mode) -->
             <div id="promptSelectorContainer" class="prompt-selector-container">
                 <div class="prompt-input-group">
-                    <label for="promptInput"><strong>Evaluator Reference:</strong></label>
+                    <label for="promptInput"><strong data-i18n="labelEvaluatorRef">Evaluator Reference:</strong></label>
                     <input type="text" id="promptInput" list="promptSuggestions" class="prompt-text-input" value="bebek" placeholder="Evaluator: enter reference text..." autocomplete="off">
                     <datalist id="promptSuggestions">
                         <option value="bebek">
@@ -59,11 +72,11 @@
                 <div class="prompt-visibility-group">
                     <label class="mode-label" title="Display the reference text above the canvas so the child can copy it visually.">
                         <input type="radio" name="promptVisibility" value="copying" checked id="visCopying">
-                        Visual Copying (Show Target)
+                        <span data-i18n="optVisCopying">Visual Copying (Show Target)</span>
                     </label>
                     <label class="mode-label" title="Hide the reference text on screen while the evaluator dictates the letter or word verbally.">
                         <input type="radio" name="promptVisibility" value="dictation" id="visDictation">
-                        Evaluator Dictation (Hide Target from Child)
+                        <span data-i18n="optVisDictation">Evaluator Dictation (Hide Target from Child)</span>
                     </label>
                 </div>
             </div>
@@ -75,89 +88,88 @@
             <!-- Movement Dynamics Summary -->
             <div class="telemetry-grid">
                 <div class="telemetry-card">
-                    <div class="telemetry-label">Start Delay</div>
+                    <div class="telemetry-label" data-i18n="telemStartDelay">Start Delay</div>
                     <div id="telemetryLatency" class="telemetry-value">0 ms</div>
                 </div>
                 <div class="telemetry-card">
-                    <div class="telemetry-label">Direction Changes</div>
+                    <div class="telemetry-label" data-i18n="telemDirChanges">Direction Changes</div>
                     <div id="telemetryNIV" class="telemetry-value telemetry-value-smooth">0</div>
                 </div>
                 <div class="telemetry-card">
-                    <div class="telemetry-label">Stroke Count</div>
+                    <div class="telemetry-label" data-i18n="telemStrokeCount">Stroke Count</div>
                     <div id="telemetryStrokes" class="telemetry-value">0</div>
                 </div>
                 <div class="telemetry-card">
-                    <div class="telemetry-label">Movement Smoothness</div>
-                    <div id="telemetryStatus" class="telemetry-value telemetry-value-smooth">Smooth</div>
+                    <div class="telemetry-label" data-i18n="telemSmoothness">Movement Smoothness</div>
+                    <div id="telemetryStatus" class="telemetry-value telemetry-value-smooth" data-i18n="smoothStatus">Smooth</div>
                 </div>
             </div>
 
             <div class="controls">
-                <button class="btn-clear" id="clearBtn">Clear</button>
-                <button class="btn-transcribe" id="transcribeBtn">Transcribe Text</button>
-                <button class="btn-secondary" id="analyzeBtn">Run Assessment</button>
+                <button class="btn-clear" id="clearBtn" data-i18n="btnClear">Clear</button>
+                <button class="btn-transcribe" id="transcribeBtn" data-i18n="btnTranscribe">Transcribe Text</button>
+                <button class="btn-secondary" id="analyzeBtn" data-i18n="btnRunAssessment">Run Assessment</button>
             </div>
 
             <!-- Visualization & Transparency Controls -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; margin-bottom: 5px; font-size: 13px; color: #475569;">
                 <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
                     <input type="checkbox" id="toggleBoundingBoxes" checked style="cursor: pointer; width: 16px; height: 16px; accent-color: #3b82f6;">
-                    <span><strong>Show Segmented Character Bounding Boxes</strong></span>
+                    <span><strong data-i18n="toggleShowBoxes">Show Segmented Character Bounding Boxes</strong></span>
                 </label>
                 <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
                     <input type="checkbox" id="togglePhraseBox" style="cursor: pointer; width: 15px; height: 15px; accent-color: #64748b;">
-                    <span>Show Whole Word Box</span>
+                    <span data-i18n="toggleShowWholeWord">Show Whole Word Box</span>
                 </label>
             </div>
 
             <!-- Transcription Box -->
             <div id="transcriptionCard" class="transcription-card">
-                <div class="transcription-label">Recognized Text</div>
+                <div class="transcription-label" data-i18n="transcriptionLabel">Recognized Text</div>
                 <div id="decodedTextDisplay" class="decoded-text-display">"..."</div>
-                <div id="alternativeCandidates" class="alternative-candidates">Alternative Guesses: —</div>
+                <div id="alternativeCandidates" class="alternative-candidates" data-i18n="altGuessesEmpty">Alternative Guesses: —</div>
                 <div id="reversalNotice" class="reversal-notice"></div>
             </div>
 
-            <!-- Model Transparency & Diagnostics Drawer (Always Dedicated Container) -->
+            <!-- Model Transparency & Diagnostics Drawer -->
             <div id="modelDiagnosticsCard" class="model-diagnostics-card" style="display: none;">
                 <div class="diagnostics-header">
-                    <span>Individual Character Inference (ONNX Dual-Head)</span>
+                    <span data-i18n="diagHeader">Individual Character Inference (ONNX Dual-Head)</span>
                     <span id="diagnosticsSummaryTag" class="diag-tag diag-tag-normal">OK</span>
                 </div>
                 <div id="diagnosticsDetails" class="diagnostics-details"></div>
             </div>
 
-            <!-- Assessment Summary -->
+            <!-- Assessment Summary Dashboard -->
             <div class="dashboard" id="resultsDashboard">
-                <h2 class="dashboard-heading">Assessment Summary</h2>
-                <p><strong>Overall Status:</strong> <span id="diagnosisBadge"
-                        class="status-badge badge-green">Typical</span></p>
-                <p><strong>Rating:</strong> <span id="severityText">Standard</span></p>
+                <h2 class="dashboard-heading" data-i18n="dashHeading">Assessment Summary</h2>
+                <p><strong data-i18n="dashOverallStatus">Overall Status:</strong> <span id="diagnosisBadge"
+                        class="status-badge badge-green" data-i18n="badgeTypical">Typical</span></p>
+                <p><strong data-i18n="dashRating">Rating:</strong> <span id="severityText" data-i18n="ratingStandard">Standard</span></p>
 
                 <div class="risk-grid">
                     <div class="risk-card">
-                        <div class="risk-title">Movement Irregularity</div>
+                        <div class="risk-title" data-i18n="riskDysgraphiaTitle">Movement Irregularity</div>
                         <div id="dysgraphiaRiskText" class="risk-percentage">0%</div>
-                        <small class="risk-footnote">Based on movement trajectory</small>
+                        <small class="risk-footnote" data-i18n="riskDysgraphiaFootnote">Based on movement trajectory</small>
                     </div>
                     <div class="risk-card">
-                        <div class="risk-title">Spelling Variance</div>
+                        <div class="risk-title" data-i18n="riskDyslexiaTitle">Spelling Variance</div>
                         <div id="dyslexiaRiskText" class="risk-percentage">0%</div>
-                        <small class="risk-footnote">Compared to target text</small>
+                        <small class="risk-footnote" data-i18n="riskDyslexiaFootnote">Compared to target text</small>
                     </div>
                 </div>
 
                 <div id="reversalAlertBox" class="reversal-alert-box">
-                    <strong>Letter Observation:</strong> <span id="reversalAlertText"></span>
+                    <strong data-i18n="reversalObservation">Letter Observation:</strong> <span id="reversalAlertText"></span>
                 </div>
 
                 <div class="meta-latency">
-                    <span><strong>Start Delay:</strong> <span id="latencyText">0 ms</span></span>
+                    <span><strong data-i18n="telemStartDelay">Start Delay:</strong> <span id="latencyText">0 ms</span></span>
                 </div>
 
                 <hr class="dashboard-divider">
-                <p class="dashboard-footer-note">Highlighted marks on the canvas indicate segments with higher movement
-                    variability.</p>
+                <p class="dashboard-footer-note" data-i18n="dashFooterNote">Highlighted marks on the canvas indicate segments with higher movement variability.</p>
             </div>
         </div>
     </div>
