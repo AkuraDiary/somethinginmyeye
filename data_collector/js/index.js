@@ -35,6 +35,7 @@ const COLLECTOR_TRANSLATIONS = {
         labelDataset: "Dataset:",
         labelClassification: "Klasifikasi:",
         labelExecutionMode: "Mode Eksekusi:",
+        labelTierFocus: "Fokus Kategori:",
         labelItemCount: "Jumlah Item:",
         labelReference: "Label:",
 
@@ -45,6 +46,12 @@ const COLLECTOR_TRANSLATIONS = {
         optDysgraphia: "Dysgraphia",
         optVisualCopying: "Visual Copying (Salin Teks)",
         optSpokenDictation: "Dikte Lisan Penguji (Target Disembunyikan)",
+        optTierAll: "Semua Tingkat (Seimbang)",
+        optTierLetters: "Hanya Huruf (Level 1)",
+        optTierRegular: "Hanya Kata Reguler (Level 2A)",
+        optTierAnagram: "Hanya Kata Anagram (Level 2B)",
+        optTierPseudo: "Hanya Kata Tanpa Makna (Level 2C)",
+        optTierSentences: "Hanya Kalimat (Level 3)",
 
         btnStartGuided: "Mulai Sesi Terpandu",
         btnReplayAudio: "Putar Ulang Suara",
@@ -95,6 +102,7 @@ const COLLECTOR_TRANSLATIONS = {
         labelDataset: "Dataset:",
         labelClassification: "Classification:",
         labelExecutionMode: "Execution Mode:",
+        labelTierFocus: "Category Focus:",
         labelItemCount: "Session Items:",
         labelReference: "Label:",
 
@@ -105,6 +113,12 @@ const COLLECTOR_TRANSLATIONS = {
         optDysgraphia: "Dysgraphia",
         optVisualCopying: "Visual Copying (Show Target)",
         optSpokenDictation: "Examiner Spoken Dictation (Target Hidden)",
+        optTierAll: "All Levels (Balanced)",
+        optTierLetters: "Letters Only (Level 1)",
+        optTierRegular: "Regular Words Only (Level 2A)",
+        optTierAnagram: "Anagram Words Only (Level 2B)",
+        optTierPseudo: "Pseudowords Only (Level 2C)",
+        optTierSentences: "Sentences Only (Level 3)",
 
         btnStartGuided: "Start Guided Session",
         btnReplayAudio: "Replay Audio",
@@ -244,35 +258,126 @@ const ttsEngine = EXTERNAL_TTS_API_URL
     : new BrowserTTSEngine();
 
 // ---------------------------------------------------------------------------
-// INDONESIAN STIMULUS POOLS (task level tiers justified by Danna et al. 2023)
+// INDONESIAN STIMULUS REPOSITORY & BANK LOADER
 // ---------------------------------------------------------------------------
-const STIMULUS_POOLS = {
+const DEFAULT_STIMULUS_BANK = {
+    alphabet: {
+        lowercase: [
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',
+            'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z'
+        ],
+        uppercase: [
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',
+            'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
+        ],
+        chiral_priority: [
+            'b', 'd', 'p', 'q', 'B', 'D', 'E', 'S', 'N', 'C', 'J', 'L', 'P', 'R', 'Z'
+        ]
+    },
+    high_frequency_regular_words: [
+        'kuda', 'sapi', 'ayam', 'bebek', 'kucing', 'katak', 'cicak', 'burung', 'gajah', 'rusa', 'ikan', 'semut',
+        'buku', 'meja', 'kursi', 'pintu', 'kasur', 'lampu', 'topi', 'baju', 'roda', 'bola', 'sapu', 'piring',
+        'ibu', 'ayah', 'adik', 'kakak', 'teman', 'guru', 'batu', 'daun', 'pohon', 'hujan', 'air', 'api',
+        'nasi', 'roti', 'susu', 'madu', 'kopi', 'apel', 'jeruk'
+    ],
+    anagram_pairs: [
+        { target: 'batu', counterpart: 'buta' },
+        { target: 'tali', counterpart: 'liat' },
+        { target: 'kasur', counterpart: 'rusak' },
+        { target: 'kapal', counterpart: 'pakal' },
+        { target: 'bakar', counterpart: 'kabar' },
+        { target: 'palu', counterpart: 'lupa' },
+        { target: 'kuda', counterpart: 'duka' },
+        { target: 'pasar', counterpart: 'paras' },
+        { target: 'tarik', counterpart: 'rakit' },
+        { target: 'tebal', counterpart: 'lebat' }
+    ],
+    minimal_pairs: [
+        { target: 'buku', counterpart: 'kuku' },
+        { target: 'tari', counterpart: 'lari' },
+        { target: 'bata', counterpart: 'data' },
+        { target: 'pola', counterpart: 'bola' },
+        { target: 'sapu', counterpart: 'satu' },
+        { target: 'daun', counterpart: 'gaun' }
+    ],
+    pseudowords: [
+        'kumo', 'mado', 'beka', 'tuko', 'dapi', 'fodi', 'wena', 'solu', 'leki', 'nura',
+        'somi', 'poti', 'duba', 'gopu', 'selu', 'wabi', 'jeno', 'ropu', 'bami', 'lusi',
+        'kinu', 'tupin', 'medas', 'rokat', 'simap'
+    ],
+    short_sentences: [
+        'Saya suka baca buku.',
+        'Ibu masak nasi di dapur.',
+        'Budi bermain bola di lapangan.',
+        'Adik minum susu setiap pagi.',
+        'Kakak mencuci sepeda roda dua.',
+        'Ayah membaca koran di teras.',
+        'Kucing belang tidur di kasur.',
+        'Baju baru adik warna biru.'
+    ]
+};
+
+let stimulusBank = null;
+
+async function loadStimulusBank() {
+    try {
+        const response = await fetch('vocabularies/stimuli_id.json');
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        stimulusBank = await response.json();
+    } catch (err) {
+        console.warn('Could not load stimuli_id.json, using embedded fallback:', err);
+        stimulusBank = DEFAULT_STIMULUS_BANK;
+    }
+}
+
+const TIER_DEFS = {
     L1: {
-        label: { id: 'Level 1: Huruf & Angka Kiral', en: 'Level 1: Chiral Letters & Digits' },
-        items: ['b', 'd', 'p', 'q', 'B', 'D', 'E', 'S', 'N', '3', '6', '9'],
+        code: 'L1',
+        label: { id: 'Level 1: Huruf Alfabet (Kiral & Acak)', en: 'Level 1: Alphabet Letters (Chiral & General)' },
         share: 0.25
     },
     L2A: {
+        code: 'L2A',
         label: { id: 'Level 2A: Kata Reguler Frekuensi Tinggi', en: 'Level 2A: High-Frequency Regular Words' },
-        items: ['bebek', 'kucing', 'buku', 'dadu', 'pohon', 'meja', 'kopi', 'pintu', 'ayam', 'sapi'],
-        share: 0.35
+        share: 0.25
     },
     L2B: {
-        label: { id: 'Level 2B: Kata Rawan Migrasi Huruf', en: 'Level 2B: Letter Migration Anagram Words' },
-        items: ['batu', 'buta', 'kursi', 'lampu', 'bulan', 'tangan', 'lari', 'tari'],
+        code: 'L2B',
+        label: { id: 'Level 2B: Kata Rawan Migrasi Huruf (Anagram)', en: 'Level 2B: Letter Migration Anagram Words' },
         share: 0.20
     },
+    L2C: {
+        code: 'L2C',
+        label: { id: 'Level 2C: Kata Tanpa Makna (Pseudoword)', en: 'Level 2C: Pseudowords (Sublexical)' },
+        share: 0.15
+    },
     L3: {
-        label: { id: 'Level 3: Kalimat Pendek', en: 'Level 3: Short Standardized Sentences' },
-        items: [
-            'Saya suka baca buku.',
-            'Ibu masak nasi di dapur.',
-            'Baju baru adik warna biru.',
-            'Kucing itu tidur di bawah meja.'
-        ],
-        share: 0.20
+        code: 'L3',
+        label: { id: 'Level 3: Kalimat Pendek Standar', en: 'Level 3: Short Standardized Sentences' },
+        share: 0.15
     }
 };
+
+function getRecentStimuli() {
+    try {
+        const stored = sessionStorage.getItem('elkinematics_recent_stimuli');
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+}
+
+function recordRecentStimuli(prompts) {
+    try {
+        let recent = getRecentStimuli().concat(prompts);
+        if (recent.length > 80) {
+            recent = recent.slice(recent.length - 80);
+        }
+        sessionStorage.setItem('elkinematics_recent_stimuli', JSON.stringify(recent));
+    } catch (e) {
+        console.warn('Could not save recent stimuli to sessionStorage', e);
+    }
+}
 
 function fisherYates(array) {
     const arr = array.slice();
@@ -283,45 +388,122 @@ function fisherYates(array) {
     return arr;
 }
 
-function drawFromPool(items, count) {
-    const out = [];
-    let bag = [];
-    while (out.length < count) {
-        if (bag.length === 0) bag = fisherYates(items);
-        out.push(bag.pop());
+function getPoolForTier(tierKey, bank) {
+    const b = bank || DEFAULT_STIMULUS_BANK;
+    if (tierKey === 'L1') {
+        const chiral = b.alphabet.chiral_priority || [];
+        const lower = b.alphabet.lowercase || [];
+        const upper = b.alphabet.uppercase || [];
+        // Combine chiral with double weighting and full alphabet; strictly zero digits
+        return [...chiral, ...chiral, ...lower, ...upper];
     }
-    return out;
+    if (tierKey === 'L2A') {
+        return b.high_frequency_regular_words || [];
+    }
+    if (tierKey === 'L2B') {
+        const items = [];
+        (b.anagram_pairs || []).forEach((p) => {
+            if (p.target) items.push(p.target);
+            if (p.counterpart) items.push(p.counterpart);
+        });
+        (b.minimal_pairs || []).forEach((p) => {
+            if (p.target) items.push(p.target);
+            if (p.counterpart) items.push(p.counterpart);
+        });
+        return Array.from(new Set(items));
+    }
+    if (tierKey === 'L2C') {
+        return b.pseudowords || [];
+    }
+    if (tierKey === 'L3') {
+        return b.short_sentences || [];
+    }
+    return [];
 }
 
-function generateSessionPlan(total) {
-    const keys = Object.keys(STIMULUS_POOLS);
-    const counts = {};
-    let assigned = 0;
-    keys.forEach((k) => {
-        counts[k] = Math.max(1, Math.round(total * STIMULUS_POOLS[k].share));
-        assigned += counts[k];
-    });
-    while (assigned > total) {
-        const k = keys.reduce((a, b) => (counts[a] >= counts[b] ? a : b));
-        counts[k]--;
-        assigned--;
+function drawFromPoolWithAntiRepetition(candidates, count) {
+    const recent = new Set(getRecentStimuli());
+    const uniqueCandidates = Array.from(new Set(candidates));
+
+    let fresh = uniqueCandidates.filter((item) => !recent.has(item));
+    if (fresh.length === 0) {
+        fresh = uniqueCandidates.slice();
     }
-    while (assigned < total) {
-        const k = keys.reduce((a, b) => (counts[a] <= counts[b] ? a : b));
-        counts[k]++;
-        assigned++;
+
+    let bag = fisherYates(fresh);
+    const chosen = [];
+    const usedInSession = new Set();
+
+    while (chosen.length < count) {
+        if (bag.length === 0) {
+            const remaining = uniqueCandidates.filter((item) => !usedInSession.has(item));
+            if (remaining.length > 0) {
+                bag = fisherYates(remaining);
+            } else {
+                usedInSession.clear();
+                bag = fisherYates(uniqueCandidates);
+            }
+        }
+        const item = bag.pop();
+        chosen.push(item);
+        usedInSession.add(item);
+    }
+    return chosen;
+}
+
+function generateSessionPlan(total, tierFocus = 'all') {
+    const bank = stimulusBank || DEFAULT_STIMULUS_BANK;
+    let targetTiers = [];
+
+    if (tierFocus === 'letters') {
+        targetTiers = ['L1'];
+    } else if (tierFocus === 'regular_words') {
+        targetTiers = ['L2A'];
+    } else if (tierFocus === 'anagram_words') {
+        targetTiers = ['L2B'];
+    } else if (tierFocus === 'pseudowords') {
+        targetTiers = ['L2C'];
+    } else if (tierFocus === 'sentences') {
+        targetTiers = ['L3'];
+    } else {
+        targetTiers = ['L1', 'L2A', 'L2B', 'L2C', 'L3'];
+    }
+
+    const counts = {};
+    if (targetTiers.length === 1) {
+        counts[targetTiers[0]] = total;
+    } else {
+        let assigned = 0;
+        targetTiers.forEach((k) => {
+            counts[k] = Math.max(1, Math.round(total * TIER_DEFS[k].share));
+            assigned += counts[k];
+        });
+        while (assigned > total) {
+            const k = targetTiers.reduce((a, b) => (counts[a] >= counts[b] ? a : b));
+            counts[k]--;
+            assigned--;
+        }
+        while (assigned < total) {
+            const k = targetTiers.reduce((a, b) => (counts[a] <= counts[b] ? a : b));
+            counts[k]++;
+            assigned++;
+        }
     }
 
     let plan = [];
-    keys.forEach((k) => {
-        drawFromPool(STIMULUS_POOLS[k].items, counts[k]).forEach((prompt) => {
-            plan.push({ tier: k, labelObj: STIMULUS_POOLS[k].label, prompt });
+    targetTiers.forEach((k) => {
+        const pool = getPoolForTier(k, bank);
+        const drawn = drawFromPoolWithAntiRepetition(pool, counts[k]);
+        drawn.forEach((prompt) => {
+            plan.push({ tier: k, labelObj: TIER_DEFS[k].label, prompt });
         });
     });
 
     plan = fisherYates(plan);
+
+    const isMultiTier = targetTiers.length > 1;
     for (let i = 1; i < plan.length; i++) {
-        const clash = (a, b) => a.tier === b.tier || a.prompt === b.prompt;
+        const clash = (a, b) => a.prompt === b.prompt || (isMultiTier && a.tier === b.tier);
         if (clash(plan[i], plan[i - 1])) {
             for (let j = i + 1; j < plan.length; j++) {
                 if (!clash(plan[j], plan[i - 1]) && (i + 1 >= plan.length || !clash(plan[j], plan[i + 1] || {}))) {
@@ -331,6 +513,8 @@ function generateSessionPlan(total) {
             }
         }
     }
+
+    recordRecentStimuli(plan.map((p) => p.prompt));
     return plan;
 }
 
@@ -647,13 +831,15 @@ function startGuidedSession() {
     }
 
     const total = parseInt(el('modSessionLength').value, 10);
+    const tierFocus = el('modTierFocus') ? el('modTierFocus').value : 'all';
     guidedState.config = {
         annotator,
         dataset: el('modDatasetSelect').value,
         mode: el('modModeSelect').value,
-        execution: el('modExecutionMode').value
+        execution: el('modExecutionMode').value,
+        tierFocus
     };
-    guidedState.plan = generateSessionPlan(total);
+    guidedState.plan = generateSessionPlan(total, tierFocus);
     guidedState.index = 0;
     guidedState.savedCount = 0;
     guidedState.latencies = [];
@@ -720,6 +906,7 @@ async function saveAndNext() {
                 language: 'id',
                 task_tier: item.tier,
                 task_level: item.labelObj.en,
+                tier_focus: cfg.tierFocus || 'all',
                 execution_mode: cfg.execution,
                 session_id: guidedState.sessionId,
                 item_index: guidedState.index + 1,
@@ -798,3 +985,16 @@ el('tabFree').addEventListener('click', () => switchTab(false));
 
 // Apply language on initial load
 switchLanguage(currentLang);
+
+// Restore saved tier focus preference and load stimulus bank
+const savedTierFocus = localStorage.getItem('elkinematics_tier_focus');
+const tierSelect = el('modTierFocus');
+if (savedTierFocus && tierSelect) {
+    tierSelect.value = savedTierFocus;
+}
+if (tierSelect) {
+    tierSelect.addEventListener('change', (e) => {
+        localStorage.setItem('elkinematics_tier_focus', e.target.value);
+    });
+}
+loadStimulusBank();

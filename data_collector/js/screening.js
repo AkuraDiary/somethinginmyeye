@@ -1360,7 +1360,7 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
     }
 
     // Arbitration: Build human display text (displayWinner) and clean unannotated text (cleanWinner)
-    let displayWinner = rawWinner;
+    displayWinner = rawWinner;
     let cleanWinner = rawWinner;
 
     if (clusters.length === 1) {

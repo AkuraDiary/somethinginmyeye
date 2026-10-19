@@ -83,12 +83,23 @@
                     <option value="spoken_dictation" data-i18n="optSpokenDictation">Spoken Dictation (Dikte Suara)</option>
                 </select>
 
+                <label for="modTierFocus"><strong data-i18n="labelTierFocus">Fokus Kategori:</strong></label>
+                <select id="modTierFocus">
+                    <option value="all" data-i18n="optTierAll" selected>Semua Tingkat (Seimbang)</option>
+                    <option value="letters" data-i18n="optTierLetters">Hanya Huruf (Level 1)</option>
+                    <option value="regular_words" data-i18n="optTierRegular">Hanya Kata Reguler (Level 2A)</option>
+                    <option value="anagram_words" data-i18n="optTierAnagram">Hanya Kata Anagram (Level 2B)</option>
+                    <option value="pseudowords" data-i18n="optTierPseudo">Hanya Kata Tanpa Makna (Level 2C)</option>
+                    <option value="sentences" data-i18n="optTierSentences">Hanya Kalimat (Level 3)</option>
+                </select>
+
                 <label for="modSessionLength"><strong data-i18n="labelItemCount">Jumlah Item:</strong></label>
                 <select id="modSessionLength">
                     <option value="5">5</option>
                     <option value="10" selected>10</option>
                     <option value="15">15</option>
                     <option value="20">20</option>
+                    <option value="26">26</option>
                 </select>
 
                 <button id="startSessionBtn" type="button" class="btn-primary" data-i18n="btnStartGuided">Mulai Sesi Terpandu</button>

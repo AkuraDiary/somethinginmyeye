@@ -575,7 +575,38 @@ Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (
      - Lowercase d Reversed: `'d [Rev: b]'`
      - Lowercase p Reversed: `'p [Rev: q]'`
      - Word Context (e.g. `bebek`): `"[b→d]ebek"`
-  3. *Decoupled Payload (`cleanWinner`):* The front-end delivers both the human-readable annotated text and an unannotated `cleanWinner` string (`ꓭ` or `d`) stored in `data-clean`. This ensures downstream Levenshtein edit distance calculations in `/analyze` evaluate the true character substitution without syntax artifact inflation.
+  3. *Decoupled Payload (`cleanWinner`):* The front-end delivers both the human-readable annotated text and an unannotated `cleanWinner` string (`ꓭ` or `d`) stored in `data-clean`. This ensures downstream Levenshtein edit distance calculations in `/analyze` evaluate the true character substitution without syntax artifact inflation.---
 
+## 29. Standardized Indonesian Linguistic Corpus, Zero-Digit Orthographic Invariant, and Anti-Repetition Randomization
 
+### 1. Orthographic Screening Scope & The Zero-Digit Invariant
+* **Scope Definition:** The Elkinematics system screens for Specific Learning Disorder (SLD) subtypes: Motor Dysgraphia, Spatial Dysgraphia, and Dyslexic Dysgraphia (Dysorthographia) under DSM-5 criteria. Mathematical calculation (dyscalculia) and numeral handwriting are outside this scope.
+* **The Invariant:** Numeric digits (`0–9`, specifically legacy chiral digits `3`, `6`, `9`) are completely eliminated from all stimulus banks, candidate pools, and generation algorithms. Level 1 evaluates strictly the Latin alphabet: all 26 lowercase letters ($a\text{–}z$) and 26 uppercase letters ($A\text{–}Z$), with balanced weighting toward clinically significant chiral letters ($b, d, p, q, B, D, E, S, N, C, J, L, P, R, Z$).
+
+### 2. Standardized Indonesian Linguistic Corpus (`vocabularies/stimuli_id.json`)
+* **Decoupled Architecture:** Hardcoded JavaScript arrays are replaced by an extensible, structured JSON repository grounded in early childhood literacy research (EGRA Indonesia, USAID PRIORITAS, Danna et al. 2023):
+  * **Level 1 (Alphabet Letters):** 52 lowercase and uppercase letters with 15 chiral priority items.
+  * **Level 2A (High-Frequency Regular Words):** 68 two-to-three syllable CVCV/CVCVC words across 5 authentic categories (animals, common objects, family, nature, food).
+  * **Level 2B (Letter Migration Anagram & Minimal Pairs):** 22 anagram transposition pairs (e.g. *batu/buta, kasur/rusak, tali/liat, kapal/pakal*) and 16 minimal phonological contrast pairs (e.g. *bata/data, pola/bola, buku/kuku*) designed to expose sublexical position migrations.
+  * **Level 2C (Pronounceable Pseudowords):** 33 pronounceable Indonesian nonwords (e.g. *kumo, mado, beka, tuko, dapi, fodi*) conforming to standard Indonesian phonotactics to test sublexical phoneme-grapheme conversion without whole-word visual memory shortcuts.
+  * **Level 3 (Standardized Sentences):** 18 standardized short sentences (4–6 words) suitable for early primary school children.
+* **Embedded Fail-Safe Fallback:** The client embeds a complete fallback memory bank (`DEFAULT_STIMULUS_BANK`), ensuring 100% offline and standalone functionality if HTTP fetching is blocked.
+
+### 3. Intra-Session Uniqueness & History Anti-Repetition Buffer
+* **The Repetition Problem:** Small stimulus arrays and rigid tier-alternating sorting previously caused consecutive sessions to present the exact same sequence of words, reducing participant engagement and biasing data collection.
+* **The Solution:**
+  1. *Intra-Session Uniqueness:* Candidate pools are sampled without replacement within each session, guaranteeing 0 duplicate items across all session lengths ($5, 10, 15, 20, 26$).
+  2. *Cross-Session Memory Buffer:* Recent prompts are cached in `sessionStorage` (`elkinematics_recent_stimuli`, rolling buffer of 80 items). The generator filters out recently presented items, ensuring participants encounter fresh vocabulary across multiple consecutive sessions.
+  3. *Adaptive Anti-Clash Shuffling:* Resolves adjacent tier or prompt clashes for multi-tier sessions, while correctly permitting same-tier consecutive prompts in single-tier focused runs.
+
+### 4. Examiner Tier Focus Selector
+* **Clinical Purpose:** In research or diagnostic contexts, examiners often need to target specific subtests (e.g. collecting purely chiral letters, or running a focused anagram-migration battery).
+* **The Selector:** A dropdown `#modTierFocus` allows selecting:
+  * `All Levels (Balanced)`: 25% L1, 25% L2A, 20% L2B, 15% L2C, 15% L3.
+  * `Letters Only (Level 1)`: 100% Alphabet letters.
+  * `Regular Words Only (Level 2A)`: 100% High-frequency vocabulary.
+  * `Anagram Words Only (Level 2B)`: 100% Migration/anagram pairs.
+  * `Pseudowords Only (Level 2C)`: 100% Sublexical nonwords.
+  * `Sentences Only (Level 3)`: 100% Short standardized sentences.
+* **Clinical Traceability:** The selected `tier_focus` is logged in the companion metadata alongside `task_tier` and `execution_mode`, preserved across reloads via `localStorage`.
 

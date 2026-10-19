@@ -1,0 +1,96 @@
+{
+  "version": "1.0.0",
+  "metadata": {
+    "corpus": "Elkinematics Standardized Indonesian Early Literacy Bank",
+    "target_grades": "Grade 1-3 (Fase A-B SD)",
+    "language": "id-ID",
+    "frameworks": ["EGRA Indonesia", "Danna et al. 2023 Task Types", "DSM-5 SLD Screening"]
+  },
+  "alphabet": {
+    "lowercase": [
+      "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
+      "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z"
+    ],
+    "uppercase": [
+      "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+      "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
+    ],
+    "chiral_priority": [
+      "b", "d", "p", "q", "B", "D", "E", "S", "N", "C", "J", "L", "P", "R", "Z"
+    ]
+  },
+  "high_frequency_regular_words": [
+    "kuda", "sapi", "ayam", "bebek", "kucing", "katak", "cicak", "burung", "gajah", "rusa", "ikan", "semut", "kambing", "kelinci",
+    "buku", "meja", "kursi", "pintu", "kasur", "lampu", "topi", "baju", "roda", "bola", "sapu", "piring", "gelas", "pensil", "kertas", "sepeda",
+    "ibu", "ayah", "adik", "kakak", "paman", "bibi", "kakek", "nenek", "teman", "guru", "bayi", "anak",
+    "batu", "pasir", "tanah", "daun", "pohon", "hujan", "awan", "air", "api", "laut", "bunga", "pelangi",
+    "nasi", "roti", "susu", "madu", "kopi", "soto", "apel", "jeruk", "bayam", "wortel", "gula", "garam", "tahu", "tempe"
+  ],
+  "anagram_pairs": [
+    {"target": "batu", "counterpart": "buta", "type": "anagram_transposition", "feature": "vowel_swap"},
+    {"target": "tali", "counterpart": "liat", "type": "anagram_transposition", "feature": "liquid_onset_coda"},
+    {"target": "kasur", "counterpart": "rusak", "type": "anagram_transposition", "feature": "full_inversion"},
+    {"target": "kapal", "counterpart": "pakal", "type": "anagram_transposition", "feature": "plosive_swap"},
+    {"target": "bakar", "counterpart": "kabar", "type": "anagram_transposition", "feature": "plosive_swap"},
+    {"target": "balok", "counterpart": "lobak", "type": "anagram_transposition", "feature": "syllable_inversion"},
+    {"target": "besar", "counterpart": "beras", "type": "anagram_transposition", "feature": "medial_consonant_swap"},
+    {"target": "palu", "counterpart": "lupa", "type": "anagram_transposition", "feature": "syllable_inversion"},
+    {"target": "kuda", "counterpart": "duka", "type": "anagram_transposition", "feature": "syllable_inversion"},
+    {"target": "pasar", "counterpart": "paras", "type": "anagram_transposition", "feature": "medial_coda_swap"},
+    {"target": "tarik", "counterpart": "rakit", "type": "anagram_transposition", "feature": "onset_coda_inversion"},
+    {"target": "pagar", "counterpart": "garap", "type": "anagram_transposition", "feature": "syllable_inversion"},
+    {"target": "tebal", "counterpart": "lebat", "type": "anagram_transposition", "feature": "onset_coda_inversion"},
+    {"target": "puas", "counterpart": "suap", "type": "anagram_transposition", "feature": "onset_coda_inversion"},
+    {"target": "tiru", "counterpart": "turi", "type": "anagram_transposition", "feature": "liquid_vowel_swap"},
+    {"target": "kera", "counterpart": "reka", "type": "anagram_transposition", "feature": "onset_coda_swap"},
+    {"target": "peta", "counterpart": "tape", "type": "anagram_transposition", "feature": "syllable_vowel_swap"},
+    {"target": "raut", "counterpart": "urat", "type": "anagram_transposition", "feature": "liquid_vowel_inversion"},
+    {"target": "labu", "counterpart": "balu", "type": "anagram_transposition", "feature": "bilabial_liquid_swap"},
+    {"target": "serap", "counterpart": "peras", "type": "anagram_transposition", "feature": "sibilant_plosive_swap"},
+    {"target": "batik", "counterpart": "tabik", "type": "anagram_transposition", "feature": "dental_bilabial_swap"},
+    {"target": "pintu", "counterpart": "tupin", "type": "anagram_pseudoword_pair", "feature": "syllable_transposition"}
+  ],
+  "minimal_pairs": [
+    {"target": "buku", "counterpart": "kuku", "levenshtein": 1, "contrast": "onset_stop"},
+    {"target": "tari", "counterpart": "lari", "levenshtein": 1, "contrast": "onset_stop_liquid"},
+    {"target": "bata", "counterpart": "data", "levenshtein": 1, "contrast": "chiral_onset_b_d"},
+    {"target": "pola", "counterpart": "bola", "levenshtein": 1, "contrast": "chiral_voicing_p_b"},
+    {"target": "paru", "counterpart": "baru", "levenshtein": 1, "contrast": "chiral_voicing_p_b"},
+    {"target": "kuda", "counterpart": "kura", "levenshtein": 1, "contrast": "medial_stop_liquid"},
+    {"target": "sapu", "counterpart": "satu", "levenshtein": 1, "contrast": "medial_bilabial_dental"},
+    {"target": "paku", "counterpart": "palu", "levenshtein": 1, "contrast": "medial_velar_lateral"},
+    {"target": "pita", "counterpart": "peta", "levenshtein": 1, "contrast": "vowel_height_i_e"},
+    {"target": "topi", "counterpart": "tepi", "levenshtein": 1, "contrast": "vowel_backness_o_e"},
+    {"target": "daun", "counterpart": "gaun", "levenshtein": 1, "contrast": "onset_alveolar_velar"},
+    {"target": "rusa", "counterpart": "busa", "levenshtein": 1, "contrast": "onset_liquid_bilabial"},
+    {"target": "kali", "counterpart": "tali", "levenshtein": 1, "contrast": "onset_velar_dental"},
+    {"target": "kaki", "counterpart": "daki", "levenshtein": 1, "contrast": "onset_velar_alveolar"},
+    {"target": "jari", "counterpart": "tari", "levenshtein": 1, "contrast": "onset_affricate_dental"},
+    {"target": "batu", "counterpart": "bata", "levenshtein": 1, "contrast": "final_vowel_u_a"}
+  ],
+  "pseudowords": [
+    "kumo", "mado", "beka", "tuko", "dapi", "fodi", "wena", "solu", "leki", "nura",
+    "somi", "poti", "duba", "gopu", "selu", "wabi", "jeno", "ropu", "bami", "lusi",
+    "kinu", "tupin", "medas", "rokat", "simap", "helun", "tanik", "godep", "puran", "welat", "bupak", "nupan", "gilus"
+  ],
+  "short_sentences": [
+    "Saya suka baca buku.",
+    "Ibu masak nasi di dapur.",
+    "Budi bermain bola di lapangan.",
+    "Adik minum susu setiap pagi.",
+    "Kakak mencuci sepeda roda dua.",
+    "Ayah membaca koran di teras.",
+    "Kucing belang tidur di kasur.",
+    "Baju baru adik warna biru.",
+    "Kakek menyiram bunga di kebun.",
+    "Burung kecil terbang sangat tinggi.",
+    "Bebek berenang di kolam air.",
+    "Paman membeli buah di pasar.",
+    "Siti makan roti rasa cokelat.",
+    "Ani menulis cerita di buku.",
+    "Matahari pagi bersinar sangat terang.",
+    "Beni dan Edo bermain layang-layang.",
+    "Lampu kamar menyala saat malam.",
+    "Dodi membawa tas warna merah."
+  ]
+}
