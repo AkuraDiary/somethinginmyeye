@@ -188,6 +188,122 @@ body {
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
+/* Moderated Guided Setup Card */
+.session-setup-card {
+    border-radius: 12px;
+    padding: 18px 22px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+    text-align: left;
+}
+
+.setup-header {
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.setup-title {
+    margin: 0 0 4px 0;
+    font-size: 15.5px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.setup-subtitle {
+    margin: 0;
+    font-size: 13px;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+.setup-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px 18px;
+}
+
+.setup-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.setup-field label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.setup-field input[type="text"],
+.setup-field select {
+    width: 100%;
+    box-sizing: border-box;
+    height: 40px;
+    padding: 8px 12px;
+    font-size: 13.5px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background-color: #ffffff;
+    color: #0f172a;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.setup-field input[type="text"]:focus,
+.setup-field select:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.setup-actions {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    justify-content: center;
+}
+
+.btn-start-session {
+    min-width: 220px;
+    height: 42px;
+    padding: 10px 28px;
+    font-size: 14.5px;
+    font-weight: 700;
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+    transition: all 0.15s ease;
+}
+
+.btn-start-session:hover {
+    background-color: #1d4ed8;
+    box-shadow: 0 4px 8px rgba(29, 78, 216, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-start-session:active {
+    transform: translateY(0);
+}
+
+@media (max-width: 768px) {
+    .setup-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 480px) {
+    .setup-grid {
+        grid-template-columns: 1fr;
+    }
+    .btn-start-session {
+        width: 100%;
+    }
+}
+
 .prompt-area-box {
     margin: 12px auto;
     padding: 14px;

@@ -31,6 +31,9 @@ const COLLECTOR_TRANSLATIONS = {
         guide5: "Jika tulisan dirasa sudah selesai, klik <strong>Save Sample (In Server)</strong>. Aplikasi akan secara otomatis menyimpan data tulisan dan data kinematic di server.",
         guide6: "Gunakan tombol <strong>Clear Canvas</strong> untuk membersihkan layar dan mengulang tulisan (sekaligus mengulang pencatat waktu).",
 
+        setupTitle: "Konfigurasi Sesi Pengumpulan Terpandu",
+        setupSubtitle: "Atur parameter annotator, dataset, mode stimulus, dan jumlah item sebelum memulai.",
+
         labelAnnotator: "Anotator:",
         labelDataset: "Dataset:",
         labelClassification: "Klasifikasi:",
@@ -97,6 +100,9 @@ const COLLECTOR_TRANSLATIONS = {
         guide4: "<strong>Write the letters/words</strong> on the canvas below (active stylus/pen tablet recommended). The canvas records: <strong>stroke direction, velocity, pressure, and inter-stroke hesitation</strong>.",
         guide5: "When finished writing, click <strong>Save Sample (In Server)</strong>. The system automatically stores kinematic trajectories and stroke images on the server.",
         guide6: "Use <strong>Clear Canvas</strong> to wipe the drawing area and restart latency timing for the current item.",
+
+        setupTitle: "Guided Collection Session Setup",
+        setupSubtitle: "Configure annotator, dataset, stimulus mode, and session items before starting.",
 
         labelAnnotator: "Annotator:",
         labelDataset: "Dataset:",
