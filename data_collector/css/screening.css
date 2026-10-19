@@ -194,20 +194,63 @@ button {
     cursor: pointer;
 }
 
-/* Target Word Selector */
+/* Evaluator Reference Selector */
 .prompt-selector-container {
     display: none;
+    flex-direction: column;
     margin: 10px auto;
     justify-content: center;
     align-items: center;
     gap: 10px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 12px 16px;
+    border-radius: 8px;
+    max-width: 650px;
 }
 
-.prompt-select {
-    padding: 8px 12px;
+.prompt-input-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.prompt-text-input {
+    padding: 8px 14px;
     font-size: 16px;
     border-radius: 6px;
-    border: 1px solid #ccc;
+    border: 1px solid #cbd5e1;
+    min-width: 240px;
+    color: #1e293b;
+    background: #ffffff;
+    transition: border-color 0.15s ease, filter 0.2s ease;
+}
+
+.prompt-text-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+    filter: none !important;
+}
+
+.prompt-text-input-masked {
+    filter: blur(5px);
+}
+
+.prompt-visibility-group {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    font-size: 14px;
+    color: #334155;
+    padding-top: 4px;
+    border-top: 1px solid #e2e8f0;
+    width: 100%;
 }
 
 .instruction { 

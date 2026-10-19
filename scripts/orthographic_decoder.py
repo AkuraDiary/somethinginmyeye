@@ -13,24 +13,75 @@ import pandas as pd
 
 
 def compute_levenshtein_distance(s1: str, s2: str) -> int:
-    """Computes standard edit distance between two strings."""
-    if len(s1) < len(s2):
-        return compute_levenshtein_distance(s2, s1)
+    """
+    Computes Damerau-Levenshtein (Optimal String Alignment) edit distance between two strings.
+    Accounts for insertions, deletions, substitutions, and adjacent character transpositions
+    (letter position migrations).
+    """
+    len1, len2 = len(s1), len(s2)
+    if len1 == 0:
+        return len2
+    if len2 == 0:
+        return len1
 
-    if len(s2) == 0:
-        return len(s1)
+    d = [[0] * (len2 + 1) for _ in range(len1 + 1)]
+    for i in range(len1 + 1):
+        d[i][0] = i
+    for j in range(len2 + 1):
+        d[0][j] = j
 
-    previous_row = range(len(s2) + 1)
-    for i, c1 in enumerate(s1):
-        current_row = [i + 1]
-        for j, c2 in enumerate(s2):
-            insertions = previous_row[j + 1] + 1
-            deletions = current_row[j] + 1
-            substitutions = previous_row[j] + (c1 != c2)
-            current_row.append(min(insertions, deletions, substitutions))
-        previous_row = current_row
+    for i in range(1, len1 + 1):
+        for j in range(1, len2 + 1):
+            cost = 0 if s1[i - 1] == s2[j - 1] else 1
+            d[i][j] = min(
+                d[i - 1][j] + 1,          # deletion
+                d[i][j - 1] + 1,          # insertion
+                d[i - 1][j - 1] + cost,   # substitution
+            )
+            if (
+                i > 1
+                and j > 1
+                and s1[i - 1] == s2[j - 2]
+                and s1[i - 2] == s2[j - 1]
+            ):
+                d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)  # adjacent transposition
 
-    return previous_row[-1]
+    return d[len1][len2]
+
+
+MIRROR_GLYPH_TO_CANONICAL = {
+    "ꓭ": "b",
+    "ᗡ": "d",
+    "Ɔ": "c",
+    "ɔ": "c",
+    "Ǝ": "e",
+    "ɘ": "e",
+    "ꟻ": "f",
+    "⅁": "g",
+    "ᒐ": "j",
+    "⅃": "l",
+    "И": "n",
+    "и": "n",
+    "ꟼ": "p",
+    "Я": "r",
+    "ɿ": "r",
+    "Ƨ": "s",
+    "ƨ": "s",
+    "Ɛ": "3",
+    "ᔭ": "4",
+    "г": "7",
+}
+
+RECIPROCAL_PAIRS = {
+    "b": "d",
+    "d": "b",
+    "p": "q",
+    "q": "p",
+    "m": "w",
+    "w": "m",
+    "u": "n",
+    "n": "u",
+}
 
 
 def detect_stroke_reversal_features(df: pd.DataFrame) -> Dict[str, Any]:
@@ -105,8 +156,8 @@ def evaluate_orthographic_accuracy(
     """
     Evaluates phonological and spelling accuracy against expected prompt.
     Checks:
-      1. Letter reversals (e.g. prompt 'b' written with loop on left -> mirror reversal).
-      2. String edit distance between recognized character/word and expected prompt.
+      1. Letter reversals (canonical mirror glyphs from ONNX Head 2, reciprocal b/d or p/q swaps, and stroke geometry).
+      2. Damerau-Levenshtein string edit distance (omissions, substitutions, and adjacent transpositions/migrations).
       3. Normalized orthographic error index (0.0 = perfect match, 1.0 = severe spelling/reversal error).
     """
     target = expected_prompt.lower().strip()
@@ -115,32 +166,40 @@ def evaluate_orthographic_accuracy(
     reversal_detected = False
     reversal_description = ""
 
-    # Check classic b-d reversal
-    if target in ["b"]:
-        if geometry["stem_side"] == "right":
-            reversal_detected = True
-            reversal_description = "Mirror reversal detected: 'b' written as 'd' (vertical stem oriented on right)."
-    elif target in ["d"]:
-        if geometry["stem_side"] == "left":
-            reversal_detected = True
-            reversal_description = "Mirror reversal detected: 'd' written as 'b' (vertical stem oriented on left)."
-    elif target in ["p"]:
-        if geometry["stem_side"] == "right":
-            reversal_detected = True
-            reversal_description = "Mirror reversal detected: 'p' written as 'q' (descender stem oriented on right)."
-    elif target in ["q"]:
-        if geometry["stem_side"] == "left":
-            reversal_detected = True
-            reversal_description = "Mirror reversal detected: 'q' written as 'p' (descender stem oriented on left)."
+    # 1. Check classic single-letter geometric b-d / p-q reversal
+    if target in ["b"] and geometry["stem_side"] == "right":
+        reversal_detected = True
+        reversal_description = "Mirror reversal detected: 'b' written as 'd' (vertical stem oriented on right)."
+    elif target in ["d"] and geometry["stem_side"] == "left":
+        reversal_detected = True
+        reversal_description = "Mirror reversal detected: 'd' written as 'b' (vertical stem oriented on left)."
+    elif target in ["p"] and geometry["stem_side"] == "right":
+        reversal_detected = True
+        reversal_description = "Mirror reversal detected: 'p' written as 'q' (descender stem oriented on right)."
+    elif target in ["q"] and geometry["stem_side"] == "left":
+        reversal_detected = True
+        reversal_description = "Mirror reversal detected: 'q' written as 'p' (descender stem oriented on left)."
 
-
-    # Calculate edit distance if decoded text provided, otherwise infer from reversal
+    # 2. Check decoded_text from Dual-Track ONNX Resolver for mirror glyphs or reciprocal swaps
     if decoded_text:
-        recognized = decoded_text.lower().strip()
+        raw_decoded = decoded_text.strip()
+        mirror_positions = []
+        for idx, ch in enumerate(raw_decoded):
+            if ch in MIRROR_GLYPH_TO_CANONICAL:
+                canon = MIRROR_GLYPH_TO_CANONICAL[ch]
+                mirror_positions.append(f"position {idx + 1} ('{canon}' -> '{ch}')")
+            elif idx < len(target) and target[idx] in RECIPROCAL_PAIRS:
+                if ch.lower() == RECIPROCAL_PAIRS[target[idx]] and ch.lower() != target[idx]:
+                    mirror_positions.append(f"position {idx + 1} ('{target[idx]}' written as '{ch.lower()}')")
+
+        if mirror_positions:
+            reversal_detected = True
+            reversal_description = "Character reversal detected at " + ", ".join(mirror_positions) + "."
+
+        recognized = raw_decoded.lower()
         edit_dist = compute_levenshtein_distance(recognized, target)
         normalized_edit_dist = min(edit_dist / max(len(target), 1), 1.0)
     else:
-        # Default estimation based on reversal flag and geometric properties
         if reversal_detected:
             normalized_edit_dist = 0.8
             recognized = target[::-1] if len(target) > 1 else ("d" if target == "b" else "b")

@@ -127,32 +127,62 @@ window.addEventListener('touchmove', (e) => {
 const modeFreeFlow = document.getElementById('modeFreeFlow');
 const modePrompted = document.getElementById('modePrompted');
 const promptSelectorContainer = document.getElementById('promptSelectorContainer');
-const promptSelect = document.getElementById('promptSelect');
+const promptInput = document.getElementById('promptInput');
+const visCopying = document.getElementById('visCopying');
+const visDictation = document.getElementById('visDictation');
 const promptDisplay = document.getElementById('promptDisplay');
 const transcribeBtn = document.getElementById('transcribeBtn');
 const analyzeBtn = document.getElementById('analyzeBtn');
 
-function updateModeUI() {
+function getEvaluatorPrompt() {
+    if (!promptInput) return 'bebek';
+    const val = promptInput.value.trim();
+    return val.length > 0 ? val : 'bebek';
+}
+
+function refreshPromptDisplayText() {
     if (modeFreeFlow.checked) {
         promptSelectorContainer.style.display = 'none';
         promptDisplay.innerText = '"Write freely on the canvas below"';
         promptDisplay.className = 'instruction prompt-display-free';
+        if (promptInput) promptInput.classList.remove('prompt-text-input-masked');
     } else {
         promptSelectorContainer.style.display = 'flex';
-        promptDisplay.innerText = `"${promptSelect.value}"`;
-        promptDisplay.className = 'instruction prompt-display-target';
+        const isDictation = visDictation && visDictation.checked;
+        if (isDictation) {
+            promptDisplay.innerText = '"Write the letter or word spoken by the evaluator"';
+            promptDisplay.className = 'instruction prompt-display-free';
+            if (promptInput) promptInput.classList.add('prompt-text-input-masked');
+        } else {
+            promptDisplay.innerText = `"${getEvaluatorPrompt()}"`;
+            promptDisplay.className = 'instruction prompt-display-target';
+            if (promptInput) promptInput.classList.remove('prompt-text-input-masked');
+        }
     }
+}
+
+function updateModeUI() {
+    refreshPromptDisplayText();
     clearCanvas();
 }
 
 modeFreeFlow.addEventListener('change', updateModeUI);
 modePrompted.addEventListener('change', updateModeUI);
-promptSelect.addEventListener('change', () => {
-    if (modePrompted.checked) {
-        promptDisplay.innerText = `"${promptSelect.value}"`;
-        clearCanvas();
-    }
-});
+if (visCopying) visCopying.addEventListener('change', refreshPromptDisplayText);
+if (visDictation) visDictation.addEventListener('change', refreshPromptDisplayText);
+if (promptInput) {
+    promptInput.addEventListener('input', () => {
+        if (modePrompted.checked) {
+            refreshPromptDisplayText();
+        }
+    });
+    promptInput.addEventListener('change', () => {
+        if (modePrompted.checked) {
+            refreshPromptDisplayText();
+            clearCanvas();
+        }
+    });
+}
 
 // --- MOVEMENT DYNAMICS TELEMETRY ---
 function updateMovementMetrics() {
@@ -1024,10 +1054,11 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
     let displayWinner = rawWinner;
 
     const isPrompted = modePrompted.checked;
-    const promptTarget = promptSelect.value.trim();
+    const promptTarget = getEvaluatorPrompt();
+    const promptTargetNoSpaces = promptTarget.replace(/\s+/g, '');
 
     // Contextual Domain Masking: Prevents numeral reversals (e.g. 6/9) from polluting alphabetic text
-    const isAlphabeticContext = isPrompted ? !/^\d+$/.test(promptTarget) : (rawWinner.length > 0 && /[a-zA-Z]/.test(rawWinner));
+    const isAlphabeticContext = isPrompted ? !/^\d+$/.test(promptTargetNoSpaces) : (rawWinner.length > 0 && /[a-zA-Z]/.test(rawWinner));
     const numericReversalKeys = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
     // Track 2: Kinematic Clustering into Characters
@@ -1043,11 +1074,11 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
         const onnxRes = await evaluateClusterWithONNX(clusterStrokes);
 
         // Identify intended canonical letter:
-        // Priority 1: In Prompted Mode, the expected letter from promptTarget (e.g. "D" or "b")
+        // Priority 1: In Prompted Mode, the expected non-space character from promptTargetNoSpaces (e.g. "D" or "b")
         // Priority 2: In Free Writing, the In-House ONNX Head 1 predicted letter (e.g. "D", "B", "b")
         // Priority 3: Google Digital Ink's raw letter
-        const canonicalChar = (isPrompted && k < promptTarget.length) 
-            ? promptTarget[k] 
+        const canonicalChar = (isPrompted && k < promptTargetNoSpaces.length) 
+            ? promptTargetNoSpaces[k] 
             : (onnxRes.topChar || rawWinner[k] || '');
 
         let revSymbol = canonicalChar;
@@ -1278,7 +1309,7 @@ analyzeBtn.addEventListener('click', async () => {
         });
 
         const isFreeFlow = modeFreeFlow.checked;
-        const targetPrompt = isFreeFlow ? decoded : promptSelect.value;
+        const targetPrompt = isFreeFlow ? decoded : getEvaluatorPrompt();
 
         const payload = {
             strokes: strokesWithLatency,

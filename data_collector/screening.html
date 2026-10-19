@@ -35,17 +35,37 @@
                 </label>
             </div>
 
-            <!-- Target Word Selector (Visible in Prompted Mode) -->
+            <!-- Evaluator Reference & Display Mode (Visible in Prompted Mode) -->
             <div id="promptSelectorContainer" class="prompt-selector-container">
-                <label for="promptSelect"><strong>Target Word:</strong></label>
-                <select id="promptSelect" class="prompt-select">
-                    <option value="bebek">bebek</option>
-                    <option value="A">A</option>
-                    <option value="b">b</option>
-                    <option value="d">d</option>
-                    <option value="p">p</option>
-                    <option value="q">q</option>
-                </select>
+                <div class="prompt-input-group">
+                    <label for="promptInput"><strong>Evaluator Reference:</strong></label>
+                    <input type="text" id="promptInput" list="promptSuggestions" class="prompt-text-input" value="bebek" placeholder="Evaluator: enter reference text..." autocomplete="off">
+                    <datalist id="promptSuggestions">
+                        <option value="bebek">
+                        <option value="kucing">
+                        <option value="buku">
+                        <option value="dadu">
+                        <option value="pohon">
+                        <option value="baju baru">
+                        <option value="smile">
+                        <option value="b">
+                        <option value="d">
+                        <option value="p">
+                        <option value="q">
+                        <option value="B">
+                        <option value="D">
+                    </datalist>
+                </div>
+                <div class="prompt-visibility-group">
+                    <label class="mode-label" title="Display the reference text above the canvas so the child can copy it visually.">
+                        <input type="radio" name="promptVisibility" value="copying" checked id="visCopying">
+                        Visual Copying (Show Target)
+                    </label>
+                    <label class="mode-label" title="Hide the reference text on screen while the evaluator dictates the letter or word verbally.">
+                        <input type="radio" name="promptVisibility" value="dictation" id="visDictation">
+                        Evaluator Dictation (Hide Target from Child)
+                    </label>
+                </div>
             </div>
 
             <div class="instruction prompt-display-free" id="promptDisplay">"Write freely on the canvas below"</div>
