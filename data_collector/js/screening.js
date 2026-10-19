@@ -593,6 +593,9 @@ let lastScreeningX = 0;
 let lastScreeningY = 0;
 
 canvas.addEventListener('pointerdown', (e) => {
+    try {
+        canvas.setPointerCapture(e.pointerId);
+    } catch (_) {}
     if (!hasStartedWriting) {
         latencyMs = Date.now() - promptStartTime;
         hasStartedWriting = true;
@@ -636,6 +639,20 @@ canvas.addEventListener('pointermove', (e) => {
 });
 
 canvas.addEventListener('pointerup', (e) => {
+    try {
+        canvas.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+    if (isDrawing) {
+        isDrawing = false;
+        recordPoint(e, 0);
+        updateMovementMetrics();
+    }
+});
+
+canvas.addEventListener('pointercancel', (e) => {
+    try {
+        canvas.releasePointerCapture(e.pointerId);
+    } catch (_) {}
     if (isDrawing) {
         isDrawing = false;
         recordPoint(e, 0);
@@ -650,6 +667,10 @@ canvas.addEventListener('pointerout', (e) => {
         updateMovementMetrics();
     }
 });
+
+// Suppress context menu, magnifying glass, and text selection on touch/stylus hold
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('selectstart', (e) => e.preventDefault());
 
 document.getElementById('clearBtn').addEventListener('click', clearCanvas);
 

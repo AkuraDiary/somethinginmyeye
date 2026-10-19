@@ -605,6 +605,9 @@ let lastX = 0;
 let lastY = 0;
 
 canvas.addEventListener('pointerdown', (e) => {
+    try {
+        canvas.setPointerCapture(e.pointerId);
+    } catch (_) {}
     onFirstTouchLatency();
     isDrawing = true;
     lastX = e.offsetX;
@@ -649,6 +652,21 @@ canvas.addEventListener('pointermove', (e) => {
 });
 
 canvas.addEventListener('pointerup', (e) => {
+    try {
+        canvas.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+    if (isDrawing) {
+        isDrawing = false;
+        recordPoint(e, 0);
+        const pressEl = document.getElementById('livePressureDisplay');
+        if (pressEl) pressEl.innerText = 'Pressure: 0.00';
+    }
+});
+
+canvas.addEventListener('pointercancel', (e) => {
+    try {
+        canvas.releasePointerCapture(e.pointerId);
+    } catch (_) {}
     if (isDrawing) {
         isDrawing = false;
         recordPoint(e, 0);
@@ -665,6 +683,10 @@ canvas.addEventListener('pointerout', (e) => {
         if (pressEl) pressEl.innerText = 'Pressure: 0.00';
     }
 });
+
+// Suppress context menu, magnifying glass, and text selection on touch/stylus hold
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+canvas.addEventListener('selectstart', (e) => e.preventDefault());
 
 // ---------------------------------------------------------------------------
 // SERVER PAYLOAD & FILE CONVENTION

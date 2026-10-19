@@ -551,6 +551,14 @@ Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (
   * *Benchmark 2 (Mixed Cohort Training):* Harmonize iPad and Huawei samples into a unified training distribution, demonstrating robustness across hardware tiers.
   * *Golden Invariant:* Ensure diagnostic labels (`Normal` vs `Dyslexia`/`Dysgraphia`) are never completely segregated by hardware device.
 
+### 5. iPadOS WebKit Stylus Long-Press & Accidental Selection Suppression
+* **The Problem:** In iPadOS Safari, holding down an Apple Pencil or capacitive stylus (or pausing briefly before writing) causes WebKit's default gesture engine to trigger text selection handles, magnifying glasses, image drag-and-drop, or the system context menu ("Copy | Look Up | Share"), accidentally selecting the whole canvas or surrounding layout.
+* **The Solution:**
+  1. *CSS Selection & Callout Suppression:* Apply `-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;` to `body` and `canvas`, while explicitly preserving `-webkit-user-select: text; user-select: text;` on text fields (`input, select, textarea`).
+  2. *Drag Suppression:* Apply `-webkit-user-drag: none;` on `canvas` so WebKit never treats canvas strokes as draggable image objects.
+  3. *Pointer Capture Locking:* Invoke `canvas.setPointerCapture(e.pointerId)` on `pointerdown` and `canvas.releasePointerCapture(e.pointerId)` on `pointerup` and `pointercancel`, directing all stylus trajectory events strictly to the canvas.
+  4. *Synthetic Context Menu Neutralization:* Intercept `contextmenu` and `selectstart` events on `canvas` via `e.preventDefault()`.
+
 ---
 
 ## 28. Canvas PNG Image Export Calibration & Dual-Track Reversal Arbitration

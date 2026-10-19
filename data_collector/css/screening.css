@@ -12,6 +12,15 @@ html, body {
     position: fixed;
     background-color: #f4f7f6;
     touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+input, select, textarea {
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 .app-scroll-container { 
@@ -215,6 +224,11 @@ canvas {
     touch-action: none; 
     margin-top: 10px; 
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .controls { 
