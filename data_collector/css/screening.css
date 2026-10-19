@@ -360,19 +360,21 @@ button {
 
 /* Movement Dynamics Telemetry Grid */
 .telemetry-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    display: flex;
+    /* grid-template-columns: repeat(4, 1fr); */
     gap: 10px;
+    justify-content: center;
     max-width: 1000px;
     margin: 15px auto 5px auto;
     font-size: 14px;
 }
 
 .telemetry-card {
+    min-width: fit-content;
     background: #f8f9fa;
     border: 1px solid #e0e0e0;
     border-radius: 6px;
-    padding: 8px;
+    padding:  8px 16px;
 }
 
 .telemetry-label {

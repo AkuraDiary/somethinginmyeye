@@ -91,7 +91,7 @@
                     <div class="telemetry-label" data-i18n="telemStartDelay">Start Delay</div>
                     <div id="telemetryLatency" class="telemetry-value">0 ms</div>
                 </div>
-                <div class="telemetry-card">
+                <div class="telemetry-card" hidden>
                     <div class="telemetry-label" data-i18n="telemDirChanges">Direction Changes</div>
                     <div id="telemetryNIV" class="telemetry-value telemetry-value-smooth">0</div>
                 </div>
@@ -99,7 +99,7 @@
                     <div class="telemetry-label" data-i18n="telemStrokeCount">Stroke Count</div>
                     <div id="telemetryStrokes" class="telemetry-value">0</div>
                 </div>
-                <div class="telemetry-card">
+                <div class="telemetry-card" hidden>
                     <div class="telemetry-label" data-i18n="telemSmoothness">Movement Smoothness</div>
                     <div id="telemetryStatus" class="telemetry-value telemetry-value-smooth" data-i18n="smoothStatus">Smooth</div>
                 </div>
@@ -134,7 +134,7 @@
             <!-- Model Transparency & Diagnostics Drawer -->
             <div id="modelDiagnosticsCard" class="model-diagnostics-card" style="display: none;">
                 <div class="diagnostics-header">
-                    <span data-i18n="diagHeader">Individual Character Inference (ONNX Dual-Head)</span>
+                    <span data-i18n="diagHeader">Individual Character Inference</span>
                     <span id="diagnosticsSummaryTag" class="diag-tag diag-tag-normal">OK</span>
                 </div>
                 <div id="diagnosticsDetails" class="diagnostics-details"></div>
