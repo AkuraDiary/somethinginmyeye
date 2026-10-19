@@ -468,3 +468,55 @@ Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (
   \end{cases}$$
   *Domain Mask Invariant:* Numeral reversals ($6 \leftrightarrow 9$) are suppressed when the expected prompt context is alphabetic ($[a\text{-}zA\text{-}Z]$).
 * **Academic Grounding:** Murnani et al. (2025); Hussein et al. (2024); Patil et al. (2024).
+
+---
+
+## 26. Bilingual Localization, Moderated Semi-Gamified Data Intake, and Speech Synthesis Architecture
+
+### 1. Unified Bilingual Localization Architecture
+* **The Problem:** Clinical tools operated in Indonesia require native Indonesian instructions and field labels for local annotators and pediatric subjects. However, academic validation, research documentation, and international peer review require rigorous English terminology.
+* **Synchronized Client-Side State:**
+  - Both `data_collector/index.html` (Data Collector) and `data_collector/screening.html` (Screening Evaluator) store and read the active language code (`id` or `en`) via `localStorage.getItem('elkinematics_lang')`.
+  - Changing the language toggle pill (`[ID] | [EN]`) on either interface instantaneously applies translation across all DOM elements via data attributes (`data-i18n`, `data-i18n-ph`) and updates internal telemetry/diagnostic text generators without page reloads.
+  - When navigating between interfaces, the selected language preference is automatically preserved.
+* **Restoration of Full 6-Point Research Guidelines:**
+  - The guided usage instructions were restored to full scientific rigor, explicitly educating annotators on:
+    1. Dataset type (`Train` vs `Validation`) and annotator attribution.
+    2. Classification label mode (`Normal` vs `Dyslexia` / `Dysgraphia`).
+    3. Cognitive latency initiation protocol (measuring pre-writing hesitation).
+    4. Hardware-level kinematic dynamics: stroke direction ($\Delta x, \Delta y$), velocity ($v$), pressure ($p$), and inter-stroke in-air hesitation ($t_{\text{air}}$).
+    5. Server persistence and companion `.meta.json` logging.
+    6. Canvas reset and stimulus transition protocol.
+
+### 2. Task-Type Grounded Semi-Gamified Moderated Intake Protocol
+* **Clinical Justification by Task Type (Danna et al., 2023; Daniel et al., 2025):**
+  - Following the methodological framework established in Danna et al. (2023, *Children* 10(12):1925), cognitive-motor loads are graded by **Task Type** rather than arbitrary lexical claims:
+    - *Task Type 1 (Isolated Letters & Digits):* Evaluates baseline visuospatial orientation and mirror reversals ($b, d, p, q, m, w, 3, 6, 9$).
+    - *Task Type 2A (High-Frequency Regular Words):* Assesses lexical graphomotor flow and velocity-invariant arc-length trajectories in typical Indonesian vocabulary (`buku`, `kucing`, `pohon`, `dadu`, `meja`, `sekolah`).
+    - *Task Type 2B (Transposition & Migration Anagram Words):* Directly targets Letter Position Dyslexia (LPD) and orthographic transposition errors (`kapal` / `pakal`, `kasur` / `rusak`, `bakar` / `kabar`).
+    - *Task Type 3 (Short Continuous Sentences):* Evaluates sustained graphomotor endurance, inter-word spacing, and baseline stability (`budi suka baca buku cerita`, `kucing hitam tidur di kasur`).
+* **Semi-Gamification & Throughput Optimization:**
+  - To eliminate annotator cognitive fatigue and data entry bottlenecks, a one-time session setup modal configures: Annotator Name, Target Dataset, Classification Mode, Execution Mode (*Visual Copying* vs. *Spoken Dictation*), and Batch Count ($N = 5, 10, 20$).
+  - Once started, the engine automatically draws pseudorandom balanced items from the target pools, displays dynamic progress bars (`Item i of N`), automatically clears canvas state upon submission, and presents the next item seamlessly.
+
+### 3. Examiner-Administered Oral Dictation Protocol & Speech Fallback Architecture
+* **Clinical Justification over Synthetic TTS (Daniel et al., 2025; Danna et al., 2023; Chung et al., 2020):**
+  - In standardized pediatric psycho-educational batteries (e.g. WIST, WIAT-III, BHK), oral spelling and dictation subtests are administered by a human examiner speaking the target word aloud with natural cadence and phonemic clarity (e.g., *"Tulis kata: bebek. Bebek."*).
+  - Synthetic TTS models introduce robotic formant flattening and unnatural prosody, which disproportionately confound children with subtle auditory processing or phonological discrimination deficits.
+  - Formally establishing the primary protocol as **Examiner-Administered Oral Dictation** elevates the clinical and ecological validity of the dataset.
+* **Examiner HUD & Latency Trigger:**
+  - In *Examiner Spoken Dictation* mode, the visual target is masked on the child's canvas area to prevent visual copying shortcuts.
+  - The target glyph/word is displayed prominently in an Examiner HUD callout (`Instruksi Penguji: Ucapkan kata berikut ke anak: "bebek"`).
+  - Once the examiner finishes speaking, they trigger latency timing via an on-screen button (`Mulai Ukur Latency`) or keyboard shortcut (`Spacebar`).
+  - If the participant touches the canvas prior to manual trigger, an automatic baseline reaction window ($350\text{ms}$) is applied.
+* **Zero-Dependency Audio Fallback:**
+  - External network TTS dependencies are disabled to ensure offline reliability in field and school settings.
+  - An optional browser speech button (`window.speechSynthesis`) is maintained in the Examiner HUD for solo testing workflows, automatically initiating latency timing once synthetic speech terminates.
+
+### 4. Data Storage & Pipeline Backward Compatibility
+* **Filename Continuity:**
+  - Downstream training and evaluation scripts in `scripts/universal_pipeline.py` rely on string-based filename tokenization.
+  - To prevent pipeline breakage, files continue to be written to disk following the standardized legacy pattern: `${dataset}_${mode}_${prompt}_${annotator}_${timestamp}.csv` and `.png`.
+* **Companion Metadata Manifest (`.meta.json`):**
+  - All extended clinical fields (session ID, task tier, execution mode, language code, cognitive latency, raw stroke count) are written synchronously as a companion `.meta.json` sidecar alongside the CSV and PNG, enabling rich longitudinal cohort analytics without altering legacy binary parsers.
+

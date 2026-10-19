@@ -377,3 +377,75 @@ canvas {
     background: #f0fdf4;
     border: 1px solid #bbf7d0;
 }
+
+/* Examiner Oral Dictation Card */
+.examiner-oral-card {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-left: 5px solid #f59e0b;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 10px auto 14px auto;
+    max-width: 720px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.examiner-oral-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.examiner-badge {
+    font-size: 12px;
+    font-weight: 700;
+    color: #92400e;
+    background: #fef3c7;
+    padding: 3px 8px;
+    border-radius: 4px;
+    border: 1px solid #fde68a;
+}
+
+.examiner-target-text {
+    font-size: 24px;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: 0.6px;
+}
+
+.examiner-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.examiner-actions .btn-timer {
+    padding: 7px 16px;
+    font-size: 13.5px;
+    background-color: #f59e0b;
+    color: #ffffff;
+}
+
+.examiner-actions .btn-timer:hover {
+    background-color: #d97706;
+}
+
+.examiner-actions .btn-timer:disabled {
+    background-color: #94a3b8;
+    cursor: default;
+    opacity: 0.85;
+}
+
+.examiner-actions .btn-audio {
+    margin-top: 0;
+    padding: 7px 14px;
+    font-size: 13px;
+}
+

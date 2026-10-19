@@ -103,8 +103,20 @@
                 <span id="liveLatencyDisplay" class="hud-pill hud-pill-latency" data-i18n="latencyWaiting">Latency: menunggu...</span>
             </div>
             <div class="progress-track"><div id="sessionProgressBar" class="progress-fill"></div></div>
+
+            <!-- Examiner Oral Dictation HUD (active only during spoken_dictation mode) -->
+            <div id="examinerOralCard" class="examiner-oral-card" style="display: none;">
+                <div class="examiner-oral-header">
+                    <span class="examiner-badge" data-i18n="examinerSpokenTag">Instruksi Penguji: Ucapkan kata berikut ke anak:</span>
+                    <strong id="examinerSpokenTarget" class="examiner-target-text">-</strong>
+                </div>
+                <div class="examiner-actions">
+                    <button id="startOralTimingBtn" type="button" class="btn-timer" data-i18n="btnStartOralTiming">Mulai Ukur Latency (Spasi)</button>
+                    <button id="replayAudioBtn" type="button" class="btn-audio" data-i18n="btnPlayBrowserAudio">Putar Suara (Browser)</button>
+                </div>
+            </div>
+
             <div id="promptDisplayHeader" class="prompt-header">-</div>
-            <button id="replayAudioBtn" type="button" class="btn-audio" style="display: none;" data-i18n="btnReplayAudio">Putar Ulang Suara</button>
         </div>
 
         <div id="sessionSummaryCard" class="session-card summary-card" style="display: none;"></div>

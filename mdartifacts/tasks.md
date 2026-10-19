@@ -12,7 +12,7 @@ Dokumen ini mencatat prioritas pengerjaan teknis, validasi klinis, dan eksperime
   - Restored full 6-point research guidelines covering dataset types, classification modes, cognitive latency timing, hardware stylus usage, and 4 kinematic dynamics (stroke direction, velocity, pressure, inter-stroke hesitation).
   - Implemented instant bilingual (`ID` / `EN`) localization toggle across both Data Collector and Live Screening interfaces with shared `localStorage` synchronization.
   - Implemented semi-gamified Moderated Guided Collection serving balanced pseudorandom Indonesian stimuli (L1 chiral characters, L2A high-frequency words, L2B letter-migration anagrams, L3 short sentences) justified by task-type literature (Danna et al. 2023).
-  - Wired External TTS engine (`EXTERNAL_TTS_API_URL`) with graceful fallback to browser speech synthesis (`id-ID` / `en-US`).
+  - Implemented Examiner-Administered Oral Dictation Standard with Examiner HUD target presentation, manual/Spacebar latency initiation triggers, and client-side browser speech fallback (`window.speechSynthesis`).
   - Preserved legacy filename format (`${dataset}_${mode}_${prompt}_${annotator}_${timestamp}`) while writing companion `.meta.json` sidecars in `scripts/server.py`.
   - Verified strict compliance with the repository's Zero-Emoji Policy across all HTML, CSS, and JS files.
 - [x] **Step 2A: Multi-Character Bounding-Box Segmentation & Writing Speed Robustness (`data_collector/js/screening.js`):**

@@ -44,23 +44,27 @@ const COLLECTOR_TRANSLATIONS = {
         optDyslexia: "Dyslexia",
         optDysgraphia: "Dysgraphia",
         optVisualCopying: "Visual Copying (Salin Teks)",
-        optSpokenDictation: "Spoken Dictation (Dikte Suara)",
+        optSpokenDictation: "Dikte Lisan Penguji (Target Disembunyikan)",
 
         btnStartGuided: "Mulai Sesi Terpandu",
         btnReplayAudio: "Putar Ulang Suara",
+        btnPlayBrowserAudio: "Putar Suara (Browser)",
         btnStartWriting: "Start Writing",
+        btnStartOralTiming: "Mulai Ukur Latency (Spasi)",
+        oralTimingStarted: "Waktu Berjalan (Menunggu sentuhan pena...)",
         btnSaveSample: "Save Sample (In Server)",
         btnClearCanvas: "Clear Canvas",
         btnSaveAndNext: "Save Sample (Next →)",
         btnSkip: "Skip",
         btnEndSession: "End Session",
 
+        examinerSpokenTag: "Instruksi Penguji: Ucapkan kata berikut ke anak:",
         freePromptDesc: "Prompt: Tulis teks acuan sesuai Label (huruf, kata, atau kalimat)",
         latencyWaiting: "Latency: menunggu...",
         latencyMeasuring: "Latency: mengukur jeda...",
         latencyWaitingToStart: "Latency: Menunggu mulai...",
         latencyTimingDelay: "Latency: Mengukur jeda kognitif...",
-        dictationInstruction: "Dengarkan suara, lalu tulis yang Anda dengar",
+        dictationInstruction: "Dengarkan kata yang diucapkan penguji lalu tuliskan di kanvas",
 
         alertNeedAnnotator: "Isi nama Anotator terlebih dahulu.",
         alertNeedDrawing: "Tulis sesuatu pada kanvas terlebih dahulu.",
@@ -100,23 +104,27 @@ const COLLECTOR_TRANSLATIONS = {
         optDyslexia: "Dyslexia",
         optDysgraphia: "Dysgraphia",
         optVisualCopying: "Visual Copying (Show Target)",
-        optSpokenDictation: "Spoken Dictation (Audio Only)",
+        optSpokenDictation: "Examiner Spoken Dictation (Target Hidden)",
 
         btnStartGuided: "Start Guided Session",
         btnReplayAudio: "Replay Audio",
+        btnPlayBrowserAudio: "Play Browser Audio",
         btnStartWriting: "Start Writing",
+        btnStartOralTiming: "Start Latency Timing (Space)",
+        oralTimingStarted: "Timing Active (Waiting for stylus touch...)",
         btnSaveSample: "Save Sample (In Server)",
         btnClearCanvas: "Clear Canvas",
         btnSaveAndNext: "Save Sample (Next →)",
         btnSkip: "Skip",
         btnEndSession: "End Session",
 
+        examinerSpokenTag: "Examiner: Speak the following word aloud to the participant:",
         freePromptDesc: "Prompt: Write the reference text according to Label (letters, words, or sentences)",
         latencyWaiting: "Latency: waiting...",
         latencyMeasuring: "Latency: timing reaction delay...",
         latencyWaitingToStart: "Latency: Waiting to start...",
         latencyTimingDelay: "Latency: Timing cognitive delay...",
-        dictationInstruction: "Listen to the spoken audio and write what you hear",
+        dictationInstruction: "Listen to the word spoken by the examiner and write it on canvas",
 
         alertNeedAnnotator: "Please enter Annotator name first.",
         alertNeedDrawing: "Please draw something on the canvas first.",
@@ -358,14 +366,22 @@ function recordPoint(e, isTouching) {
 }
 
 function onFirstTouchLatency() {
-    if (promptStartTime > 0 && !hasStartedWriting) {
-        latencyMs = Date.now() - promptStartTime;
+    if (!hasStartedWriting) {
+        if (promptStartTime === 0) {
+            promptStartTime = Date.now() - 350;
+        }
+        latencyMs = Math.max(50, Date.now() - promptStartTime);
         hasStartedWriting = true;
         const text = `Latency: ${latencyMs} ms`;
         const freeEl = document.getElementById('latencyDisplay');
         const liveEl = document.getElementById('liveLatencyDisplay');
         if (freeEl) freeEl.innerText = text;
         if (liveEl) liveEl.innerText = text;
+        const timingBtn = el('startOralTimingBtn');
+        if (timingBtn) {
+            timingBtn.disabled = true;
+            timingBtn.innerText = COLLECTOR_TRANSLATIONS[currentLang].oralTimingStarted;
+        }
     }
 }
 
@@ -490,15 +506,34 @@ const el = (id) => document.getElementById(id);
 
 function setPromptHeader(item) {
     const header = el('promptDisplayHeader');
-    const replayBtn = el('replayAudioBtn');
+    const oralCard = el('examinerOralCard');
+    const spokenTarget = el('examinerSpokenTarget');
+    const timingBtn = el('startOralTimingBtn');
+
     if (guidedState.config.execution === 'spoken_dictation') {
         header.innerText = COLLECTOR_TRANSLATIONS[currentLang].dictationInstruction;
         header.className = 'prompt-header prompt-header-masked';
-        replayBtn.style.display = 'inline-block';
+        if (oralCard) oralCard.style.display = 'flex';
+        if (spokenTarget) spokenTarget.innerText = item.prompt;
+        if (timingBtn) {
+            timingBtn.disabled = false;
+            timingBtn.innerText = COLLECTOR_TRANSLATIONS[currentLang].btnStartOralTiming;
+        }
     } else {
         header.innerText = item.prompt;
         header.className = 'prompt-header';
-        replayBtn.style.display = 'none';
+        if (oralCard) oralCard.style.display = 'none';
+    }
+}
+
+function startOralLatencyTiming() {
+    if (promptStartTime > 0 || hasStartedWriting) return;
+    promptStartTime = Date.now();
+    el('liveLatencyDisplay').innerText = COLLECTOR_TRANSLATIONS[currentLang].latencyMeasuring;
+    const timingBtn = el('startOralTimingBtn');
+    if (timingBtn) {
+        timingBtn.disabled = true;
+        timingBtn.innerText = COLLECTOR_TRANSLATIONS[currentLang].oralTimingStarted;
     }
 }
 
@@ -511,7 +546,7 @@ function updateHud() {
     el('sessionProgressBar').style.width = `${(guidedState.index / total) * 100}%`;
 }
 
-async function presentCurrentItem() {
+function presentCurrentItem() {
     const item = guidedState.plan[guidedState.index];
     clearCanvas();
     latencyMs = 0;
@@ -520,13 +555,10 @@ async function presentCurrentItem() {
     el('liveLatencyDisplay').innerText = COLLECTOR_TRANSLATIONS[currentLang].latencyWaiting;
     setPromptHeader(item);
 
-    if (guidedState.config.execution === 'spoken_dictation') {
-        const token = ++guidedState.presentToken;
-        await ttsEngine.speak(item.prompt);
-        if (token !== guidedState.presentToken || !guidedState.running) return;
+    if (guidedState.config.execution === 'visual_copying') {
+        promptStartTime = Date.now();
+        el('liveLatencyDisplay').innerText = COLLECTOR_TRANSLATIONS[currentLang].latencyMeasuring;
     }
-    promptStartTime = Date.now();
-    el('liveLatencyDisplay').innerText = COLLECTOR_TRANSLATIONS[currentLang].latencyMeasuring;
 }
 
 function showGuidedUi(active) {
@@ -646,10 +678,28 @@ el('skipBtn').addEventListener('click', () => {
 el('endSessionBtn').addEventListener('click', () => {
     if (guidedState.running) finishGuidedSession();
 });
-el('replayAudioBtn').addEventListener('click', () => {
+
+const startOralTimingBtn = el('startOralTimingBtn');
+if (startOralTimingBtn) {
+    startOralTimingBtn.addEventListener('click', startOralLatencyTiming);
+}
+
+el('replayAudioBtn').addEventListener('click', async () => {
     if (guidedState.running) {
         const item = guidedState.plan[guidedState.index];
-        ttsEngine.speak(item.prompt);
+        await ttsEngine.speak(item.prompt);
+        if (promptStartTime === 0) {
+            startOralLatencyTiming();
+        }
+    }
+});
+
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && guidedState.running && guidedState.config && guidedState.config.execution === 'spoken_dictation') {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            startOralLatencyTiming();
+        }
     }
 });
 
