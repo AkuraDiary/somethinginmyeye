@@ -551,4 +551,31 @@ Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (
   * *Benchmark 2 (Mixed Cohort Training):* Harmonize iPad and Huawei samples into a unified training distribution, demonstrating robustness across hardware tiers.
   * *Golden Invariant:* Ensure diagnostic labels (`Normal` vs `Dyslexia`/`Dysgraphia`) are never completely segregated by hardware device.
 
+---
+
+## 28. Canvas PNG Image Export Calibration & Dual-Track Reversal Arbitration
+
+### 1. Canvas PNG Coloration & Transparency Artifacts
+* **The Problem:** In HTML5 Canvas 2D contexts, calling `ctx.clearRect()` resets all pixels to transparent black (`rgba(0,0,0,0)`). When strokes are rendered with dark slate styling (e.g. Tailwind `slate-900` `#0f172a`, RGB `15, 23, 42`) and exported via `canvas.toDataURL('image/png')`, the resulting `.png` file has a transparent background. When opened in photo galleries, dark-mode viewers, or computer vision scripts without alpha compositing, the transparent background causes the strokes to appear visibly blue/navy or get distorted against dark backgrounds.
+* **The Invariant:**
+  1. Stroke drawing style must use pure solid black `#000000` (RGB `0, 0, 0`).
+  2. Image export (`postSample()`) must composite the active canvas over an offscreen buffer filled with solid white `#ffffff` (RGB `255, 255, 255`) prior to serialization, guaranteeing crisp, non-transparent pure black ink on solid white paper for all datasets on disk.
+  3. Raw sensor CSV coordinates remain 100% pure hardware events.
+
+### 2. Dual-Track Hybrid Resolver Arbitration & Clinical Reversal Representation
+* **The Problem:** When character reversals are detected (e.g. reversed 'B' or 'd'), two conflicts arose in the transcription resolver:
+  1. *Case Sensitivity Discrepancy:* In Free Writing mode, 62-class Head 1 classification biased toward lowercase `'b'`, which mapped to `'d'`. To the examiner, drawing an uppercase reversed 'B' displayed as lowercase `'d'`.
+  2. *Lexical Overwrite:* The resolver previously tied character replacement to Google Digital Ink's string indices (`rawWinner.split('')`). If Google Ink recognized a reversed 'b' as 'd', substituting `'d'` made it appear that the reversal was ignored. If Google Ink returned a different word length (or dropped spaces), indices were thrown out of alignment.
+* **The Invariant:**
+  1. *Prompt & Height-Aware Case Disambiguation:* In Prompted Mode, the prompt target casing is preserved. In Free Writing Mode, tall strokes ($\ge 55\text{px}$) or uppercase candidate agreement in Head 1 top-3 are promoted to uppercase.
+  2. *Explicit Clinical Notation:* Reversals are never silently replaced with plain ASCII characters. The UI outputs clear clinical annotations:
+     - Uppercase B Reversed: `'B [Rev: ꓭ]'`
+     - Uppercase D Reversed: `'D [Rev: ᗡ]'`
+     - Lowercase b Reversed: `'b [Rev: d]'`
+     - Lowercase d Reversed: `'d [Rev: b]'`
+     - Lowercase p Reversed: `'p [Rev: q]'`
+     - Word Context (e.g. `bebek`): `"[b→d]ebek"`
+  3. *Decoupled Payload (`cleanWinner`):* The front-end delivers both the human-readable annotated text and an unannotated `cleanWinner` string (`ꓭ` or `d`) stored in `data-clean`. This ensures downstream Levenshtein edit distance calculations in `/analyze` evaluate the true character substitution without syntax artifact inflation.
+
+
 

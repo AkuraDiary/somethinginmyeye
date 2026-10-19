@@ -424,10 +424,10 @@ canvas.addEventListener('pointerdown', (e) => {
     ctx.lineWidth = initialWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = '#0f172a';
+    ctx.strokeStyle = '#000000';
     ctx.beginPath();
     ctx.arc(lastX, lastY, Math.max(1.0, initialWidth / 2), 0, Math.PI * 2);
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#000000';
     ctx.fill();
     recordPoint(e, 1);
 
@@ -446,7 +446,7 @@ canvas.addEventListener('pointermove', (e) => {
         ctx.lineWidth = currentWidth;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.strokeStyle = '#0f172a';
+        ctx.strokeStyle = '#000000';
         ctx.stroke();
 
         lastX = e.offsetX;
@@ -483,6 +483,17 @@ function sanitizeLabel(text) {
     return (text || 'UnknownSubj').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').substring(0, 40) || 'UnknownSubj';
 }
 
+function getExportImageDataUrl() {
+    const exportCanvas = document.createElement('canvas');
+    exportCanvas.width = canvas.width;
+    exportCanvas.height = canvas.height;
+    const expCtx = exportCanvas.getContext('2d');
+    expCtx.fillStyle = '#ffffff';
+    expCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+    expCtx.drawImage(canvas, 0, 0);
+    return exportCanvas.toDataURL('image/png');
+}
+
 async function postSample({ dataset, mode, label, annotator, metadata }) {
     const timestamp = Date.now();
     const prefix = `${dataset}_${mode}_${sanitizeLabel(label)}_${annotator}_${timestamp}`;
@@ -490,7 +501,7 @@ async function postSample({ dataset, mode, label, annotator, metadata }) {
         mode: mode,
         prefix: prefix,
         strokes: strokeData.map((point) => ({ ...point, latency: latencyMs })),
-        image: canvas.toDataURL('image/png'),
+        image: getExportImageDataUrl(),
         metadata: {
             ...metadata,
             latency_ms: latencyMs,

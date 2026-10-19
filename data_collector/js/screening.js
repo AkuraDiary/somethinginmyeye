@@ -388,7 +388,7 @@ function redrawAllUserStrokes() {
                 inStroke = true;
             } else {
                 ctx.lineWidth = Math.max((pt.pressure || 0.5) * 5, 2.5);
-                ctx.strokeStyle = "#2c3e50";
+                ctx.strokeStyle = "#000000";
                 ctx.lineTo(pt.x, pt.y);
                 ctx.stroke();
             }
@@ -464,7 +464,9 @@ function renderBoundingBoxesOverlay() {
         ctx.fillRect(bx, by, bw, bh);
 
         // Header label badge on top of the bounding box
-        const labelText = `C#${d.clusterIndex}: '${d.onnxCanonicalChar}' → ${d.resolvedGlyph} (${d.onnxCharConfidence}%)`;
+        const labelText = isRev
+            ? `C#${d.clusterIndex}: ${d.resolvedGlyph}`
+            : `C#${d.clusterIndex}: '${d.onnxCanonicalChar}' (${d.onnxCharConfidence}%)`;
         ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, sans-serif";
         const textWidth = ctx.measureText(labelText).width;
         const badgeW = textWidth + 14;
@@ -522,6 +524,11 @@ function clearCanvas() {
 
     document.getElementById('transcriptionCard').style.display = 'none';
     document.getElementById('resultsDashboard').style.display = 'none';
+    const decodedDisplay = document.getElementById('decodedTextDisplay');
+    if (decodedDisplay) {
+        decodedDisplay.innerText = '"..."';
+        decodedDisplay.removeAttribute('data-clean');
+    }
 
     // Clear and hide Model Diagnostics & Inference Cards
     const diagCard = document.getElementById('modelDiagnosticsCard');
@@ -600,10 +607,10 @@ canvas.addEventListener('pointerdown', (e) => {
     ctx.lineWidth = initialWidth;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    ctx.strokeStyle = "#2c3e50";
+    ctx.strokeStyle = "#000000";
     ctx.beginPath();
     ctx.arc(lastScreeningX, lastScreeningY, Math.max(1.0, initialWidth / 2), 0, Math.PI * 2);
-    ctx.fillStyle = "#2c3e50";
+    ctx.fillStyle = "#000000";
     ctx.fill();
     recordPoint(e, 1);
 });
@@ -619,7 +626,7 @@ canvas.addEventListener('pointermove', (e) => {
         ctx.lineWidth = currentWidth;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
-        ctx.strokeStyle = "#2c3e50";
+        ctx.strokeStyle = "#000000";
         ctx.stroke();
 
         lastScreeningX = e.offsetX;
@@ -1236,52 +1243,10 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
 
     // Evaluate each cluster locally using the In-House ONNX Reversal Model (1-2ms per cluster)
     const reversedPositions = [];
-    const displayChars = rawWinner.split('');
     const diagnostics = [];
 
     for (let k = 0; k < clusters.length; k++) {
         const clusterStrokes = clusters[k];
-        const onnxRes = await evaluateClusterWithONNX(clusterStrokes);
-
-        // Identify intended canonical letter:
-        // Priority 1: In Prompted Mode, the expected non-space character from promptTargetNoSpaces (e.g. "D" or "b")
-        // Priority 2: In Free Writing, the In-House ONNX Head 1 predicted letter (e.g. "D", "B", "b")
-        // Priority 3: Google Digital Ink's raw letter
-        const canonicalChar = (isPrompted && k < promptTargetNoSpaces.length) 
-            ? promptTargetNoSpaces[k] 
-            : (onnxRes.topChar || rawWinner[k] || '');
-
-        let revSymbol = canonicalChar;
-        let clusterIsReversed = false;
-
-        if (onnxRes.isReversed) {
-            // Domain mask check: suppress numeric reversals in alphabetic context
-            if (!(isAlphabeticContext && numericReversalKeys.includes(canonicalChar))) {
-                clusterIsReversed = true;
-                isReversal = true;
-                reversedPositions.push({
-                    index: k + 1,
-                    prob: onnxRes.reversalProb,
-                    rawChar: rawWinner[k] || '?',
-                    onnxChar: onnxRes.topChar
-                });
-
-                // Map to the canonical reversed glyph: e.g. D -> ᗡ, B -> ꓭ, b -> d, E -> Ǝ, N -> И, S -> Ƨ
-                revSymbol = asymmetricReversible[canonicalChar] || 
-                            asymmetricReversible[canonicalChar.toUpperCase()] || 
-                            asymmetricReversible[canonicalChar.toLowerCase()] || 
-                            canonicalChar;
-
-                if (k < displayChars.length) {
-                    displayChars[k] = revSymbol;
-                } else {
-                    displayChars.push(revSymbol);
-                }
-            }
-        }
-
-        const resolvedGlyph = clusterIsReversed ? revSymbol : (displayChars[k] || canonicalChar);
-
         const allClusterPts = clusterStrokes.flat();
         const cXs = allClusterPts.map(p => p.x);
         const cYs = allClusterPts.map(p => p.y);
@@ -1289,6 +1254,86 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
         const boxXMax = Math.max(...cXs);
         const boxYMin = Math.min(...cYs);
         const boxYMax = Math.max(...cYs);
+        const boxH = Math.max(boxYMax - boxYMin, 1);
+        const boxW = Math.max(boxXMax - boxXMin, 1);
+
+        const onnxRes = await evaluateClusterWithONNX(clusterStrokes);
+
+        // Identify intended canonical letter:
+        let canonicalChar = '';
+        if (isPrompted && k < promptTargetNoSpaces.length) {
+            // Priority 1: In Prompted Mode, use exact character casing from promptTargetNoSpaces
+            canonicalChar = promptTargetNoSpaces[k];
+        } else {
+            // Priority 2: In Free Writing, evaluate ONNX Head 1 with case awareness
+            let topChar = onnxRes.topChar || '';
+            const inkChar = (k < rawWinner.length && rawWinner[k] !== '?') ? rawWinner[k] : '';
+
+            // If Google Ink recognized an uppercase character and ONNX top3 contains that uppercase character, favor uppercase:
+            if (inkChar >= 'A' && inkChar <= 'Z' && onnxRes.top3 && onnxRes.top3.some(c => c.char === inkChar)) {
+                topChar = inkChar;
+            } else if (boxH >= 55 && onnxRes.top3) {
+                // If tall stroke (>55px) and topChar is lowercase 'b'/'d', check if 'B'/'D' is in top3 candidates
+                if (topChar === 'b' && onnxRes.top3.some(c => c.char === 'B')) {
+                    topChar = 'B';
+                } else if (topChar === 'd' && onnxRes.top3.some(c => c.char === 'D')) {
+                    topChar = 'D';
+                }
+            }
+            canonicalChar = topChar || inkChar || '?';
+        }
+
+        let revSymbol = canonicalChar;
+        let clusterIsReversed = false;
+        let resolvedGlyph = canonicalChar;
+        let revTag = '';
+
+        if (onnxRes.isReversed) {
+            // Domain mask check: suppress numeric reversals in alphabetic context
+            if (!(isAlphabeticContext && numericReversalKeys.includes(canonicalChar))) {
+                clusterIsReversed = true;
+                isReversal = true;
+
+                // Map to the canonical reversed glyph
+                revSymbol = asymmetricReversible[canonicalChar] || 
+                            asymmetricReversible[canonicalChar.toUpperCase()] || 
+                            asymmetricReversible[canonicalChar.toLowerCase()] || 
+                            canonicalChar;
+
+                // Explicit clinical reversal label formatting:
+                if (canonicalChar.toLowerCase() === 'b' && revSymbol === 'd') {
+                    revTag = canonicalChar === 'B' ? 'B [Rev: ꓭ]' : 'b [Rev: d]';
+                    if (canonicalChar === 'B') revSymbol = 'ꓭ';
+                } else if (canonicalChar.toLowerCase() === 'd' && revSymbol === 'b') {
+                    revTag = canonicalChar === 'D' ? 'D [Rev: ᗡ]' : 'd [Rev: b]';
+                    if (canonicalChar === 'D') revSymbol = 'ᗡ';
+                } else if (canonicalChar.toLowerCase() === 'p' && revSymbol === 'q') {
+                    revTag = canonicalChar === 'P' ? 'P [Rev: ꟼ]' : 'p [Rev: q]';
+                    if (canonicalChar === 'P') revSymbol = 'ꟼ';
+                } else if (canonicalChar.toLowerCase() === 'q' && revSymbol === 'p') {
+                    revTag = 'q [Rev: p]';
+                } else if (revSymbol !== canonicalChar) {
+                    revTag = `${canonicalChar} [Rev: ${revSymbol}]`;
+                } else {
+                    revTag = `${canonicalChar} [Rev]`;
+                }
+
+                resolvedGlyph = revTag;
+
+                reversedPositions.push({
+                    index: k + 1,
+                    prob: onnxRes.reversalProb,
+                    rawChar: (k < rawWinner.length) ? rawWinner[k] : '?',
+                    onnxChar: onnxRes.topChar,
+                    canonicalChar: canonicalChar,
+                    revSymbol: revSymbol,
+                    revTag: revTag
+                });
+            }
+        } else {
+            // Not reversed: use Google Ink char if available, otherwise ONNX canonicalChar
+            resolvedGlyph = (k < rawWinner.length && rawWinner[k] && rawWinner[k] !== '?') ? rawWinner[k] : canonicalChar;
+        }
 
         diagnostics.push({
             clusterIndex: k + 1,
@@ -1297,28 +1342,66 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
             bbox: {
                 x: boxXMin,
                 y: boxYMin,
-                w: Math.max(boxXMax - boxXMin, 1),
-                h: Math.max(boxYMax - boxYMin, 1)
+                w: boxW,
+                h: boxH
             },
             clusterStrokes: clusterStrokes,
-            googleInkChar: rawWinner[k] || '?',
+            googleInkChar: (k < rawWinner.length) ? rawWinner[k] : '?',
+            canonicalChar: canonicalChar,
             onnxCanonicalChar: onnxRes.topChar,
             onnxCharConfidence: (onnxRes.topProb * 100).toFixed(1),
             onnxTop3: onnxRes.top3,
             reversalProbability: (onnxRes.reversalProb * 100).toFixed(1),
             isReversed: clusterIsReversed,
+            revSymbol: revSymbol,
+            revTag: revTag,
             resolvedGlyph: resolvedGlyph
         });
     }
 
+    // Arbitration: Build human display text (displayWinner) and clean unannotated text (cleanWinner)
+    let displayWinner = rawWinner;
+    let cleanWinner = rawWinner;
+
+    if (clusters.length === 1) {
+        if (isReversal && reversedPositions.length > 0) {
+            displayWinner = reversedPositions[0].revTag;
+            cleanWinner = reversedPositions[0].revSymbol;
+        } else {
+            displayWinner = (rawWinner && rawWinner !== '?') ? rawWinner : (diagnostics[0]?.canonicalChar || '?');
+            cleanWinner = displayWinner;
+        }
+    } else if (clusters.length > 1) {
+        if (isReversal) {
+            if (rawWinner.length === clusters.length) {
+                const dispParts = rawWinner.split('');
+                const cleanParts = rawWinner.split('');
+                reversedPositions.forEach(p => {
+                    dispParts[p.index - 1] = `[${p.canonicalChar}→${p.revSymbol}]`;
+                    cleanParts[p.index - 1] = p.revSymbol;
+                });
+                displayWinner = dispParts.join('');
+                cleanWinner = cleanParts.join('');
+            } else {
+                const dispParts = diagnostics.map(d => d.isReversed ? `[${d.canonicalChar}→${d.revSymbol}]` : (d.googleInkChar !== '?' ? d.googleInkChar : d.canonicalChar));
+                const cleanParts = diagnostics.map(d => d.isReversed ? d.revSymbol : (d.googleInkChar !== '?' ? d.googleInkChar : d.canonicalChar));
+                displayWinner = dispParts.join('');
+                cleanWinner = cleanParts.join('');
+            }
+        } else {
+            displayWinner = (rawWinner && rawWinner !== '?') ? rawWinner : diagnostics.map(d => d.canonicalChar).join('');
+            cleanWinner = displayWinner;
+        }
+    }
+
     if (isReversal) {
-        displayWinner = displayChars.join('');
-        const posDescs = reversedPositions.map(p => `position ${p.index} (confidence: ${(p.prob * 100).toFixed(1)}%)`).join(', ');
+        const posDescs = reversedPositions.map(p => `pos ${p.index} ('${p.canonicalChar}' reversed as '${p.revSymbol}', confidence: ${(p.prob * 100).toFixed(1)}%)`).join(', ');
         notice = `Letter Observation: Mirror / rotational reversal detected at ${posDescs}.`;
     }
 
     return {
         winner: displayWinner,
+        cleanWinner: cleanWinner,
         rawWinner: rawWinner,
         candidates: rawCandidates,
         isReversal: isReversal,
@@ -1351,6 +1434,7 @@ transcribeBtn.addEventListener('click', async () => {
         const result = await transcribeWithReflectionAnalysis(strokeData);
 
         decodedTextDisplay.innerText = `"${result.winner}"`;
+        decodedTextDisplay.setAttribute('data-clean', result.cleanWinner || result.winner);
         if (result.isReversal && result.notice) {
             reversalNotice.innerText = result.notice;
             reversalNotice.style.display = 'block';
@@ -1455,11 +1539,13 @@ analyzeBtn.addEventListener('click', async () => {
 
     try {
         // First check if transcribed
-        let decoded = document.getElementById('decodedTextDisplay').innerText.replace(/"/g, '').trim();
+        let cleanDecoded = document.getElementById('decodedTextDisplay').getAttribute('data-clean');
+        let decoded = cleanDecoded || document.getElementById('decodedTextDisplay').innerText.replace(/"/g, '').trim();
         if (decoded === "" || decoded === "..." || decoded === "?") {
             const res = await transcribeWithReflectionAnalysis(strokeData);
-            decoded = res.winner;
-            document.getElementById('decodedTextDisplay').innerText = `"${decoded}"`;
+            decoded = res.cleanWinner || res.winner;
+            document.getElementById('decodedTextDisplay').innerText = `"${res.winner}"`;
+            document.getElementById('decodedTextDisplay').setAttribute('data-clean', res.cleanWinner || res.winner);
             if (res.isReversal && res.notice) {
                 document.getElementById('reversalNotice').innerText = res.notice;
                 document.getElementById('reversalNotice').style.display = 'block';
