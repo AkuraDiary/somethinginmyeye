@@ -556,17 +556,34 @@ resizeCanvas();
 updateModeUI();
 
 // --- DRAWING LOGIC ---
+function normalizePressure(raw) {
+    if (raw === undefined || raw === null || Number.isNaN(raw)) return 0.5;
+    let p = Number(raw);
+    if (p > 1.0) {
+        p = Math.min(1.0, p / 2.5);
+    }
+    return Math.min(1.0, Math.max(0.0, p));
+}
+
 function recordPoint(e, isTouching) {
     strokeData.push({
         time: e.timeStamp,
         x: e.offsetX,
         y: e.offsetY,
-        pressure: e.pressure || 0.5,
+        pressure: e.pressure !== undefined ? e.pressure : 0.5,
         tiltX: e.tiltX || 0,
         tiltY: e.tiltY || 0,
         touching: isTouching
     });
 }
+
+function computeLineWidth(pressure) {
+    // Base 2.0px + 8.0px multiplier, hard-capped at 10.0px for firm pressure
+    return Math.min(10.0, 2.0 + pressure * 8.0);
+}
+
+let lastScreeningX = 0;
+let lastScreeningY = 0;
 
 canvas.addEventListener('pointerdown', (e) => {
     if (!hasStartedWriting) {
@@ -575,17 +592,38 @@ canvas.addEventListener('pointerdown', (e) => {
     }
     isDrawing = true;
     currentStrokeCount++;
+    lastScreeningX = e.offsetX;
+    lastScreeningY = e.offsetY;
+
+    const p = normalizePressure(e.pressure);
+    const initialWidth = computeLineWidth(p);
+    ctx.lineWidth = initialWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = "#2c3e50";
     ctx.beginPath();
-    ctx.moveTo(e.offsetX, e.offsetY);
+    ctx.arc(lastScreeningX, lastScreeningY, Math.max(1.0, initialWidth / 2), 0, Math.PI * 2);
+    ctx.fillStyle = "#2c3e50";
+    ctx.fill();
     recordPoint(e, 1);
 });
 
 canvas.addEventListener('pointermove', (e) => {
     if (isDrawing) {
-        ctx.lineWidth = Math.max((e.pressure || 0.5) * 5, 2.5);
-        ctx.strokeStyle = "#2c3e50";
+        const p = normalizePressure(e.pressure);
+        const currentWidth = computeLineWidth(p);
+
+        ctx.beginPath();
+        ctx.moveTo(lastScreeningX, lastScreeningY);
         ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.lineWidth = currentWidth;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = "#2c3e50";
         ctx.stroke();
+
+        lastScreeningX = e.offsetX;
+        lastScreeningY = e.offsetY;
         recordPoint(e, 1);
     }
 });

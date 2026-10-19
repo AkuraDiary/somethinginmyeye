@@ -337,6 +337,11 @@ canvas {
     color: #9a3412;
 }
 
+.hud-pill-pressure {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
 .progress-track {
     height: 8px;
     background: #e2e8f0;

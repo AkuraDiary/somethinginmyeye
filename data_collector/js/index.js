@@ -379,7 +379,7 @@ function recordPoint(e, isTouching) {
         time: e.timeStamp,
         x: e.offsetX,
         y: e.offsetY,
-        pressure: normalizePressure(e.pressure),
+        pressure: e.pressure !== undefined ? e.pressure : 0.5,
         tiltX: e.tiltX || 0,
         tiltY: e.tiltY || 0,
         touching: isTouching
@@ -406,20 +406,55 @@ function onFirstTouchLatency() {
     }
 }
 
+function computeLineWidth(pressure) {
+    // Base 2.0px + 8.0px multiplier, hard-capped at 10.0px for firm pressure
+    return Math.min(10.0, 2.0 + pressure * 8.0);
+}
+
+let lastX = 0;
+let lastY = 0;
+
 canvas.addEventListener('pointerdown', (e) => {
     onFirstTouchLatency();
     isDrawing = true;
+    lastX = e.offsetX;
+    lastY = e.offsetY;
+    const p = normalizePressure(e.pressure);
+    const initialWidth = computeLineWidth(p);
+    ctx.lineWidth = initialWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#0f172a';
     ctx.beginPath();
-    ctx.moveTo(e.offsetX, e.offsetY);
+    ctx.arc(lastX, lastY, Math.max(1.0, initialWidth / 2), 0, Math.PI * 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fill();
     recordPoint(e, 1);
+
+    const pressEl = document.getElementById('livePressureDisplay');
+    if (pressEl) pressEl.innerText = `Pressure: ${p.toFixed(2)}`;
 });
 
 canvas.addEventListener('pointermove', (e) => {
     if (isDrawing) {
-        ctx.lineWidth = Math.max((e.pressure || 0.5) * 5, 2.5);
+        const p = normalizePressure(e.pressure);
+        const currentWidth = computeLineWidth(p);
+
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
         ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.lineWidth = currentWidth;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#0f172a';
         ctx.stroke();
+
+        lastX = e.offsetX;
+        lastY = e.offsetY;
         recordPoint(e, 1);
+
+        const pressEl = document.getElementById('livePressureDisplay');
+        if (pressEl) pressEl.innerText = `Pressure: ${p.toFixed(2)}`;
     }
 });
 
@@ -427,6 +462,8 @@ canvas.addEventListener('pointerup', (e) => {
     if (isDrawing) {
         isDrawing = false;
         recordPoint(e, 0);
+        const pressEl = document.getElementById('livePressureDisplay');
+        if (pressEl) pressEl.innerText = 'Pressure: 0.00';
     }
 });
 
@@ -434,6 +471,8 @@ canvas.addEventListener('pointerout', (e) => {
     if (isDrawing) {
         isDrawing = false;
         recordPoint(e, 0);
+        const pressEl = document.getElementById('livePressureDisplay');
+        if (pressEl) pressEl.innerText = 'Pressure: 0.00';
     }
 });
 

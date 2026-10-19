@@ -128,6 +128,7 @@ def extract_universal_features(df: pd.DataFrame, resample: bool = True) -> np.nd
 def load_and_scale_universal(
     data_dir: str = DATASET_DIR,
     scaler_save_path: str = SCALER_PATH,
+    resample: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load training CSV sequences, calculate global z-score parameters, and scale data."""
     sequences: List[np.ndarray] = []
@@ -150,7 +151,7 @@ def load_and_scale_universal(
         else:
             continue
 
-        stroke_data = extract_universal_features(df)
+        stroke_data = extract_universal_features(df, resample=resample)
         if len(stroke_data) > MAX_TIMESTEPS:
             stroke_data = stroke_data[:MAX_TIMESTEPS]
         else:
@@ -183,6 +184,7 @@ def load_and_scale_universal(
 def load_validation_with_train_scalers(
     data_dir: str = VAL_DATASET_DIR,
     scaler_path: str = SCALER_PATH,
+    resample: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load validation cohort using strictly precomputed training scalers to prevent leakage."""
     scaler_data = np.load(scaler_path)
@@ -209,7 +211,7 @@ def load_validation_with_train_scalers(
         else:
             continue
 
-        stroke_data = extract_universal_features(df)
+        stroke_data = extract_universal_features(df, resample=resample)
         if len(stroke_data) > MAX_TIMESTEPS:
             stroke_data = stroke_data[:MAX_TIMESTEPS]
         else:
@@ -256,9 +258,10 @@ def unified_predict(
     model,
     version: str,
     scaler_path: str = SCALER_PATH,
+    resample: bool = True,
 ) -> Tuple[float, List[float]]:
     """Universal inference predicting dysgraphia probability and generating XAI heatmaps."""
-    stroke_data = extract_universal_features(df)
+    stroke_data = extract_universal_features(df, resample=resample)
     latency_val = float(df["latency"].iloc[0]) / 1000.0 if "latency" in df.columns and len(df) > 0 else 0.0
     stroke_data = np.nan_to_num(stroke_data, nan=0.0, posinf=0.0, neginf=0.0)
 
