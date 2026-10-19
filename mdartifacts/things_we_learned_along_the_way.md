@@ -568,14 +568,8 @@ Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (
   2. *Lexical Overwrite:* The resolver previously tied character replacement to Google Digital Ink's string indices (`rawWinner.split('')`). If Google Ink recognized a reversed 'b' as 'd', substituting `'d'` made it appear that the reversal was ignored. If Google Ink returned a different word length (or dropped spaces), indices were thrown out of alignment.
 * **The Invariant:**
   1. *Prompt & Height-Aware Case Disambiguation:* In Prompted Mode, the prompt target casing is preserved. In Free Writing Mode, tall strokes ($\ge 55\text{px}$) or uppercase candidate agreement in Head 1 top-3 are promoted to uppercase.
-  2. *Explicit Clinical Notation:* Reversals are never silently replaced with plain ASCII characters. The UI outputs clear clinical annotations:
-     - Uppercase B Reversed: `'B [Rev: ꓭ]'`
-     - Uppercase D Reversed: `'D [Rev: ᗡ]'`
-     - Lowercase b Reversed: `'b [Rev: d]'`
-     - Lowercase d Reversed: `'d [Rev: b]'`
-     - Lowercase p Reversed: `'p [Rev: q]'`
-     - Word Context (e.g. `bebek`): `"[b→d]ebek"`
-  3. *Decoupled Payload (`cleanWinner`):* The front-end delivers both the human-readable annotated text and an unannotated `cleanWinner` string (`ꓭ` or `d`) stored in `data-clean`. This ensures downstream Levenshtein edit distance calculations in `/analyze` evaluate the true character substitution without syntax artifact inflation.---
+  2. *Direct Character Representation:* Reversals are never silently replaced with unreversed canonical characters. To keep both the transcript result and the diagnostics clean and unencumbered by artificial formatting, the interface renders the exact detected character glyph directly (e.g. `ꓭ`, `ᗡ`, `d`, `b`, `q`, or `debek`), completely eliminating verbose bracket annotations (`[ normal -> reversed ]` or `[Rev: ...]`).
+  3. *Consistent Payload:* Both `displayWinner` and `cleanWinner` carry the exact glyph string, ensuring direct visual-to-phonetic alignment and pure Levenshtein edit distance calculations in `/analyze`.---
 
 ## 29. Standardized Indonesian Linguistic Corpus, Zero-Digit Orthographic Invariant, and Anti-Repetition Randomization
 

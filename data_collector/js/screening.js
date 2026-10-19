@@ -10,7 +10,7 @@
 const SCREENING_TRANSLATIONS = {
     id: {
         screenTitle: "Kanvas Tulisan Tangan",
-        subPillScreen: "Antarmuka Skrining & Diagnostik Langsung",
+        subPillScreen: "Antarmuka Skrining",
         navToCollector: "← Pengumpul Data",
         screenSubtitle: "Tulis secara bebas pada kanvas atau ikuti acuan untuk transkripsi teks dan pemantauan dinamika gerak.",
         labelMode: "Mode:",
@@ -60,7 +60,7 @@ const SCREENING_TRANSLATIONS = {
     },
     en: {
         screenTitle: "Handwriting Canvas",
-        subPillScreen: "Live Screening & Diagnostic Interface",
+        subPillScreen: "Live Screening Interface",
         navToCollector: "← Data Collector",
         screenSubtitle: "Write freely on the canvas or follow a prompt to transcribe text and monitor movement dynamics.",
         labelMode: "Mode:",
@@ -1286,7 +1286,6 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
         let revSymbol = canonicalChar;
         let clusterIsReversed = false;
         let resolvedGlyph = canonicalChar;
-        let revTag = '';
 
         if (onnxRes.isReversed) {
             // Domain mask check: suppress numeric reversals in alphabetic context
@@ -1300,25 +1299,17 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
                             asymmetricReversible[canonicalChar.toLowerCase()] || 
                             canonicalChar;
 
-                // Explicit clinical reversal label formatting:
+                // Disambiguate case-sensitive chiral glyphs
                 if (canonicalChar.toLowerCase() === 'b' && revSymbol === 'd') {
-                    revTag = canonicalChar === 'B' ? 'B [Rev: ꓭ]' : 'b [Rev: d]';
                     if (canonicalChar === 'B') revSymbol = 'ꓭ';
                 } else if (canonicalChar.toLowerCase() === 'd' && revSymbol === 'b') {
-                    revTag = canonicalChar === 'D' ? 'D [Rev: ᗡ]' : 'd [Rev: b]';
                     if (canonicalChar === 'D') revSymbol = 'ᗡ';
                 } else if (canonicalChar.toLowerCase() === 'p' && revSymbol === 'q') {
-                    revTag = canonicalChar === 'P' ? 'P [Rev: ꟼ]' : 'p [Rev: q]';
                     if (canonicalChar === 'P') revSymbol = 'ꟼ';
-                } else if (canonicalChar.toLowerCase() === 'q' && revSymbol === 'p') {
-                    revTag = 'q [Rev: p]';
-                } else if (revSymbol !== canonicalChar) {
-                    revTag = `${canonicalChar} [Rev: ${revSymbol}]`;
-                } else {
-                    revTag = `${canonicalChar} [Rev]`;
                 }
 
-                resolvedGlyph = revTag;
+                // Show only the resolved character itself (no bracket notation)
+                resolvedGlyph = revSymbol;
 
                 reversedPositions.push({
                     index: k + 1,
@@ -1326,8 +1317,7 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
                     rawChar: (k < rawWinner.length) ? rawWinner[k] : '?',
                     onnxChar: onnxRes.topChar,
                     canonicalChar: canonicalChar,
-                    revSymbol: revSymbol,
-                    revTag: revTag
+                    revSymbol: revSymbol
                 });
             }
         } else {
@@ -1354,7 +1344,6 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
             reversalProbability: (onnxRes.reversalProb * 100).toFixed(1),
             isReversed: clusterIsReversed,
             revSymbol: revSymbol,
-            revTag: revTag,
             resolvedGlyph: resolvedGlyph
         });
     }
@@ -1365,7 +1354,7 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
 
     if (clusters.length === 1) {
         if (isReversal && reversedPositions.length > 0) {
-            displayWinner = reversedPositions[0].revTag;
+            displayWinner = reversedPositions[0].revSymbol;
             cleanWinner = reversedPositions[0].revSymbol;
         } else {
             displayWinner = (rawWinner && rawWinner !== '?') ? rawWinner : (diagnostics[0]?.canonicalChar || '?');
@@ -1374,19 +1363,16 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
     } else if (clusters.length > 1) {
         if (isReversal) {
             if (rawWinner.length === clusters.length) {
-                const dispParts = rawWinner.split('');
-                const cleanParts = rawWinner.split('');
+                const parts = rawWinner.split('');
                 reversedPositions.forEach(p => {
-                    dispParts[p.index - 1] = `[${p.canonicalChar}→${p.revSymbol}]`;
-                    cleanParts[p.index - 1] = p.revSymbol;
+                    parts[p.index - 1] = p.revSymbol;
                 });
-                displayWinner = dispParts.join('');
-                cleanWinner = cleanParts.join('');
+                displayWinner = parts.join('');
+                cleanWinner = parts.join('');
             } else {
-                const dispParts = diagnostics.map(d => d.isReversed ? `[${d.canonicalChar}→${d.revSymbol}]` : (d.googleInkChar !== '?' ? d.googleInkChar : d.canonicalChar));
-                const cleanParts = diagnostics.map(d => d.isReversed ? d.revSymbol : (d.googleInkChar !== '?' ? d.googleInkChar : d.canonicalChar));
-                displayWinner = dispParts.join('');
-                cleanWinner = cleanParts.join('');
+                const parts = diagnostics.map(d => d.isReversed ? d.revSymbol : (d.googleInkChar !== '?' ? d.googleInkChar : d.canonicalChar));
+                displayWinner = parts.join('');
+                cleanWinner = parts.join('');
             }
         } else {
             displayWinner = (rawWinner && rawWinner !== '?') ? rawWinner : diagnostics.map(d => d.canonicalChar).join('');
