@@ -78,6 +78,21 @@ All conversations, turns, tool calls, and token metrics are also automatically c
 | T09 | `ml-coder` | Calibrate NIV velocity inversion thresholds and eliminate UI jargon | **Completed** | [`data_collector/screening.html`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/screening.html), [`mdartifacts/things_we_learned_along_the_way.md`](file:///Users/asthiseta/Project/somethinginmyeye/mdartifacts/things_we_learned_along_the_way.md) |
 | T10 | `ml-coder` | Implement fixed viewport and tactile on-screen tablet touch scrollbar | **Completed** | [`data_collector/screening.html`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/screening.html) |
 | T11 | `ml-coder` | Implement horizontal reflection test, fix reciprocal pair false-positives, create roadmap | **Completed** | [`data_collector/screening.html`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/screening.html), [`mdartifacts/roadmap.md`](file:///Users/asthiseta/Project/somethinginmyeye/mdartifacts/roadmap.md) |
+| T12 | `ml-coder` | Ingest UJIpenchars2 & local tablet samples in RAM; train & evaluate Dual-Head Isolated Reversal Model | **Completed** | [`playground.ipynb`](file:///Users/asthiseta/Project/somethinginmyeye/playground.ipynb) |
+| T13 | `ml-coder` | Export Dual-Head model to ONNX opset 15 and integrate into frontend via ONNX Runtime Web | **Completed** | [`data_collector/models/dual_head_reversal.onnx`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/models/dual_head_reversal.onnx), [`data_collector/js/screening.js`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/js/screening.js) |
+| T14 | `ml-coder` | Implement on-canvas character bounding box overlay & Model Diagnostics Drawer | **Completed** | [`data_collector/screening.html`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/screening.html), [`data_collector/css/screening.css`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/css/screening.css) |
+| T15 | `ml-coder` | Implement Arc-length spatial resampling ($ds=3.5\text{px}$) and Clear Canvas reset | **Completed** | [`data_collector/js/screening.js`](file:///Users/asthiseta/Project/somethinginmyeye/data_collector/js/screening.js) |
+
+---
+
+### End of Day Status (October 15, 2026)
+- **Active Model Running:** `data_collector/models/dual_head_reversal.onnx` (Head 1: 62 classes, Head 2: Reversal $p_{\text{rev}}$ with ROC-AUC 0.9982).
+- **Resolver Logic:** Dual-Track Hybrid Resolver standard persisted in `AGENTS.md` and active in `screening.js`.
+- **Open Challenge for Tomorrow:** Writing speed variance still distorts character segmentation boundaries. Rapid strokes vs slow/hesitant strokes cause inconsistent bounding box clustering in cursive words.
+- **Starting Point for Tomorrow:**
+  1. Inspect and tune ligature valley segmentation using spatial Curvature Maxima ($\kappa_{\text{extrema}}$) and Vertical Projection Profiling.
+  2. Test multi-letter words (e.g., `bebek`, `kucing`, `ayam`) under varying drawing speeds (fast cursive vs hesitant print).
+  3. Verify that individual bounding boxes remain stable regardless of writing speed.
 
 ---
 

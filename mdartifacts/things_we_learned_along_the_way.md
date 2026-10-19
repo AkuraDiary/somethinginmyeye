@@ -1,4 +1,4 @@
-# Things We Learned Along the Way 🧠
+# Things We Learned Along the Way
 
 This document serves as a "Cheat Sheet" for the core Machine Learning concepts, physics, and architectural theories we explored while building the Dyslexia Kinematics Evaluator.
 
@@ -357,6 +357,46 @@ When decoding handwriting in clinical screening, two distinct requirements confl
   - If Head 2 flags a reversal ($p_{\text{rev}} \ge 0.50$), the resolver overrides the lexical engine at that character index, mapping the recognized canonical letter to its exact mirror glyph (e.g., $D \to ᗡ$, $B \to ꓭ$, $b \to d$, $E \to Ǝ$, $N \to И$).
   - If normal ($p_{\text{rev}} < 0.50$), the resolver retains the lexical engine's output.
 
+---
 
+## 24. Clinical Grounding: How Dyslexia & Dysgraphia Are Actually Tested, Why Writing Matters, and Why Task Design Replaces NLP
 
+Synthesized from 10 peer-reviewed clinical and engineering studies added in October 2026:
 
+### 1. How Dyslexia Is Clinically Tested & The Weight of Written Expression
+* **UK Certified Assessors Survey ($N = 274$, Daniel et al., 2025, *Annals of Dyslexia*):**
+  Clinical dyslexia assessments take a median of 150–220 minutes across 6–8 batteries. Assessors administer:
+  - Reading assessments (word reading 91.5%, reading fluency 87.7%, comprehension 85.9%, pseudoword reading 81.1%): **98%**
+  - Working memory: **98%**
+  - Phonological processing: **97%**
+  - **Writing assessments (punctuation, composition): 93%**
+  - **Orthographic processing (spelling tests): 93%**
+  - Rapid Automatized Naming (RAN): **91%**
+  - Fine motor skills: **38%**
+* **Norwegian EPS Survey ($N = 118$, Andresen & Monsrud, 2022) & Global School Screening Review (16 studies, Bakhti et al., 2025, *Frontiers in Public Health*):**
+  Standardized batteries (Logos, STAS, DDE-2, and Norway's *Dyslexia Marker Test for Children* with **90.6% sensitivity**) treat **nonword/word decoding** and **dictated spelling accuracy (dysorthographia)** as co-primary behavioral diagnostic criteria.
+
+### 2. Predictive Power of Written Expression Alone in Dyslexia Screening
+* **Longitudinal Evidence (Andrade et al., 2015, *Frontiers in Psychology*):**
+  - On the core Literacy factor in Principal Component Analysis (PCA), **Writing Dictated Words had the single highest loading (0.818)** and **Writing Dictated Pseudowords loaded at 0.765**—exceeding oral reading accuracy (0.787) and reading fluency (0.752).
+  - Second-grade written dictation scores alone accounted for **48.8% of the variance** ($p < 0.001$) in 5th-grade literacy status.
+  - Using **only written dictation (30 real words + 10 pseudowords)** predicted future poor literacy/dyslexia with **100% Sensitivity, 84.2% Specificity, and 86.7% Overall Accuracy** (rising to **91.1% accuracy** when paired with phonological matching).
+  - *Clinical Mechanism (Snowling & Hulme, 2012):* Reading permits partial visual/contextual guessing, whereas spelling requires complete phoneme-to-grapheme mapping and explicit orthographic retrieval from memory. Consequently, writing and spelling deficits are more severe and persistent than reading deficits in individuals with dyslexia.
+
+### 3. Differential Diagnosis via Task Dissociation (Chung et al., 2020, *Translational Pediatrics*)
+Comorbidity between writing disorders and reading dyslexia is **30% to 47%**. The three clinical subtypes are separated by comparing **Visual Copying** against **Auditory Dictation / Spontaneous Writing**:
+1. **Motor (Peripheral) Dysgraphia:** Fine motor / cerebellar deficit. **Oral spelling is intact**, but **visual copying, dictated writing, and drawing are all impaired** (captured by the 8 standard kinematic features: velocity, acceleration, jerk, pressure, tilt, NIV).
+2. **Spatial Dysgraphia:** Visuospatial deficit. **Oral spelling and finger tapping are intact**, but **visual copying, letter spacing, margins, and baseline alignment are impaired**.
+3. **Dyslexic Dysgraphia (Dysorthographia):** Inefficiency of the **graphomotor loop** (phonologic-to-orthographic memory transfer). **Visual copying and finger tapping are preserved**, whereas **dictated/spontaneous spelling (especially on pseudowords requiring sublexical phoneme-grapheme conversion) is impaired**, producing pre-writing latency spikes, intra-word in-air stalls, and orthographic errors.
+
+### 4. Static Letter Reversals vs. Letter Position Migrations (Daniel et al., 2025; Hussein et al., 2024)
+* **Static Mirror Reversals (`b/d`, `p/q`, `B/D`):** Characteristic of an early developmental stage of literacy (preschool to Grade 1 readiness, Chung et al., 2020; Kaggle/ADM 138,680-letter dataset in Murnani et al., 2025). In older children, static reversals alone do not differentiate dyslexic from non-dyslexic readers.
+* **True Dyslexic Orthographic Markers:**
+  1. **Sublexical Pseudoword Breakdown:** Errors and latency stalls when writing dictated nonwords (e.g., *lamoken*).
+  2. **Letter Position Dyslexia (LPD) / Migrations:** Transposing internal letters in anagram words (e.g., *smile* $\leftrightarrow$ *slime*, *tried* $\leftrightarrow$ *tired*), alongside vowel/consonant omissions (Neglect/Surface dyslexia).
+
+### 5. Why 2D Task Design Replaces Heavy NLP Models (Murnani et al., 2025; Fallah et al., 2025; Patil et al., 2024; Ramlan et al., 2024)
+Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (2025), **zero studies require an LLM or open-ended NLP semantic parser**. Instead, cognitive-linguistic load is controlled via **2D Task Design (Content Complexity $\times$ Execution Mode)**:
+* **Level 1 (Isolated Letters & Shapes - Copying/Recall):** Evaluates motor automaticity and early visuospatial chiral reversals (`Dual-Head ONNX` + `Bi-LSTM`) with **zero multi-character segmentation ambiguity**.
+* **Level 2 (Real Words, Pseudowords, & Migration Words - Copying vs. Dictation):** Isolates Motor/Spatial Dysgraphia from Dyslexic Dysgraphia using `Bi-LSTM` kinematics + Latency/In-Air pauses + deterministic **Damerau-Levenshtein edit distance** against the known target prompt.
+* **Level 3 (Fixed Short Sentences - Copying/Dictation):** Evaluates sustained graphomotor endurance, word spacing, baseline drift, and Word Error Rate (WER).

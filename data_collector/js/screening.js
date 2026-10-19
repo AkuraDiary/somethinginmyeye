@@ -492,17 +492,17 @@ async function queryGoogleInk(strokes) {
 function segmentIntoCharacterClusters(strokes) {
     if (!strokes || strokes.length === 0) return [];
 
-    // Filter out accidental micro-taps (< 3 points and dimensions < 5px)
+    // Filter out accidental micro-taps (< 5px in both dimensions)
     const cleanStrokes = strokes.filter(s => {
-        if (s.length >= 3) return true;
+        if (!s || s.length === 0) return false;
         const xs = s.map(p => p.x), ys = s.map(p => p.y);
-        return (Math.max(...xs) - Math.min(...xs) > 5) || (Math.max(...ys) - Math.min(...ys) > 5);
+        return (Math.max(...xs) - Math.min(...xs) > 4) || (Math.max(...ys) - Math.min(...ys) > 4);
     });
 
     if (cleanStrokes.length === 0) return strokes;
 
-    // Helper: Resample a single stroke by equidistant spatial arc length (e.g. step = 3.5px)
-    // This decouples the stroke geometry entirely from writing velocity and sampling frequency fluctuations.
+    // Helper 1: Resample a single stroke by equidistant spatial arc length (step = 3.5px)
+    // Decouples stroke geometry from writing velocity and hardware polling rate fluctuations.
     function resampleStrokeEquidistant(strokePts, stepSize = 3.5) {
         if (!strokePts || strokePts.length < 2) return strokePts;
         const cumDist = [0];
@@ -528,7 +528,9 @@ function segmentIntoCharacterClusters(strokes) {
                 resampled.push({
                     x: p0.x + t * (p1.x - p0.x),
                     y: p0.y + t * (p1.y - p0.y),
-                    pressure: p0.pressure + t * ((p1.pressure || 0.5) - (p0.pressure || 0.5)),
+                    pressure: (p0.pressure || 0.5) + t * ((p1.pressure || 0.5) - (p0.pressure || 0.5)),
+                    tiltX: (p0.tiltX || 0) + t * ((p1.tiltX || 0) - (p0.tiltX || 0)),
+                    tiltY: (p0.tiltY || 0) + t * ((p1.tiltY || 0) - (p0.tiltY || 0)),
                     time: p0.time + t * (p1.time - p0.time),
                     touching: p0.touching
                 });
@@ -537,124 +539,258 @@ function segmentIntoCharacterClusters(strokes) {
         return resampled;
     }
 
-    // Step 1: Resample strokes uniformly to arc-length coordinates, then inspect cursive ligatures
+    // Helper 2: Spatial moving-average smoothing on arc-length points to suppress slow-writing motor tremor
+    function smoothStrokeSpatial(pts, radius = 2) {
+        if (!pts || pts.length < 2 * radius + 1) return pts;
+        return pts.map((p, idx) => {
+            if (idx === 0 || idx === pts.length - 1) return { ...p };
+            let sx = 0, sy = 0, cnt = 0;
+            const r = Math.min(radius, idx, pts.length - 1 - idx);
+            for (let k = -r; k <= r; k++) {
+                sx += pts[idx + k].x;
+                sy += pts[idx + k].y;
+                cnt++;
+            }
+            return { ...p, x: sx / cnt, y: sy / cnt };
+        });
+    }
+
+    // Helper 3: Detect if a stroke segment contains a retrograde loop (dx < 0) characteristic of character bodies
+    function hasLoopOrTurn(seg) {
+        if (!seg || seg.length < 10) return false;
+        let negDxSteps = 0;
+        for (let i = 2; i < seg.length - 2; i++) {
+            if (seg[i + 1].x - seg[i - 1].x < -1.5) negDxSteps++;
+        }
+        return negDxSteps >= 3;
+    }
+
+    // Helper 4: Compute total spatial arc-length of a stroke
+    function strokeArcLength(s) {
+        let L = 0;
+        for (let i = 1; i < s.length; i++) {
+            L += Math.hypot(s[i].x - s[i - 1].x, s[i].y - s[i - 1].y);
+        }
+        return L;
+    }
+
+    // Helper 5: Minimum Euclidean distance between endpoints of two strokes (shared vertex detection)
+    function minEndpointDist(s1, s2) {
+        const ends1 = [s1[0], s1[s1.length - 1]];
+        const ends2 = [s2[0], s2[s2.length - 1]];
+        let minD = Infinity;
+        for (const p1 of ends1) {
+            for (const p2 of ends2) {
+                const d = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+                if (d < minD) minD = d;
+            }
+        }
+        return minD;
+    }
+
+    // Step 1: Equidistant spatial resampling + spatial smoothing + single-pass neck cursive ligature splitting
     const refinedStrokes = [];
-    cleanStrokes.forEach(rawS => {
-        const s = resampleStrokeEquidistant(rawS, 3.5);
-        if (s.length < 15) {
-            refinedStrokes.push(s);
+    cleanStrokes.forEach((rawS, origStrokeIdx) => {
+        const resampled = resampleStrokeEquidistant(rawS, 3.5);
+        const s = smoothStrokeSpatial(resampled, 2);
+        if (s.length < 30) {
+            refinedStrokes.push({ pts: resampled, origId: origStrokeIdx, splitPart: 0 });
             return;
         }
 
-        const xs = s.map(p => p.x);
-        const ys = s.map(p => p.y);
+        const xs = s.map(p => p.x), ys = s.map(p => p.y);
         const sW = Math.max(...xs) - Math.min(...xs);
-        const sH = Math.max(...ys) - Math.min(...ys);
+        const sH = Math.max(Math.max(...ys) - Math.min(...ys), 1);
         const yMin = Math.min(...ys);
 
-        // If stroke is exceptionally wide (spans > 1.6x height), inspect spatial ligature valleys
-        if (sW > 1.6 * Math.max(sH, 22)) {
+        if (sW >= 110 && sW >= 1.05 * sH) {
             const splitIndices = [];
-            const baselineThreshold = yMin + 0.45 * sH;
+            const baselineThreshold = yMin + 0.35 * sH;
 
-            // Using 5-point spatial window on equidistant points
-            for (let i = 3; i < s.length - 3; i++) {
-                const prev2 = s[i - 2], prev1 = s[i - 1];
+            for (let i = 8; i < s.length - 8; i++) {
                 const curr = s[i];
-                const next1 = s[i + 1], next2 = s[i + 2];
-
-                // Geometric valley: local y-maximum (towards bottom baseline in canvas coordinates)
-                const isLocalValley = curr.y >= baselineThreshold &&
-                                      curr.y >= prev1.y && curr.y >= prev2.y &&
-                                      curr.y >= next1.y && curr.y >= next2.y;
-
-                if (isLocalValley) {
-                    const lastSplitIdx = splitIndices.length > 0 ? splitIndices[splitIndices.length - 1] : 0;
-                    if (curr.x - s[lastSplitIdx].x > 0.35 * sH) {
-                        splitIndices.push(i);
+                // 1. Must be moving rightward along an inter-character bridge
+                if (s[i + 3].x - s[i - 3].x <= 3.5) continue;
+                // 2. Must lie in the lower 65% of the stroke vertical span
+                if (curr.y < baselineThreshold) continue;
+                // 3. Must be a local valley (y-maximum) over a +-4 step (14px) window
+                let isValley = true;
+                for (let k = -4; k <= 4; k++) {
+                    if (k !== 0 && s[i + k].y > curr.y + 0.5) {
+                        isValley = false;
+                        break;
                     }
+                }
+                if (!isValley) continue;
+
+                // 4. Single-pass neck invariant: ensure point is NOT inside the bottom of a closed loop
+                let multiPass = false;
+                for (let j = 0; j < s.length; j++) {
+                    if (Math.abs(j - i) > 7 && Math.abs(s[j].x - curr.x) < 5.0) {
+                        multiPass = true;
+                        break;
+                    }
+                }
+                if (multiPass) continue;
+
+                // 5. Both left and right segments must form complete character bodies
+                const lastSplit = splitIndices.length > 0 ? splitIndices[splitIndices.length - 1] : 0;
+                const leftSeg = s.slice(lastSplit, i);
+                const rightSeg = s.slice(i + 1);
+                const leftW = Math.max(...leftSeg.map(p => p.x)) - Math.min(...leftSeg.map(p => p.x));
+                const rightW = Math.max(...rightSeg.map(p => p.x)) - Math.min(...rightSeg.map(p => p.x));
+                const leftH = Math.max(...leftSeg.map(p => p.y)) - Math.min(...leftSeg.map(p => p.y));
+                const rightH = Math.max(...rightSeg.map(p => p.y)) - Math.min(...rightSeg.map(p => p.y));
+
+                if (leftW >= 32 && rightW >= 32 && leftH >= 0.32 * sH && rightH >= 0.32 * sH &&
+                    hasLoopOrTurn(leftSeg) && hasLoopOrTurn(rightSeg)) {
+                    splitIndices.push(i);
                 }
             }
 
             if (splitIndices.length > 0) {
                 let startIdx = 0;
-                splitIndices.forEach(splitIdx => {
-                    refinedStrokes.push(s.slice(startIdx, splitIdx + 1));
-                    startIdx = splitIdx;
+                splitIndices.forEach((splitIdx, partIdx) => {
+                    refinedStrokes.push({
+                        pts: resampled.slice(startIdx, splitIdx),
+                        origId: origStrokeIdx,
+                        splitPart: partIdx
+                    });
+                    startIdx = splitIdx + 1;
                 });
-                if (startIdx < s.length - 1) {
-                    refinedStrokes.push(s.slice(startIdx));
+                if (startIdx < resampled.length - 1) {
+                    refinedStrokes.push({
+                        pts: resampled.slice(startIdx),
+                        origId: origStrokeIdx,
+                        splitPart: splitIndices.length
+                    });
                 }
             } else {
-                refinedStrokes.push(s);
+                refinedStrokes.push({ pts: resampled, origId: origStrokeIdx, splitPart: 0 });
             }
         } else {
-            refinedStrokes.push(s);
+            refinedStrokes.push({ pts: resampled, origId: origStrokeIdx, splitPart: 0 });
         }
     });
 
-    // Step 2: Sort strokes by horizontal bounding box
-    const strokeMeta = refinedStrokes.map(s => {
-        const xs = s.map(p => p.x);
-        const ys = s.map(p => p.y);
-        const ts = s.map(p => p.time);
-        const xMin = Math.min(...xs);
-        const xMax = Math.max(...xs);
-        const yMin = Math.min(...ys);
-        const yMax = Math.max(...ys);
+    if (refinedStrokes.length === 1) {
+        return [[refinedStrokes[0].pts]];
+    }
+
+    // Step 2: Compute geometric and tortuosity metadata per stroke and sort horizontally by xMin
+    const strokeMeta = refinedStrokes.map(item => {
+        const s = item.pts;
+        const xs = s.map(p => p.x), ys = s.map(p => p.y), ts = s.map(p => p.time);
+        const xMin = Math.min(...xs), xMax = Math.max(...xs);
+        const yMin = Math.min(...ys), yMax = Math.max(...ys);
+        const width = Math.max(xMax - xMin, 1);
+        const height = Math.max(yMax - yMin, 1);
+        const arcLen = strokeArcLength(s);
         return {
             stroke: s,
+            origId: item.origId,
+            splitPart: item.splitPart,
             xMin, xMax, yMin, yMax,
-            width: Math.max(xMax - xMin, 1),
-            height: Math.max(yMax - yMin, 1),
+            width, height, arcLen,
+            tortuosity: arcLen / height,
             cx: (xMin + xMax) / 2,
             tStart: Math.min(...ts),
             tEnd: Math.max(...ts)
         };
     });
 
-    // Step 2b: If prompt is single letter, keep unified. Otherwise, always run kinematic clustering
-    if (strokeMeta.length === 1) {
-        return [cleanStrokes];
-    }
-
     strokeMeta.sort((a, b) => a.xMin - b.xMin);
 
-    // Step 3: Cluster overlapping or temporally contiguous strokes
+    // Step 3: Cluster strokes into individual characters using tortuosity, overlap, and vertex geometry
     const clusters = [];
     let currentCluster = [strokeMeta[0]];
 
     for (let i = 1; i < strokeMeta.length; i++) {
-        const prevItem = currentCluster[currentCluster.length - 1];
         const currItem = strokeMeta[i];
+        const nextItem = i + 1 < strokeMeta.length ? strokeMeta[i + 1] : null;
 
-        const clusterXMin = Math.min(...currentCluster.map(m => m.xMin));
-        const clusterXMax = Math.max(...currentCluster.map(m => m.xMax));
-        const clusterYMin = Math.min(...currentCluster.map(m => m.yMin));
-        const clusterYMax = Math.max(...currentCluster.map(m => m.yMax));
-        const avgH = Math.max(...currentCluster.map(m => m.height));
+        // Never re-merge sub-strokes that were explicitly split from the same continuous cursive stroke
+        const wasExplicitlySplit = currentCluster.some(m => m.origId === currItem.origId && m.splitPart !== currItem.splitPart);
+        if (wasExplicitlySplit) {
+            currentCluster.sort((a, b) => a.tStart - b.tStart);
+            clusters.push(currentCluster.map(m => m.stroke));
+            currentCluster = [currItem];
+            continue;
+        }
 
-        const gapX = currItem.xMin - clusterXMax;
-        const timePause = Math.max(0, currItem.tStart - prevItem.tEnd);
+        const cXMin = Math.min(...currentCluster.map(m => m.xMin));
+        const cXMax = Math.max(...currentCluster.map(m => m.xMax));
+        const cYMin = Math.min(...currentCluster.map(m => m.yMin));
+        const cYMax = Math.max(...currentCluster.map(m => m.yMax));
+        const cW = Math.max(cXMax - cXMin, 1);
+        const cH = Math.max(cYMax - cYMin, 1);
+        const cCx = (cXMin + cXMax) / 2;
+        const cArcLen = currentCluster.reduce((acc, m) => acc + m.arcLen, 0);
+        const cTortuosity = cArcLen / cH;
+        const refH = Math.max(cH, currItem.height);
 
-        const overlapY = Math.max(0, Math.min(clusterYMax, currItem.yMax) - Math.max(clusterYMin, currItem.yMin));
-        const minH = Math.min(clusterYMax - clusterYMin, currItem.height);
-        const verticalOverlapRatio = minH > 0 ? (overlapY / minH) : 0;
+        const gapX = currItem.xMin - cXMax;
+        const overlapX = Math.max(0, Math.min(cXMax, currItem.xMax) - Math.max(cXMin, currItem.xMin));
+        const overlapRatioX = overlapX / Math.min(cW, currItem.width);
 
-        const isDot = currItem.height < 18 && currItem.width < 18;
-        // Two strokes belong to the same character if they overlap horizontally (gapX <= 0)
-        // or have significant horizontal overlap and vertical proximity (like the stem and bowl of 'b' or 'd')
-        const isSameCharacter = isDot || (gapX <= 0.25 * avgH && verticalOverlapRatio >= 0.20) || (gapX < 0);
+        const overlapY = Math.max(0, Math.min(cYMax, currItem.yMax) - Math.max(cYMin, currItem.yMin));
+        const overlapRatioY = overlapY / Math.min(cH, currItem.height);
 
-        if (isSameCharacter) {
+        // Diacritic / Dot ownership check: if currItem is a dot, check if it sits over nextItem (e.g. stem of 'i'/'j')
+        const isSmallDot = (currItem.height < 22 && currItem.width < 22);
+        const overlapWithNext = nextItem ? Math.max(0, Math.min(currItem.xMax, nextItem.xMax) - Math.max(currItem.xMin, nextItem.xMin)) : 0;
+        const dotBelongsToNext = isSmallDot && (overlapWithNext > overlapX);
+
+        let minVertexD = Infinity;
+        for (const m of currentCluster) {
+            const d = minEndpointDist(m.stroke, currItem.stroke);
+            if (d < minVertexD) minVertexD = d;
+        }
+
+        // Case A: Shared vertex for straight/diagonal-stroke letters (A, M, N, V, W, K, X, Y)
+        const isSharedVertex = (minVertexD <= Math.max(14, 0.10 * refH)) &&
+                               (overlapRatioY >= 0.50) &&
+                               (cW + currItem.width <= 1.25 * refH) &&
+                               (cTortuosity < 1.35 && currItem.tortuosity < 1.45);
+
+        // Case B: Diacritic dot belonging to current cluster
+        const isDotForCurrent = isSmallDot && !dotBelongsToNext && (overlapX > 0 || Math.abs(currItem.cx - cCx) <= 15);
+
+        // Case C: Strong horizontal overlap (crossbars, multi-stroke E, F, H, t, f, k leg)
+        const hasStrongXOverlap = !dotBelongsToNext && (overlapRatioX >= 0.25 || (currItem.cx >= cXMin && currItem.cx <= cXMax) || (cCx >= currItem.xMin && cCx <= currItem.xMax));
+
+        // Case D1: Isolated straight vertical stem on left attaching to right bowl/arch/arm (b, p, k, n, h, B, D, P, R)
+        const clusterIsStraightStem = !isSmallDot && (cW < 0.25 * cH || cW < 20) && (cTortuosity < 1.55);
+        const isLeftStemAttach = clusterIsStraightStem && (gapX <= Math.max(22, 0.22 * refH)) && (overlapRatioY >= 0.20);
+
+        // Case D2: Straight vertical spine on right attaching to left-bulging belly/bowl (reversed D 'ᗡ', reversed B 'ꓭ', d, q)
+        const currIsStraightStem = !isSmallDot && (currItem.width < 0.25 * currItem.height || currItem.width < 20) && (currItem.tortuosity < 1.55);
+        const hasDotOrArmNext = nextItem && (
+            (nextItem.height < 22 && nextItem.width < 22 && nextItem.xMin <= currItem.xMax + 12) ||
+            (nextItem.xMin - currItem.xMax <= 4)
+        );
+        // Check if left cluster is a right-open belly (both endpoints on right side facing the vertical spine, as in reversed D/B)
+        const firstStroke = currentCluster[0].stroke;
+        const fStart = firstStroke[0], fEnd = firstStroke[firstStroke.length - 1];
+        const isRightOpenBelly = currentCluster.length === 1 &&
+                                 fStart.x >= cXMax - 0.35 * cW &&
+                                 fEnd.x >= cXMax - 0.35 * cW &&
+                                 cTortuosity >= 1.30;
+        const maxRightStemGap = isRightOpenBelly ? Math.max(18, 0.16 * refH) : 2;
+        const isRightStemAttach = currIsStraightStem && !hasDotOrArmNext && (gapX <= maxRightStemGap) && (cW < 0.85 * refH) && (overlapRatioY >= 0.20);
+
+        if (isDotForCurrent || hasStrongXOverlap || isLeftStemAttach || isRightStemAttach || isSharedVertex) {
             currentCluster.push(currItem);
         } else {
+            // Re-sort strokes within cluster chronologically (tStart) so ONNX receives authentic drawing order
+            currentCluster.sort((a, b) => a.tStart - b.tStart);
             clusters.push(currentCluster.map(m => m.stroke));
             currentCluster = [currItem];
         }
     }
 
     if (currentCluster.length > 0) {
+        currentCluster.sort((a, b) => a.tStart - b.tStart);
         clusters.push(currentCluster.map(m => m.stroke));
     }
 
