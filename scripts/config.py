@@ -13,6 +13,7 @@ PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
 DATASET_DIR = os.path.join(PROJECT_ROOT, "datasets")
 VAL_DATASET_DIR = os.path.join(PROJECT_ROOT, "val_datasets")
+HUAWEI_DATASET_DIR = os.path.join(PROJECT_ROOT, "huawei_datasets")
 MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
 SAMPLE_DIR = os.path.join(PROJECT_ROOT, "sample")
 ARCHIVE_DIR = os.path.join(PROJECT_ROOT, "archive")
