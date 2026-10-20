@@ -14,15 +14,20 @@ import numpy as np
 import pandas as pd
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
+import config
 from config import (
     DATASET_DIR,
-    ELKINEMATICS_TRAIN_DIR,
-    ELKINEMATICS_VAL_DIR,
     MAX_TIMESTEPS,
     SAMPLING_RATE_HZ,
     SCALER_PATH,
-    TRAIN_DATASET_DIR,
     VAL_DATASET_DIR,
+)
+
+ELKINEMATICS_TRAIN_DIR = getattr(
+    config, "ELKINEMATICS_TRAIN_DIR", os.path.join(config.PROJECT_ROOT, "elkinematics_train_datasets")
+)
+ELKINEMATICS_VAL_DIR = getattr(
+    config, "ELKINEMATICS_VAL_DIR", os.path.join(config.PROJECT_ROOT, "elkinematics_val_datasets")
 )
 
 DEFAULT_TRAIN_DIR = ELKINEMATICS_TRAIN_DIR if os.path.exists(ELKINEMATICS_TRAIN_DIR) else DATASET_DIR
