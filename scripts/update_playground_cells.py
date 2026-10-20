@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Updates Section 10 of playground.ipynb to implement the localized Dual-Head Reversal Classifier (DHRC)
-pipeline consuming dhrc_train_datasets/ and dhrc_val_datasets/ with 52 Latin classes and dynamic training.
+Updates Section 10 of playground.ipynb with Hybrid Ingestion (UJIpenchars Latin + Local Tablets),
+gradient conflict decoupling via sample_weight masking, balanced loss weights, and comprehensive evaluation.
 """
 
 import json
@@ -16,16 +16,15 @@ with open(NOTEBOOK_PATH, "r", encoding="utf-8") as f:
 # Markdown Header (Cell 19)
 c19_md = """## 10. In-House Dual-Head Reversal Classifier (DHRC): Ingestion, Training & Evaluation
 
-This section trains and evaluates the in-house **Dual-Head Reversal Classifier (DHRC)** directly from the dedicated local partitioned repositories:
-- **Training Cohort:** `dhrc_train_datasets/` (902 raw isolated Latin letter samples: 443 Typical, 459 Atypical).
-- **Validation Holdout:** `dhrc_val_datasets/` (198 raw isolated Latin letter samples: 130 Typical, 68 Atypical).
-- **Zero-Digit Invariant:** Evaluates strictly the 52-letter Latin alphabet (`a-z`, `A-Z`). Numerals are completely eliminated under DSM-5 SLD guidelines.
-- **Dual-Task Objectives:**
-  1. **Head 1 (`char_output`):** Softmax across 52 classes for canonical character identification.
-  2. **Head 2 (`reversal_output`):** Sigmoid probability ($p_{\\text{rev}} \\ge 0.50$) detecting clinical mirror reversals and inversions.
+This section trains and evaluates the in-house **Dual-Head Reversal Classifier (DHRC)** using a hybrid optimization strategy:
+- **Baseline Character Feature Backbone:** Ingests UJIpenchars2 (6,240 authentic Latin alphabet samples: 120 per character across 52 classes, strictly excluding digits).
+- **Clinical Tablet Adaptation:** Combines `dhrc_train_datasets/` (902 raw isolated Latin letter samples: 443 Typical, 459 Atypical).
+- **Strict Clinical Holdout:** Evaluates on `dhrc_val_datasets/` (198 pure authentic local tablet recordings, 100% unaugmented).
+- **Zero-Digit Invariant:** Evaluates strictly the 52-letter Latin alphabet (`a-z`, `A-Z`) under DSM-5 SLD guidelines.
+- **Gradient Conflict Decoupling:** Masks Head 1 character loss (`sample_weight=0.0`) on synthetic mirror reversals, ensuring Head 1 trains purely on canonical character geometry while Head 2 learns reversal classification.
 """
 
-# Code: Ingest Local Partitioned Tablet Datasets (Cell 20)
+# Code: Ingestion (Cell 20)
 c20_code = """import os
 import sys
 import glob
@@ -33,7 +32,7 @@ import numpy as np
 import pandas as pd
 from typing import List, Dict, Tuple, Any, Optional
 
-# Ensure scripts directory is on sys.path
+# Ensure scripts directory and project root are on sys.path
 SCRIPT_DIR = os.path.abspath("scripts")
 PROJECT_ROOT = os.path.abspath(".")
 for p in [SCRIPT_DIR, PROJECT_ROOT]:
@@ -49,6 +48,8 @@ from config import (
     DHRC_FEATURES,
     DHRC_NUM_CLASSES
 )
+
+UJIPEN_PATH = "ujipendatasets/ujipenchars2.txt"
 
 # -----------------------------------------------------------------------------
 # 1. LATIN ALPHABET VOCABULARY (52 CLASSES: a-z, A-Z)
@@ -73,13 +74,49 @@ ROTATIONAL_REVERSIBLE_CHARS = {
 }
 
 # -----------------------------------------------------------------------------
-# 2. LOCAL TABLET SAMPLE LOADER
+# 2. UJIPENCHARS2 BENCHMARK INGESTION (LATIN ALPHABET ONLY, ZERO DIGITS)
+# -----------------------------------------------------------------------------
+def parse_ujipenchars_latin(filepath: str) -> List[Dict[str, Any]]:
+    \"\"\"Parses authentic handwriting trajectories from UJIpenchars2 for Latin characters only.\"\"\"
+    samples = []
+    current = None
+    if not os.path.isfile(filepath):
+        print(f"[WARNING] UJIpenchars file not found at: {filepath}")
+        return samples
+
+    with open(filepath, 'r', encoding='latin1') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('//'):
+                continue
+            if line.startswith('WORD'):
+                parts = line.split()
+                lbl = parts[1]
+                # Filter strictly for Latin alphabet (52 classes)
+                if len(lbl) == 1 and lbl in CHAR_TO_IDX:
+                    current = {
+                        'label': lbl,
+                        'sample_id': parts[2] if len(parts) > 2 else '',
+                        'source': 'ujipenchars2',
+                        'strokes': [],
+                        'is_atypical': False
+                    }
+                    samples.append(current)
+                else:
+                    current = None
+            elif line.startswith('POINTS') and current:
+                if '#' in line:
+                    pts_str = line.split('#')[1].strip()
+                    nums = [float(v) for v in pts_str.split()]
+                    pts = [(nums[i], nums[i+1]) for i in range(0, len(nums), 2)]
+                    current['strokes'].append(pts)
+    return samples
+
+# -----------------------------------------------------------------------------
+# 3. LOCAL TABLET SAMPLE LOADER
 # -----------------------------------------------------------------------------
 def load_tablet_samples_from_dir(dataset_dir: str) -> List[Dict[str, Any]]:
-    \"\"\"
-    Reads tablet CSV recordings and segments them into stroke point lists:
-    {'label': char, 'sample_id': filename, 'strokes': [[(x, y), ...]], 'is_atypical': bool}
-    \"\"\"
+    \"\"\"Reads local tablet CSV recordings and extracts stroke trajectories.\"\"\"
     samples = []
     csv_files = sorted(glob.glob(os.path.join(dataset_dir, "*.csv")))
     
@@ -89,7 +126,6 @@ def load_tablet_samples_from_dir(dataset_dir: str) -> List[Dict[str, Any]]:
         if len(parts) < 4:
             continue
             
-        # Extract label and mode
         mode = parts[1].lower()
         if parts[-1].isdigit() and parts[-2].isdigit():
             lbl = "_".join(parts[2:-3])
@@ -138,20 +174,20 @@ def load_tablet_samples_from_dir(dataset_dir: str) -> List[Dict[str, Any]]:
             
     return samples
 
-print("Loading local partitioned cohorts...")
-train_samples = load_tablet_samples_from_dir(DHRC_TRAIN_DIR)
-val_samples = load_tablet_samples_from_dir(DHRC_VAL_DIR)
+print("Ingesting datasets for Hybrid Training...")
+ujipen_samples = parse_ujipenchars_latin(UJIPEN_PATH)
+local_train_samples = load_tablet_samples_from_dir(DHRC_TRAIN_DIR)
+local_val_samples = load_tablet_samples_from_dir(DHRC_VAL_DIR)
 
-train_typ = sum(1 for s in train_samples if not s['is_atypical'])
-train_atyp = sum(1 for s in train_samples if s['is_atypical'])
-val_typ = sum(1 for s in val_samples if not s['is_atypical'])
-val_atyp = sum(1 for s in val_samples if s['is_atypical'])
+# Combine for training: UJIpenchars baseline (6,240) + Local Tablet recordings (902)
+train_samples = ujipen_samples + local_train_samples
+val_samples = local_val_samples
 
-print(f"Loaded {len(train_samples)} training samples from '{DHRC_TRAIN_DIR}':")
-print(f"  -> Typical (Normal): {train_typ} | Atypical (SLD/Dyslexia): {train_atyp}")
-print(f"Loaded {len(val_samples)} validation holdout samples from '{DHRC_VAL_DIR}':")
-print(f"  -> Typical (Normal): {val_typ} | Atypical (SLD/Dyslexia): {val_atyp}")
-print(f"Vocabulary size: {len(VOCABULARY)} Latin classes (strictly zero digits).")
+print(f"UJIpenchars2 Latin samples loaded: {len(ujipen_samples)} (120 per character across 52 classes).")
+print(f"Local tablet training samples:    {len(local_train_samples)} from '{DHRC_TRAIN_DIR}'.")
+print(f"Total Combined Training Corpus:   {len(train_samples)} samples.")
+print(f"Pure Validation Holdout:          {len(val_samples)} authentic tablet samples from '{DHRC_VAL_DIR}'.")
+print(f"Vocabulary: 52 Latin classes (strictly zero digits).")
 """
 
 # Code: Visualizer (Cell 21)
@@ -166,10 +202,7 @@ def get_sample_bounding_box(strokes: List[List[Tuple[float, float]]]) -> Tuple[f
     return min(all_x), max(all_x), min(all_y), max(all_y)
 
 def plot_strokes_with_trajectory(ax, strokes, title, color_map="Blues"):
-    \"\"\"
-    Plots a multi-stroke character trajectory with progressive color gradients
-    and directional arrows to visually inspect authentic vs. reversed kinematics.
-    \"\"\"
+    \"\"\"Plots trajectory with progressive directional color gradients and flow arrows.\"\"\"
     cmap = plt.get_cmap(color_map)
     min_x, max_x, min_y, max_y = get_sample_bounding_box(strokes)
     total_pts = sum(len(s) for s in strokes)
@@ -191,10 +224,7 @@ def plot_strokes_with_trajectory(ax, strokes, title, color_map="Blues"):
                 solid_capstyle='round'
             )
             
-            # Directional arrow near stroke midpoint
             if len(stroke) >= 4 and i == len(stroke) // 2:
-                dx = xs[i+1] - xs[i]
-                dy = ys[i+1] - ys[i]
                 ax.annotate(
                     '', 
                     xy=(xs[i+1], ys[i+1]), 
@@ -206,16 +236,15 @@ def plot_strokes_with_trajectory(ax, strokes, title, color_map="Blues"):
     margin_x = max((max_x - min_x) * 0.15, 0.05)
     margin_y = max((max_y - min_y) * 0.15, 0.05)
     ax.set_xlim(min_x - margin_x, max_x + margin_x)
-    ax.set_ylim(max_y + margin_y, min_y - margin_y)  # Invert Y to match screen coordinates
+    ax.set_ylim(max_y + margin_y, min_y - margin_y)
     ax.set_aspect('equal', adjustable='box')
     ax.set_title(title, fontsize=11, fontweight='bold', pad=8)
     ax.axis('off')
 
 # Find representative samples for visual inspection
-sample_norm = next((s for s in train_samples if s['label'] == 'b' and not s['is_atypical']), train_samples[0])
-sample_atyp = next((s for s in train_samples if s['label'] == 'b' and s['is_atypical']), train_samples[1])
+sample_norm = next((s for s in local_train_samples if s['label'] == 'b' and not s['is_atypical']), local_train_samples[0])
+sample_atyp = next((s for s in local_train_samples if s['label'] == 'b' and s['is_atypical']), local_train_samples[1])
 
-# Generate synthetic mirror
 min_x, max_x, _, _ = get_sample_bounding_box(sample_norm['strokes'])
 mirrored_strokes = [[(min_x + max_x - pt[0], pt[1]) for pt in stroke] for stroke in sample_norm['strokes']]
 
@@ -227,14 +256,16 @@ plt.tight_layout()
 plt.show()
 """
 
-# Markdown: 10.1 Feature Extraction (Cell 22)
-c22_md = """### 10.1 Equidistant Arc-Length Resampling & Chiral Augmentation
+# Markdown: 10.1 Feature Extraction & Augmentation (Cell 22)
+c22_md = """### 10.1 Equidistant Arc-Length Resampling, Chiral Augmentation & Loss Decoupling
 
-1. **Equidistant Arc-Length Parameterization ($T=64$):** Decouples writing geometry from temporal polling rate and motor tremor speed spikes by querying at uniform spatial intervals ($\Delta s$).
+1. **Equidistant Arc-Length Parameterization ($T=64$):** Standardizes coordinate trajectories while preserving authentic aspect ratios and air-stroke transitions.
 2. **8 Kinematic Feature Channels ($F=8$):** $[\Delta x, \Delta y, \cos\\theta, \sin\\theta, \Delta\\theta, d^2x, d^2y, \\text{pen\\_state}]$.
-3. **Clinical Augmentation Protocol:**
-   - **Training Set ONLY (`dhrc_train_datasets/`):** Horizontally reflects normal chiral letters ($b \\leftrightarrow d, p \\leftrightarrow q, B, D, E, S$, etc.) and rotates invertible letters ($m \\leftrightarrow w, u \\leftrightarrow n$), assigning $y_{\\text{rev}} = 1.0$.
-   - **Validation Set (`dhrc_val_datasets/`):** Strictly unaugmented, preserving 100% pure authentic human handwriting.
+3. **Decoupled Dual-Task Loss Weighting (`sample_weight`):**
+   - For all authentic samples ($y_{\\text{rev}} = 0.0$ or authentic atypical): `char_sample_weight = 1.0`, `rev_sample_weight = 1.0`.
+   - For synthetically mirrored chiral letters: `char_sample_weight = 0.0`, `rev_sample_weight = 1.0`.
+   - **Why?** A mirrored `'b'` forms a physical `'d'`. Masking character loss on synthetic flips prevents conflicting gradients on Head 1, allowing Head 1 to learn authentic Latin geometry while Head 2 learns reversal classification.
+4. **Validation Set:** Strictly unaugmented authentic tablet holdout.
 """
 
 # Code: Feature Extraction & Tensor Construction (Cell 23)
@@ -331,21 +362,24 @@ def extract_reversal_kinematic_features(
     ])
 
 # -----------------------------------------------------------------------------
-# BUILD TRAINING TENSORS WITH CHIRAL AUGMENTATION (TRAIN ONLY)
+# BUILD TRAINING TENSORS WITH DECOUPLED LOSS WEIGHTS
 # -----------------------------------------------------------------------------
 X_train_list, y_char_train_list, y_rev_train_list = [], [], []
+sw_char_train_list, sw_rev_train_list = [], []
 
 for s in train_samples:
     lbl = s['label']
     c_idx = CHAR_TO_IDX[lbl]
     is_atyp = s['is_atypical']
     
-    # 1. Authentic sample
+    # 1. Authentic sample (Both heads learn)
     res_auth = resample_and_normalize_sample(s)
     feat_auth = extract_reversal_kinematic_features(res_auth)
     X_train_list.append(feat_auth)
     y_char_train_list.append(c_idx)
     y_rev_train_list.append(1.0 if is_atyp else 0.0)
+    sw_char_train_list.append(1.0)
+    sw_rev_train_list.append(1.0)
     
     # 2. Augment Normal Chiral Letters ONLY (Never flip Atypical samples)
     if not is_atyp:
@@ -356,6 +390,9 @@ for s in train_samples:
             X_train_list.append(extract_reversal_kinematic_features(res_mir))
             y_char_train_list.append(c_idx)
             y_rev_train_list.append(1.0)
+            # MASK character loss on synthetic flips to avoid gradient conflict on Head 1!
+            sw_char_train_list.append(0.0)
+            sw_rev_train_list.append(1.0)
             
         if lbl in ROTATIONAL_REVERSIBLE_CHARS:
             min_x, max_x, min_y, max_y = get_sample_bounding_box(s['strokes'])
@@ -364,9 +401,11 @@ for s in train_samples:
             X_train_list.append(extract_reversal_kinematic_features(res_rot))
             y_char_train_list.append(c_idx)
             y_rev_train_list.append(1.0)
+            sw_char_train_list.append(0.0)
+            sw_rev_train_list.append(1.0)
 
 # -----------------------------------------------------------------------------
-# BUILD VALIDATION TENSORS (100% PURE AUTHENTIC HOLDOUT, ZERO AUGMENTATION)
+# BUILD VALIDATION TENSORS (100% PURE AUTHENTIC LOCAL TABLET HOLDOUT)
 # -----------------------------------------------------------------------------
 X_val_list, y_char_val_list, y_rev_val_list = [], [], []
 
@@ -381,23 +420,26 @@ for s in val_samples:
 X_train = np.array(X_train_list, dtype=np.float32)
 y_char_train = np.array(y_char_train_list, dtype=np.int32)
 y_rev_train = np.array(y_rev_train_list, dtype=np.float32).reshape(-1, 1)
+sw_char_train = np.array(sw_char_train_list, dtype=np.float32)
+sw_rev_train = np.array(sw_rev_train_list, dtype=np.float32)
 
 X_val = np.array(X_val_list, dtype=np.float32)
 y_char_val = np.array(y_char_val_list, dtype=np.int32)
 y_rev_val = np.array(y_rev_val_list, dtype=np.float32).reshape(-1, 1)
 
 print("Tensors constructed successfully:")
-print(f"  Training Set:   X={X_train.shape}, y_char={y_char_train.shape}, y_rev={y_rev_train.shape}")
+print(f"  Training Corpus:    X={X_train.shape}, y_char={y_char_train.shape}, y_rev={y_rev_train.shape}")
 print(f"    -> Authentic (0.0): {np.sum(y_rev_train == 0.0)} | Reversed/Atypical (1.0): {np.sum(y_rev_train == 1.0)}")
-print(f"  Validation Set: X={X_val.shape}, y_char={y_char_val.shape}, y_rev={y_rev_val.shape}")
+print(f"    -> Char Loss Active Samples: {int(np.sum(sw_char_train))} / {len(sw_char_train)} ({len(sw_char_train)-int(np.sum(sw_char_train))} masked synthetic flips)")
+print(f"  Validation Holdout: X={X_val.shape}, y_char={y_char_val.shape}, y_rev={y_rev_val.shape}")
 print(f"    -> Authentic (0.0): {np.sum(y_rev_val == 0.0)} | Reversed/Atypical (1.0): {np.sum(y_rev_val == 1.0)}")
 """
 
-# Markdown: 10.2 Model Architecture (Cell 24)
+# Markdown: 10.2 Model Architecture & Training (Cell 24)
 c24_md = """### 10.2 Centralized Architecture Compilation & Dynamic Training
 
 - **Architecture:** Sourced directly from `build_dhrc_model()` in [`scripts/model_builder.py`](file:///Users/asthiseta/Project/somethinginmyeye/scripts/model_builder.py):
-  - Shared feature extractor: 2x Conv1D + BatchNorm + MaxPool + Bidirectional GRU (32 units) + GAP + Dense(64, ReLU) + Dropout(0.3).
+  - Shared feature extractor: 2x Conv1D + BatchNorm + MaxPool + Bidirectional GRU (32 units) + GAP + Dense(64, ReLU) + Dropout(0.35).
   - Head 1 (`char_output`): Dense(52, Softmax) predicting canonical Latin character.
   - Head 2 (`reversal_output`): Dense(1, Sigmoid) predicting clinical reversal risk.
 - **Dynamic Training Strategy:** Ceiling 50 epochs with `EarlyStopping(monitor='val_reversal_output_auc', mode='max', patience=10, restore_best_weights=True)` and `ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=4)`.
@@ -449,8 +491,9 @@ callbacks = [
 print(f"Beginning dynamic training (Ceiling: {DHRC_EPOCHS} epochs, Batch Size: {DHRC_BATCH_SIZE})...")
 history = reversal_model.fit(
     X_train,
-    {'char_output': y_char_train, 'reversal_output': y_rev_train},
-    validation_data=(X_val, {'char_output': y_char_val, 'reversal_output': y_rev_val}),
+    (y_char_train, y_rev_train),
+    sample_weight=(sw_char_train, sw_rev_train),
+    validation_data=(X_val, (y_char_val, y_rev_val)),
     epochs=DHRC_EPOCHS,
     batch_size=DHRC_BATCH_SIZE,
     callbacks=callbacks,
@@ -461,8 +504,12 @@ history = reversal_model.fit(
 fig, axes = plt.subplots(1, 2, figsize=(14, 4.5))
 
 # Character Head Metrics
-axes[0].plot(history.history['char_output_accuracy'], label='Train Accuracy', lw=2)
-axes[0].plot(history.history['val_char_output_accuracy'], label='Val Accuracy', lw=2, linestyle='--')
+char_acc_key = next((k for k in history.history if 'char_output' in k and 'acc' in k), 'char_output_accuracy')
+val_char_acc_key = f'val_{char_acc_key}'
+
+axes[0].plot(history.history[char_acc_key], label='Train Accuracy', lw=2)
+if val_char_acc_key in history.history:
+    axes[0].plot(history.history[val_char_acc_key], label='Val Accuracy', lw=2, linestyle='--')
 axes[0].set_title('Head 1: Character Classification Accuracy (52 Classes)', fontweight='bold')
 axes[0].set_xlabel('Epoch')
 axes[0].set_ylabel('Accuracy')
@@ -470,8 +517,12 @@ axes[0].legend()
 axes[0].grid(True, alpha=0.3)
 
 # Reversal Head Metrics
-axes[1].plot(history.history['reversal_output_auc'], label='Train ROC-AUC', lw=2, color='crimson')
-axes[1].plot(history.history['val_reversal_output_auc'], label='Val ROC-AUC', lw=2, linestyle='--', color='darkorange')
+rev_auc_key = next((k for k in history.history if 'reversal_output' in k and 'auc' in k), 'reversal_output_auc')
+val_rev_auc_key = f'val_{rev_auc_key}'
+
+axes[1].plot(history.history[rev_auc_key], label='Train ROC-AUC', lw=2, color='crimson')
+if val_rev_auc_key in history.history:
+    axes[1].plot(history.history[val_rev_auc_key], label='Val ROC-AUC', lw=2, linestyle='--', color='darkorange')
 axes[1].set_title('Head 2: Clinical Reversal Detection ROC-AUC', fontweight='bold')
 axes[1].set_xlabel('Epoch')
 axes[1].set_ylabel('ROC-AUC')
@@ -482,7 +533,7 @@ plt.tight_layout()
 plt.show()
 """
 
-# Code: Model Serialization & ONNX Export (Cell 26)
+# Code: Serialization & ONNX Export (Cell 26)
 c26_code = """import tf2onnx
 import onnx
 import onnxruntime as ort
@@ -493,7 +544,7 @@ os.makedirs(os.path.dirname(DHRC_MODEL_PATH), exist_ok=True)
 reversal_model.save(DHRC_MODEL_PATH)
 print(f"Trained Keras model saved to: {DHRC_MODEL_PATH}")
 
-# Also keep scratch backup
+# Backup in scratch/
 os.makedirs("scratch", exist_ok=True)
 reversal_model.save("scratch/dual_head_reversal_model.keras")
 
@@ -521,7 +572,6 @@ keras_preds = reversal_model.predict(test_input, verbose=0)
 input_name = ort_session.get_inputs()[0].name
 ort_preds = ort_session.run(None, {input_name: test_input})
 
-# Handle output dictionary alignment
 if ort_preds[0].shape[-1] == DHRC_NUM_CLASSES:
     ort_char, ort_rev = ort_preds[0], ort_preds[1]
 else:
@@ -534,16 +584,16 @@ assert diff_char < 1e-4 and diff_rev < 1e-4, "ONNX numerical parity check failed
 print("ONNX numerical parity verified successfully.")
 """
 
-# Markdown: 10.3 Evaluation Metrics (Cell 27)
+# Markdown: 10.3 Evaluation (Cell 27)
 c27_md = """### 10.3 Quantitative Evaluation & Reversal Detection Metrics
 
-Evaluates Head 1 (character accuracy) and Head 2 (reversal discriminability) on the held-out validation cohort (`dhrc_val_datasets/`).
+Evaluates Head 1 (52-class Top-1, case-insensitive Top-1, and Top-3 accuracy) and Head 2 (reversal discriminability) on the pure held-out tablet cohort (`dhrc_val_datasets/`).
 """
 
 # Code: Quantitative Evaluation & Metrics (Cell 28)
 c28_code = """from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
 
-print("Evaluating Dual-Head Model on Pure Validation Set...")
+print("Evaluating Dual-Head Model on Pure Validation Holdout (dhrc_val_datasets/)...")
 val_preds = reversal_model.predict(X_val, verbose=0)
 char_probs = val_preds[0]
 rev_probs = val_preds[1].ravel()
@@ -552,6 +602,16 @@ rev_probs = val_preds[1].ravel()
 char_preds_top1 = np.argmax(char_probs, axis=1)
 top1_acc = np.mean(char_preds_top1 == y_char_val) * 100.0
 
+# Case-Insensitive Top-1 Accuracy (accounts for geometric homoglyphs c/C, o/O, s/S, etc.)
+case_insensitive_correct = 0
+for i in range(len(y_char_val)):
+    pred_char = VOCABULARY[char_preds_top1[i]]
+    true_char = VOCABULARY[y_char_val[i]]
+    if pred_char.lower() == true_char.lower():
+        case_insensitive_correct += 1
+case_insensitive_acc = (case_insensitive_correct / len(y_char_val)) * 100.0
+
+# Top-3 Accuracy
 top3_correct = 0
 for i in range(len(y_char_val)):
     top3_idx = np.argsort(char_probs[i])[-3:]
@@ -564,20 +624,21 @@ rev_preds = (rev_probs >= 0.50).astype(int)
 rev_auc = roc_auc_score(y_rev_val, rev_probs)
 cm = confusion_matrix(y_rev_val, rev_preds)
 
-print("=" * 65)
+print("=" * 70)
 print("             DUAL-HEAD REVERSAL CLASSIFIER EVALUATION             ")
-print("=" * 65)
+print("=" * 70)
 print(f"Head 1 (Character Softmax - 52 Classes):")
-print(f"  -> Top-1 Accuracy: {top1_acc:.2f}%")
-print(f"  -> Top-3 Accuracy: {top3_acc:.2f}%")
-print("-" * 65)
+print(f"  -> Exact Top-1 Accuracy:            {top1_acc:.2f}%")
+print(f"  -> Case-Insensitive Top-1 Accuracy: {case_insensitive_acc:.2f}%")
+print(f"  -> Top-3 Accuracy:                  {top3_acc:.2f}%")
+print("-" * 70)
 print(f"Head 2 (Clinical Reversal Detection):")
 print(f"  -> ROC-AUC Score:  {rev_auc:.4f}")
 print(f"  -> Confusion Matrix:\\n{cm}")
-print("-" * 65)
+print("-" * 70)
 print("Reversal Classification Report:")
 print(classification_report(y_rev_val, rev_preds, target_names=['Authentic (0)', 'Reversed (1)']))
-print("=" * 65)
+print("=" * 70)
 
 # Visual Confusion Matrix
 fig, ax = plt.subplots(figsize=(5, 4.2))
@@ -591,7 +652,6 @@ ax.set_xlabel('Predicted Label', fontweight='bold')
 ax.set_ylabel('True Clinical Label', fontweight='bold')
 ax.set_title('Reversal Detection Confusion Matrix (Val Holdout)', fontweight='bold', pad=10)
 
-# Annotate values
 for i in range(2):
     for j in range(2):
         text_color = "white" if cm[i, j] > cm.max() / 2 else "black"
@@ -672,7 +732,6 @@ new_section_cells = [
     make_cell("code", c30_code),
 ]
 
-# Preserve cells before index 19 and cells after index 30 (sandbox/scratchpad)
 cells_before = nb["cells"][:19]
 cells_after = nb["cells"][31:]
 
@@ -681,4 +740,4 @@ nb["cells"] = cells_before + new_section_cells + cells_after
 with open(NOTEBOOK_PATH, "w", encoding="utf-8") as f:
     json.dump(nb, f, indent=1, ensure_ascii=False)
 
-print(f"Successfully updated {NOTEBOOK_PATH}. New total cell count: {len(nb['cells'])}.")
+print(f"Successfully updated {NOTEBOOK_PATH} with Hybrid Ingestion and Loss Decoupling.")
