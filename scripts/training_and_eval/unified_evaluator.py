@@ -22,14 +22,14 @@ from model_builder import (
 # ====================================================
 def get_or_train_model_with_tuning(model_name, filepath, build_fn, X_train, y_train, X_val, y_val):
     if not FORCE_RETRAIN and os.path.exists(filepath):
-        print(f"Me-load {model_name} dari {filepath}...")
+        print(f"Loading {model_name} from {filepath}...")
         try:
             model = load_model(filepath)
             return model
         except Exception as e:
-            print(f"⚠️ Gagal me-load {filepath}. Fallback ke training ulang!")
+            print(f"Failed to load {filepath} ({e}). Retraining fallback.")
     
-    print(f"Men-training ulang {model_name} dari awal dengan Tuning...")
+    print(f"Retraining {model_name} with dynamic tuning...")
     from universal_pipeline import train_with_tuning
     model = build_fn()
     model, _ = train_with_tuning(model, X_train, y_train, X_val, y_val)
@@ -37,12 +37,13 @@ def get_or_train_model_with_tuning(model_name, filepath, build_fn, X_train, y_tr
 
 if __name__ == "__main__":
     from universal_pipeline import load_validation_with_train_scalers
+    from config import ELKINEMATICS_TRAIN_DIR, ELKINEMATICS_VAL_DIR
     
-    print("Memproses TRAINING Data (datasets/)...")
-    X_train_seq_scaled, X_train_lat_scaled, y_train = load_and_scale_universal("../datasets")
+    print("Processing Training Data (ELKINEMATICS_TRAIN_DIR)...")
+    X_train_seq_scaled, X_train_lat_scaled, y_train = load_and_scale_universal(ELKINEMATICS_TRAIN_DIR)
     
-    print("Memproses VALIDATION Data (val_datasets/)...")
-    X_val_seq_scaled, X_val_lat_scaled, y_val = load_validation_with_train_scalers("../val_datasets")
+    print("Processing Validation Data (ELKINEMATICS_VAL_DIR)...")
+    X_val_seq_scaled, X_val_lat_scaled, y_val = load_validation_with_train_scalers(ELKINEMATICS_VAL_DIR)
     
     # Menyiapkan adapter data TRAIN
     X_train_v0, y_train_v0 = get_v0_data(X_train_seq_scaled, y_train)
@@ -66,7 +67,7 @@ if __name__ == "__main__":
     # ====================================================
     # 3. LEADERBOARD (EVALUASI MENGGUNAKAN DATA NORMALISASI)
     # ====================================================
-    print("\n\n🏆 FINAL LEADERBOARD (EVALUATION SCORES) 🏆")
+    print("\n\nFINAL LEADERBOARD (EVALUATION SCORES)")
     print("-" * 65)
     print(f"{'Model':<15} | {'Accuracy':<15} | {'Recall':<15} | {'Loss':<10}")
     print("-" * 65)

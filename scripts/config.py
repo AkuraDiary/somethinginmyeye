@@ -21,6 +21,10 @@ DHRC_VAL_DIR = os.path.join(PROJECT_ROOT, "dhrc_val_datasets")
 ELKINEMATICS_TRAIN_DIR = os.path.join(PROJECT_ROOT, "elkinematics_train_datasets")
 ELKINEMATICS_VAL_DIR = os.path.join(PROJECT_ROOT, "elkinematics_val_datasets")
 
+# Active Full Kinematic Battery Dataset Pointers (with fallback to legacy paths)
+TRAIN_DATASET_DIR = ELKINEMATICS_TRAIN_DIR if os.path.exists(ELKINEMATICS_TRAIN_DIR) else DATASET_DIR
+VAL_DATASET_DIR = ELKINEMATICS_VAL_DIR if os.path.exists(ELKINEMATICS_VAL_DIR) else os.path.join(PROJECT_ROOT, "val_datasets")
+
 MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
 SAMPLE_DIR = os.path.join(PROJECT_ROOT, "sample")
 ARCHIVE_DIR = os.path.join(PROJECT_ROOT, "archive")

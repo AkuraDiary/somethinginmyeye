@@ -57,20 +57,18 @@ UJIPEN_PATH = "ujipendatasets/ujipenchars2.txt"
 VOCABULARY = DHRC_VOCABULARY
 CHAR_TO_IDX = DHRC_CHAR_TO_IDX
 
-# Chiral reversal transformation maps
-HORIZONTAL_REVERSIBLE_CHARS = {
-    'b': 'd', 'd': 'b',
-    'p': 'q', 'q': 'p',
-    'B': 'B_rev', 'D': 'D_rev', 'E': 'E_rev', 'F': 'F_rev',
-    'J': 'J_rev', 'K': 'K_rev', 'L': 'L_rev', 'N': 'N_rev',
-    'P': 'P_rev', 'R': 'R_rev', 'S': 'S_rev', 'Z': 'Z_rev',
-    'c': 'c_rev', 'e': 'e_rev', 's': 's_rev', 'z': 'z_rev'
+# Asymmetric letters with distinct non-Latin mirror glyphs (ꓭ, Ↄ, ᗡ, Ǝ, ꟻ, ᒉ, ⋊, ᒧ, И, ꟼ, Я, Ƨ, Ƶ, ɘ, ƨ, ƹ)
+# When mirrored, their shape is uniquely a clinical reversal of the target letter.
+ASYMMETRIC_REVERSIBLE_CHARS = {
+    'B', 'C', 'D', 'E', 'F', 'G', 'J', 'K', 'L', 'N', 'P', 'R', 'S', 'Z',
+    'c', 'e', 'f', 'g', 'h', 'j', 'k', 'r', 's', 'z'
 }
 
-ROTATIONAL_REVERSIBLE_CHARS = {
-    'm': 'w', 'w': 'm',
-    'u': 'n', 'n': 'u',
-    'M': 'W', 'W': 'M'
+# Chiral homoglyph pairs (reflection produces another valid Latin letter: b <-> d, p <-> q)
+# Excluded from naive horizontal mirroring to eliminate supervisor label contradiction on Head 2.
+CHIRAL_HOMOGLYPH_PAIRS = {
+    'b': 'd', 'd': 'b',
+    'p': 'q', 'q': 'p'
 }
 
 # -----------------------------------------------------------------------------
@@ -257,15 +255,17 @@ plt.show()
 """
 
 # Markdown: 10.1 Feature Extraction & Augmentation (Cell 22)
-c22_md = """### 10.1 Equidistant Arc-Length Resampling, Chiral Augmentation & Loss Decoupling
+c22_md = r"""### 10.1 Equidistant Arc-Length Resampling & Asymmetric Reversal Dynamics
 
 1. **Equidistant Arc-Length Parameterization ($T=64$):** Standardizes coordinate trajectories while preserving authentic aspect ratios and air-stroke transitions.
 2. **8 Kinematic Feature Channels ($F=8$):** $[\Delta x, \Delta y, \cos\\theta, \sin\\theta, \Delta\\theta, d^2x, d^2y, \\text{pen\\_state}]$.
-3. **Decoupled Dual-Task Loss Weighting (`sample_weight`):**
-   - For all authentic samples ($y_{\\text{rev}} = 0.0$ or authentic atypical): `char_sample_weight = 1.0`, `rev_sample_weight = 1.0`.
-   - For synthetically mirrored chiral letters: `char_sample_weight = 0.0`, `rev_sample_weight = 1.0`.
-   - **Why?** A mirrored `'b'` forms a physical `'d'`. Masking character loss on synthetic flips prevents conflicting gradients on Head 1, allowing Head 1 to learn authentic Latin geometry while Head 2 learns reversal classification.
-4. **Validation Set:** Strictly unaugmented authentic tablet holdout.
+3. **Decoupled Asymmetric Reversal Training:**
+   - **Authentic Samples:** Both heads actively learn character identity and reversal state (`sw_char = 1.0, sw_rev = 1.0`).
+   - **Asymmetric Letters (`B, C, D, E, F, G, J, K, L, N, P, R, S, Z` and lowercase `c, e, f, g, h, j, k, r, s, z`):**
+     Synthetically horizontally mirrored. Head 1 actively learns character identity (`y_char = c_idx`, `sw_char = 1.0` so Head 1 recognizes `ꓭ` is `'B'`, `Ǝ` is `'E'`), and Head 2 learns reversal detection (`y_rev = 1.0`, `sw_rev = 1.0`).
+   - **Chiral Homoglyph Pairs ($b \leftrightarrow d$, $p \leftrightarrow q$):**
+     Excluded from naive horizontal flipping to eliminate supervisor label contradiction on Head 2. Chiral reversals are captured via authentic tablet atypical samples and target prompt alignment in the Dual-Track Resolver.
+4. **Validation Set:** Strictly unaugmented authentic tablet holdout (`dhrc_val_datasets/`).
 """
 
 # Code: Feature Extraction & Tensor Construction (Cell 23)
@@ -362,7 +362,7 @@ def extract_reversal_kinematic_features(
     ])
 
 # -----------------------------------------------------------------------------
-# BUILD TRAINING TENSORS WITH DECOUPLED LOSS WEIGHTS
+# BUILD TRAINING TENSORS WITH ASYMMETRIC REVERSAL DYNAMICS
 # -----------------------------------------------------------------------------
 X_train_list, y_char_train_list, y_rev_train_list = [], [], []
 sw_char_train_list, sw_rev_train_list = [], []
@@ -372,7 +372,7 @@ for s in train_samples:
     c_idx = CHAR_TO_IDX[lbl]
     is_atyp = s['is_atypical']
     
-    # 1. Authentic sample (Both heads learn)
+    # 1. Authentic sample (Both heads learn: authentic character identity and reversal state)
     res_auth = resample_and_normalize_sample(s)
     feat_auth = extract_reversal_kinematic_features(res_auth)
     X_train_list.append(feat_auth)
@@ -381,27 +381,20 @@ for s in train_samples:
     sw_char_train_list.append(1.0)
     sw_rev_train_list.append(1.0)
     
-    # 2. Augment Normal Chiral Letters ONLY (Never flip Atypical samples)
+    # 2. Augment Asymmetric Letters ONLY (Never flip chiral homoglyphs like b <-> d)
     if not is_atyp:
-        if lbl in HORIZONTAL_REVERSIBLE_CHARS:
+        if lbl in ASYMMETRIC_REVERSIBLE_CHARS:
             min_x, max_x, _, _ = get_sample_bounding_box(s['strokes'])
             mir_strokes = [[(min_x + max_x - pt[0], pt[1]) for pt in stroke] for stroke in s['strokes']]
             res_mir = resample_and_normalize_sample({'strokes': mir_strokes})
             X_train_list.append(extract_reversal_kinematic_features(res_mir))
-            y_char_train_list.append(c_idx)
-            y_rev_train_list.append(1.0)
-            # MASK character loss on synthetic flips to avoid gradient conflict on Head 1!
-            sw_char_train_list.append(0.0)
-            sw_rev_train_list.append(1.0)
             
-        if lbl in ROTATIONAL_REVERSIBLE_CHARS:
-            min_x, max_x, min_y, max_y = get_sample_bounding_box(s['strokes'])
-            rot_strokes = [[(min_x + max_x - pt[0], min_y + max_y - pt[1]) for pt in stroke] for stroke in s['strokes']]
-            res_rot = resample_and_normalize_sample({'strokes': rot_strokes})
-            X_train_list.append(extract_reversal_kinematic_features(res_rot))
+            # Head 1 actively learns character identity (ꓭ is 'B', Ǝ is 'E', ᗡ is 'D')
             y_char_train_list.append(c_idx)
+            sw_char_train_list.append(1.0)
+            
+            # Head 2 actively learns clinical reversal
             y_rev_train_list.append(1.0)
-            sw_char_train_list.append(0.0)
             sw_rev_train_list.append(1.0)
 
 # -----------------------------------------------------------------------------
@@ -430,9 +423,9 @@ y_rev_val = np.array(y_rev_val_list, dtype=np.float32).reshape(-1, 1)
 print("Tensors constructed successfully:")
 print(f"  Training Corpus:    X={X_train.shape}, y_char={y_char_train.shape}, y_rev={y_rev_train.shape}")
 print(f"    -> Authentic (0.0): {np.sum(y_rev_train == 0.0)} | Reversed/Atypical (1.0): {np.sum(y_rev_train == 1.0)}")
-print(f"    -> Char Loss Active Samples: {int(np.sum(sw_char_train))} / {len(sw_char_train)} ({len(sw_char_train)-int(np.sum(sw_char_train))} masked synthetic flips)")
+print(f"    -> Head 1 Active Loss: {int(np.sum(sw_char_train))} / {len(sw_char_train)} (100% active supervision)")
 print(f"  Validation Holdout: X={X_val.shape}, y_char={y_char_val.shape}, y_rev={y_rev_val.shape}")
-print(f"    -> Authentic (0.0): {np.sum(y_rev_val == 0.0)} | Reversed/Atypical (1.0): {np.sum(y_rev_val == 1.0)}")
+print(f"    -> Authentic (0.0): {np.sum(y_rev_train == 0.0)} | Reversed/Atypical (1.0): {np.sum(y_rev_train == 1.0)}")
 """
 
 # Markdown: 10.2 Model Architecture & Training (Cell 24)
@@ -668,9 +661,25 @@ Inspects individual tablet recordings or live strokes through the trained dual-h
 """
 
 # Code: Interactive Single-Sample Inference (Cell 30)
-c30_code = """def test_sample_inference(sample: Dict[str, Any], model_instance=reversal_model):
+c30_code = """def test_sample_inference(
+    sample: Dict[str, Any], 
+    model_instance=reversal_model,
+    flip_horizontal: bool = False
+):
     \"\"\"Evaluates a single sample and plots its trajectory with dual-head prediction results.\"\"\"
-    res = resample_and_normalize_sample(sample)
+    strokes = sample['strokes']
+    lbl = sample.get('label', '?')
+    
+    if flip_horizontal:
+        min_x, max_x, _, _ = get_sample_bounding_box(strokes)
+        strokes = [[(min_x + max_x - pt[0], pt[1]) for pt in stroke] for stroke in strokes]
+        display_label = f"'{lbl}' (Synthetically Mirrored)"
+    else:
+        display_label = f"'{lbl}'"
+
+    eval_sample = dict(sample)
+    eval_sample['strokes'] = strokes
+    res = resample_and_normalize_sample(eval_sample)
     feats = extract_reversal_kinematic_features(res)
     inp = np.expand_dims(feats, axis=0)
     
@@ -683,13 +692,18 @@ c30_code = """def test_sample_inference(sample: Dict[str, Any], model_instance=r
     
     fig, ax = plt.subplots(figsize=(4.5, 4.5))
     color_map = "Reds" if rev_prob >= 0.50 else "Greens"
-    plot_strokes_with_trajectory(ax, sample['strokes'], f"Sample: '{sample.get('label')}'", color_map)
+    plot_strokes_with_trajectory(ax, strokes, f"Input: {display_label}", color_map)
     
     rev_tag = "[REVERSED]" if rev_prob >= 0.50 else "[NORMAL]"
     candidates_str = ", ".join([f"'{c}': {p*100:.1f}%" for c, p in top3_results])
     
+    top_pred = top3_results[0][0]
+    chiral_note = ""
+    if (lbl, top_pred) in [('b', 'd'), ('d', 'b'), ('p', 'q'), ('q', 'p')]:
+        chiral_note = f"\\n[CHIRAL SUBSTITUTION]: Prompt '{lbl}' -> Predicted '{top_pred}'"
+        
     plt.suptitle(
-        f"Reversal Prob: {rev_prob*100:.1f}% {rev_tag}\\nTop Candidates: {candidates_str}",
+        f"Reversal Prob: {rev_prob*100:.1f}% {rev_tag}\\nTop Candidates: {candidates_str}{chiral_note}",
         fontsize=11,
         fontweight='bold',
         y=0.98
@@ -697,10 +711,24 @@ c30_code = """def test_sample_inference(sample: Dict[str, Any], model_instance=r
     plt.tight_layout()
     plt.show()
 
-# Test on representative holdout samples
-test_samples = [s for s in val_samples if s['label'] in ['b', 'd', 'p', 'q', 'S']][:2]
-for s in test_samples:
-    test_sample_inference(s)
+# Verification Suite
+print("Running Verification Suite...")
+
+# 1. Test authentic normal 'B' vs mirrored 'B' (ꓭ)
+sample_B = next((s for s in val_samples if s['label'] == 'B'), val_samples[0])
+print("Testing Normal 'B':")
+test_sample_inference(sample_B, flip_horizontal=False)
+print("Testing Mirrored 'B' (ꓭ):")
+test_sample_inference(sample_B, flip_horizontal=True)
+
+# 2. Test authentic normal 'd' vs normal 'b'
+sample_d = next((s for s in val_samples if s['label'] == 'd'), val_samples[1])
+print("Testing Authentic Normal 'd':")
+test_sample_inference(sample_d, flip_horizontal=False)
+
+sample_b = next((s for s in val_samples if s['label'] == 'b'), val_samples[2])
+print("Testing Authentic Normal 'b':")
+test_sample_inference(sample_b, flip_horizontal=False)
 """
 
 def make_cell(cell_type: str, source_text: str):

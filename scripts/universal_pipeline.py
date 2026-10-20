@@ -14,7 +14,19 @@ import numpy as np
 import pandas as pd
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 
-from config import DATASET_DIR, MAX_TIMESTEPS, SAMPLING_RATE_HZ, SCALER_PATH, VAL_DATASET_DIR
+from config import (
+    DATASET_DIR,
+    ELKINEMATICS_TRAIN_DIR,
+    ELKINEMATICS_VAL_DIR,
+    MAX_TIMESTEPS,
+    SAMPLING_RATE_HZ,
+    SCALER_PATH,
+    TRAIN_DATASET_DIR,
+    VAL_DATASET_DIR,
+)
+
+DEFAULT_TRAIN_DIR = ELKINEMATICS_TRAIN_DIR if os.path.exists(ELKINEMATICS_TRAIN_DIR) else DATASET_DIR
+DEFAULT_VAL_DIR = ELKINEMATICS_VAL_DIR if os.path.exists(ELKINEMATICS_VAL_DIR) else VAL_DATASET_DIR
 
 
 def resample_stroke_trajectory(df: pd.DataFrame, target_hz: float = SAMPLING_RATE_HZ) -> pd.DataFrame:
@@ -126,7 +138,7 @@ def extract_universal_features(df: pd.DataFrame, resample: bool = True) -> np.nd
 
 
 def load_and_scale_universal(
-    data_dir: str = DATASET_DIR,
+    data_dir: str = DEFAULT_TRAIN_DIR,
     scaler_save_path: str = SCALER_PATH,
     resample: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -182,7 +194,7 @@ def load_and_scale_universal(
 
 
 def load_validation_with_train_scalers(
-    data_dir: str = VAL_DATASET_DIR,
+    data_dir: str = DEFAULT_VAL_DIR,
     scaler_path: str = SCALER_PATH,
     resample: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -236,21 +248,62 @@ def load_validation_with_train_scalers(
 def get_v0_data(X_seq_scaled: np.ndarray, y: np.ndarray):
     """V0: Baseline single-sequence 3 features (velocity, dt, pressure)."""
     X_v0 = X_seq_scaled[:, :, [5, 8, 2]]
-    return X_v0, y
+    y_v0 = np.asarray(y, dtype=np.float32).reshape(-1, 1)
+    return X_v0, y_v0
 
 
 def get_v1_data(X_seq_scaled: np.ndarray, X_lat_scaled: np.ndarray, y: np.ndarray):
     """V1: Multi-input (velocity, dt, pressure) + latency."""
     X_v1_seq = X_seq_scaled[:, :, [5, 8, 2]]
+    lat = X_lat_scaled.reshape(-1, 1) if X_lat_scaled.ndim == 1 else X_lat_scaled
     y_time_distributed = np.repeat(np.expand_dims(y, axis=(1, 2)), MAX_TIMESTEPS, axis=1)
-    return [X_v1_seq, X_lat_scaled], y_time_distributed
+    return [X_v1_seq, lat], y_time_distributed
 
 
 def get_v2_data(X_seq_scaled: np.ndarray, X_lat_scaled: np.ndarray, y: np.ndarray):
     """V2: Multi-input 8 standard kinematic sequence + latency."""
     X_v2_seq = X_seq_scaled[:, :, :8]
+    lat = X_lat_scaled.reshape(-1, 1) if X_lat_scaled.ndim == 1 else X_lat_scaled
     y_time_distributed = np.repeat(np.expand_dims(y, axis=(1, 2)), MAX_TIMESTEPS, axis=1)
-    return [X_v2_seq, X_lat_scaled], y_time_distributed
+    return [X_v2_seq, lat], y_time_distributed
+
+
+def train_with_tuning(
+    model,
+    X_train,
+    y_train,
+    X_val,
+    y_val,
+    epochs: int = 50,
+    batch_size: int = 32,
+    patience: int = 15,
+    reduce_lr_patience: int = 5,
+    min_lr: float = 1e-6,
+):
+    """Standard training loop with EarlyStopping and ReduceLROnPlateau."""
+    early_stop = EarlyStopping(
+        monitor="val_loss",
+        patience=patience,
+        restore_best_weights=True,
+        verbose=1,
+    )
+    reduce_lr = ReduceLROnPlateau(
+        monitor="val_loss",
+        factor=0.5,
+        patience=reduce_lr_patience,
+        min_lr=min_lr,
+        verbose=1,
+    )
+    history = model.fit(
+        X_train,
+        y_train,
+        epochs=epochs,
+        batch_size=batch_size,
+        validation_data=(X_val, y_val),
+        callbacks=[early_stop, reduce_lr],
+        verbose=1,
+    )
+    return model, history
 
 
 def unified_predict(
