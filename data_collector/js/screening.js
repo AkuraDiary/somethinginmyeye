@@ -1030,8 +1030,8 @@ let ortReversalSession = null;
 
 const VOCABULARY_62 = (
     "abcdefghijklmnopqrstuvwxyz" +
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ" +
-    "0123456789"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ" //+
+    // "0123456789"
 ).split('');
 
 // Asymmetric Reversal Glyphs Mapping
@@ -1187,7 +1187,7 @@ async function evaluateClusterWithONNX(clusterStrokes) {
             revProb = results.reversal_output.data[0];
         } else {
             const keys = Object.keys(results);
-            if (results[keys[0]].dims.includes(62)) {
+            if (results[keys[0]].dims.includes(52) || results[keys[0]].dims.includes(62)) {
                 charData = results[keys[0]].data;
                 revProb = results[keys[1]].data[0];
             } else {

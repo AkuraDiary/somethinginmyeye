@@ -74,6 +74,31 @@ V2_LSTM1_UNITS = 64
 V2_LSTM2_UNITS = 32
 V2_DROPOUT = 0.3
 
+# DHRC (Dual-Head Reversal Classifier) Architecture & Training
+DHRC_SEQ_LEN = 64
+DHRC_FEATURES = 8
+DHRC_NUM_CLASSES = 52
+DHRC_CONV1_FILTERS = 32
+DHRC_CONV2_FILTERS = 64
+DHRC_GRU_UNITS = 32
+DHRC_DENSE_UNITS = 64
+DHRC_DROPOUT = 0.3
+DHRC_EPOCHS = 50
+DHRC_BATCH_SIZE = 32
+DHRC_PATIENCE = 10
+DHRC_REDUCE_LR_PATIENCE = 4
+DHRC_LEARNING_RATE = 1e-3
+DHRC_LOSS_WEIGHT_CHAR = 1.0
+DHRC_LOSS_WEIGHT_REV = 1.5
+DHRC_MODEL_PATH = os.path.join(MODEL_DIR, "dual_head_reversal_model.keras")
+DHRC_ONNX_PATH = os.path.join(PROJECT_ROOT, "data_collector", "models", "dual_head_reversal.onnx")
+
+DHRC_VOCABULARY = (
+    [chr(i) for i in range(ord('a'), ord('z') + 1)] +
+    [chr(i) for i in range(ord('A'), ord('Z') + 1)]
+)
+DHRC_CHAR_TO_IDX = {ch: idx for idx, ch in enumerate(DHRC_VOCABULARY)}
+
 # Clinical Screening & Inference
 CLASSIFICATION_THRESHOLD = 0.5
 COGNITIVE_LATENCY_THRESHOLD_MS = 1500.0  # Threshold for working memory delay in ms

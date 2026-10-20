@@ -15,12 +15,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import tensorflow as tf
 from tensorflow.keras.layers import (
+    BatchNormalization,
     Bidirectional,
     Concatenate,
     Conv1D,
     Dense,
     Dropout,
     GlobalAveragePooling1D,
+    GRU,
     Input,
     LSTM,
     MaxPooling1D,
@@ -30,6 +32,23 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.models import Model, Sequential, load_model
 
 from config import (
+    DHRC_BATCH_SIZE,
+    DHRC_CONV1_FILTERS,
+    DHRC_CONV2_FILTERS,
+    DHRC_DENSE_UNITS,
+    DHRC_DROPOUT,
+    DHRC_EPOCHS,
+    DHRC_FEATURES,
+    DHRC_GRU_UNITS,
+    DHRC_LEARNING_RATE,
+    DHRC_LOSS_WEIGHT_CHAR,
+    DHRC_LOSS_WEIGHT_REV,
+    DHRC_MODEL_PATH,
+    DHRC_NUM_CLASSES,
+    DHRC_ONNX_PATH,
+    DHRC_PATIENCE,
+    DHRC_REDUCE_LR_PATIENCE,
+    DHRC_SEQ_LEN,
     FEATURES,
     LATENCY_DIM,
     LEARNING_RATE,
@@ -133,6 +152,54 @@ def build_v2_bilstm(learning_rate: float = LEARNING_RATE) -> Model:
     return model
 
 
+def build_dhrc_model(
+    seq_len: int = DHRC_SEQ_LEN,
+    num_features: int = DHRC_FEATURES,
+    num_classes: int = DHRC_NUM_CLASSES,
+    learning_rate: float = DHRC_LEARNING_RATE,
+) -> Model:
+    """
+    Centralized Dual-Head Reversal Classifier (DHRC).
+    Input: (seq_len=64, num_features=8)
+    Head 1 (char_output): Softmax across num_classes (52 Latin characters)
+    Head 2 (reversal_output): Sigmoid probability of clinical reversal
+    """
+    inputs = Input(shape=(seq_len, num_features), name="trajectory_input")
+    x = Conv1D(DHRC_CONV1_FILTERS, kernel_size=5, padding="same", activation="relu")(inputs)
+    x = BatchNormalization()(x)
+    x = MaxPooling1D(2)(x)
+
+    x = Conv1D(DHRC_CONV2_FILTERS, kernel_size=3, padding="same", activation="relu")(x)
+    x = BatchNormalization()(x)
+    x = MaxPooling1D(2)(x)
+
+    x = Bidirectional(GRU(DHRC_GRU_UNITS, return_sequences=True))(x)
+    shared = GlobalAveragePooling1D()(x)
+    shared = Dense(DHRC_DENSE_UNITS, activation="relu")(shared)
+    shared = Dropout(DHRC_DROPOUT)(shared)
+
+    char_out = Dense(num_classes, activation="softmax", name="char_output")(shared)
+    rev_out = Dense(1, activation="sigmoid", name="reversal_output")(shared)
+
+    model = Model(inputs=inputs, outputs=[char_out, rev_out], name="dual_head_reversal_model")
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+        loss={
+            "char_output": "sparse_categorical_crossentropy",
+            "reversal_output": "binary_crossentropy",
+        },
+        loss_weights={
+            "char_output": DHRC_LOSS_WEIGHT_CHAR,
+            "reversal_output": DHRC_LOSS_WEIGHT_REV,
+        },
+        metrics={
+            "char_output": ["accuracy"],
+            "reversal_output": ["accuracy", tf.keras.metrics.AUC(name="auc")],
+        },
+    )
+    return model
+
+
 def build_model(version: str = "v2", learning_rate: float = LEARNING_RATE) -> Model:
     """Factory function returning the compiled model for the specified version."""
     v = version.lower().strip()
@@ -142,8 +209,10 @@ def build_model(version: str = "v2", learning_rate: float = LEARNING_RATE) -> Mo
         return build_v1_xai(learning_rate=learning_rate)
     elif v == "v2":
         return build_v2_bilstm(learning_rate=learning_rate)
+    elif v == "dhrc":
+        return build_dhrc_model(learning_rate=learning_rate)
     else:
-        raise ValueError(f"Unknown model version: '{version}'. Must be 'v0', 'v1', or 'v2'.")
+        raise ValueError(f"Unknown model version: '{version}'. Must be 'v0', 'v1', 'v2', or 'dhrc'.")
 
 
 def load_or_build_model(version: str = "v2", filepath: Optional[str] = None) -> Model:
