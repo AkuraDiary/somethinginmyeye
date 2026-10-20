@@ -25,6 +25,7 @@ from tensorflow.keras.layers import (
     GRU,
     Input,
     LSTM,
+    Masking,
     MaxPooling1D,
     RepeatVector,
     TimeDistributed,
@@ -59,29 +60,35 @@ from config import (
     V0_DENSE_UNITS,
     V0_DROPOUT,
     V0_FEATURES,
+    V0_L2_REG,
+    V0_LEARNING_RATE,
     V1_CONV1_FILTERS,
     V1_CONV2_FILTERS,
     V1_DENSE_UNITS,
     V1_DROPOUT,
+    V1_LEARNING_RATE,
+    V2_CLIPNORM,
     V2_DROPOUT,
+    V2_LEARNING_RATE,
     V2_LSTM1_UNITS,
     V2_LSTM2_UNITS,
 )
 
 
-def build_v0_baseline(learning_rate: float = LEARNING_RATE) -> Sequential:
+def build_v0_baseline(learning_rate: float = V0_LEARNING_RATE) -> Sequential:
     """
     V0: Standard spatial 1D-CNN with Global Average Pooling.
     Input: (MAX_TIMESTEPS, 3) kinematics [velocity, dt, pressure].
     Output: Binary classification scalar.
     """
+    l2_reg = tf.keras.regularizers.l2(V0_L2_REG)
     model = Sequential([
         Input(shape=(MAX_TIMESTEPS, V0_FEATURES), name="kinematics_input"),
-        Conv1D(filters=V0_CONV1_FILTERS, kernel_size=3, activation="relu", name="conv1"),
+        Conv1D(filters=V0_CONV1_FILTERS, kernel_size=3, activation="relu", kernel_regularizer=l2_reg, name="conv1"),
         MaxPooling1D(pool_size=2, name="maxpool1"),
-        Conv1D(filters=V0_CONV2_FILTERS, kernel_size=3, activation="relu", name="conv2"),
+        Conv1D(filters=V0_CONV2_FILTERS, kernel_size=3, activation="relu", kernel_regularizer=l2_reg, name="conv2"),
         GlobalAveragePooling1D(name="gap"),
-        Dense(V0_DENSE_UNITS, activation="relu", name="dense1"),
+        Dense(V0_DENSE_UNITS, activation="relu", kernel_regularizer=l2_reg, name="dense1"),
         Dropout(V0_DROPOUT, name="dropout"),
         Dense(1, activation="sigmoid", name="classification_output"),
     ], name="elkinematics_v0_baseline")
@@ -99,7 +106,7 @@ def build_v0_baseline(learning_rate: float = LEARNING_RATE) -> Sequential:
     return model
 
 
-def build_v1_xai(learning_rate: float = LEARNING_RATE) -> Model:
+def build_v1_xai(learning_rate: float = V1_LEARNING_RATE) -> Model:
     """
     V1: Dual-input TimeDistributed CNN with Latency explicitly for Explainable AI (XAI).
     Inputs:
@@ -108,8 +115,10 @@ def build_v1_xai(learning_rate: float = LEARNING_RATE) -> Model:
     Output: TimeDistributed error probability heatmap (MAX_TIMESTEPS, 1).
     """
     seq_in = Input(shape=(MAX_TIMESTEPS, V0_FEATURES), name="kinematics_input")
-    x = Conv1D(filters=V1_CONV1_FILTERS, kernel_size=3, activation="relu", padding="same", name="conv1")(seq_in)
-    x = Conv1D(filters=V1_CONV2_FILTERS, kernel_size=3, activation="relu", padding="same", name="conv2")(x)
+    x = Conv1D(filters=V1_CONV1_FILTERS, kernel_size=5, activation="relu", padding="same", name="conv1")(seq_in)
+    x = BatchNormalization(name="bn_conv1")(x)
+    x = Conv1D(filters=V1_CONV2_FILTERS, kernel_size=5, activation="relu", padding="same", name="conv2")(x)
+    x = BatchNormalization(name="bn_conv2")(x)
 
     lat_in = Input(shape=(LATENCY_DIM,), name="latency_input")
     lat_repeated = RepeatVector(MAX_TIMESTEPS, name="repeat_latency")(lat_in)
@@ -133,16 +142,18 @@ def build_v1_xai(learning_rate: float = LEARNING_RATE) -> Model:
     return model
 
 
-def build_v2_bilstm(learning_rate: float = LEARNING_RATE) -> Model:
+def build_v2_bilstm(learning_rate: float = V2_LEARNING_RATE) -> Model:
     """
-    V2: Production Flagship Dual-input Bidirectional LSTM on 8 kinematic sequence + Latency.
+    V2: Dual-input Bidirectional LSTM on 8 standard kinematic sequence + Latency.
     Inputs:
       - Kinematics sequence: (MAX_TIMESTEPS, 8)
       - Latency scalar: (1,)
     Output: TimeDistributed error probability heatmap per millisecond timestep (MAX_TIMESTEPS, 1).
     """
     seq_in = Input(shape=(MAX_TIMESTEPS, FEATURES), name="kinematics_input")
-    x = Bidirectional(LSTM(V2_LSTM1_UNITS, return_sequences=True), name="bilstm_1")(seq_in)
+    masked_seq = Masking(mask_value=0.0, name="mask_padding")(seq_in)
+
+    x = Bidirectional(LSTM(V2_LSTM1_UNITS, return_sequences=True), name="bilstm_1")(masked_seq)
     x = Dropout(V2_DROPOUT, name="dropout_1")(x)
     x = Bidirectional(LSTM(V2_LSTM2_UNITS, return_sequences=True), name="bilstm_2")(x)
     x = Dropout(V2_DROPOUT, name="dropout_2")(x)
@@ -155,7 +166,7 @@ def build_v2_bilstm(learning_rate: float = LEARNING_RATE) -> Model:
 
     model = Model(inputs=[seq_in, lat_in], outputs=out, name="elkinematics_v2_bilstm")
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate, clipnorm=1.0),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate, clipnorm=V2_CLIPNORM),
         loss="binary_crossentropy",
         metrics=[
             "accuracy",
@@ -215,17 +226,21 @@ def build_dhrc_model(
     return model
 
 
-def build_model(version: str = "v2", learning_rate: float = LEARNING_RATE) -> Model:
+def build_model(version: str = "v2", learning_rate: Optional[float] = None) -> Model:
     """Factory function returning the compiled model for the specified version."""
     v = version.lower().strip()
     if v == "v0":
-        return build_v0_baseline(learning_rate=learning_rate)
+        lr = learning_rate if learning_rate is not None else V0_LEARNING_RATE
+        return build_v0_baseline(learning_rate=lr)
     elif v == "v1":
-        return build_v1_xai(learning_rate=learning_rate)
+        lr = learning_rate if learning_rate is not None else V1_LEARNING_RATE
+        return build_v1_xai(learning_rate=lr)
     elif v == "v2":
-        return build_v2_bilstm(learning_rate=learning_rate)
+        lr = learning_rate if learning_rate is not None else V2_LEARNING_RATE
+        return build_v2_bilstm(learning_rate=lr)
     elif v == "dhrc":
-        return build_dhrc_model(learning_rate=learning_rate)
+        lr = learning_rate if learning_rate is not None else DHRC_LEARNING_RATE
+        return build_dhrc_model(learning_rate=lr)
     else:
         raise ValueError(f"Unknown model version: '{version}'. Must be 'v0', 'v1', 'v2', or 'dhrc'.")
 

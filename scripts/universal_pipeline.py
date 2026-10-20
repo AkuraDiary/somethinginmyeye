@@ -184,11 +184,20 @@ def load_and_scale_universal(
     y = np.array(labels)
 
     X_seq_clean = np.nan_to_num(X_seq, nan=0.0, posinf=0.0, neginf=0.0)
-    feature_means = np.mean(X_seq_clean, axis=(0, 1))
-    feature_stds = np.std(X_seq_clean, axis=(0, 1))
+    pad_mask = np.all(X_seq_clean == 0.0, axis=-1)
+
+    # Compute global scalers strictly on active (unpadded) timesteps to eliminate padding bias
+    active_mask = ~pad_mask
+    if np.any(active_mask):
+        feature_means = np.mean(X_seq_clean[active_mask], axis=0)
+        feature_stds = np.std(X_seq_clean[active_mask], axis=0)
+    else:
+        feature_means = np.mean(X_seq_clean, axis=(0, 1))
+        feature_stds = np.std(X_seq_clean, axis=(0, 1))
     feature_stds[feature_stds == 0] = 1.0
 
     X_seq_scaled = (X_seq_clean - feature_means) / feature_stds
+    X_seq_scaled[pad_mask] = 0.0
     X_lat_scaled = X_lat / 1000.0
 
     os.makedirs(os.path.dirname(scaler_save_path), exist_ok=True)
@@ -244,7 +253,9 @@ def load_validation_with_train_scalers(
     y = np.array(labels)
 
     X_seq_clean = np.nan_to_num(X_seq, nan=0.0, posinf=0.0, neginf=0.0)
+    pad_mask = np.all(X_seq_clean == 0.0, axis=-1)
     X_seq_scaled = (X_seq_clean - feature_means) / feature_stds
+    X_seq_scaled[pad_mask] = 0.0
     X_lat_scaled = X_lat / 1000.0
 
     return X_seq_scaled, X_lat_scaled, y
@@ -287,7 +298,9 @@ def compute_active_sequence_scores(
     scores = []
     for i in range(len(preds)):
         sample_seq = X_seq_scaled[i, :, :8]
-        is_active = ~np.all(np.isclose(sample_seq, padding_val, atol=1e-5), axis=-1)
+        is_zero = np.all(np.isclose(sample_seq, 0.0, atol=1e-5), axis=-1)
+        is_pad_val = np.all(np.isclose(sample_seq, padding_val, atol=1e-5), axis=-1)
+        is_active = ~(is_zero | is_pad_val)
         active_len = int(np.sum(is_active))
         if active_len > 0:
             if preds.ndim == 3:
