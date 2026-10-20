@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DIR=${1:-../datasets}
+DIR=${1:-../../datasets}
 if [ ! -d "$DIR" ] && [ -d "datasets" ]; then
     DIR="datasets"
 fi

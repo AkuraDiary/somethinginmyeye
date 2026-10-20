@@ -612,3 +612,47 @@ Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (
   * `Sentences Only (Level 3)`: 100% Short standardized sentences.
 * **Clinical Traceability:** The selected `tier_focus` is logged in the companion metadata alongside `task_tier` and `execution_mode`, preserved across reloads via `localStorage`.
 
+---
+
+## 30. IEEE Conference Template (A4 Format) Grounding Guidelines and Publication Invariants
+
+### 1. Document Architecture & Length Restrictions
+* **Page Limit:** Strictly **4 to 6 pages** in IEEE A4 2-column format (approximately 3,000–5,000 words including figures, tables, equations, and references).
+* **Title Invariants:** Strictly zero mathematical notation, special symbols, or footnotes in the paper title. Subtitles are prohibited (not indexed by IEEE Xplore). If the words *"that uses"* can replace *"using"*, capitalize *"Using"*; otherwise, keep *"using"* lower-case.
+* **Abstract Invariants:** Must be a self-contained, single-paragraph overview (150–250 words). *CRITICAL:* Do not use symbols, special characters, footnotes, math, or bracketed citations (`[1]`) in the abstract.
+* **Index Terms:** Prefixed by `Keywords—` or `Index Terms—` formatted with an em-dash.
+
+### 2. Authors and Affiliations
+* Maximum of 6 authors in the default configuration, arranged horizontally from left to right across columns, wrapping to the next line.
+* Keep affiliations succinct: do not differentiate departments within the same parent organization or university.
+
+### 3. Equations and Mathematical Typography
+* **Equation Numbering:** Consecutively numbered flush right with parentheses: `(1)`, `(2)`. Center-aligned via tab stop.
+* **In-Text Citation:** In running text, refer strictly as `(1)`, **never** `Eq. (1)` or `equation (1)`, except at the beginning of a sentence (*"Equation (1) is..."*).
+* **Font Standards:** Italicize Roman characters for variables and physical quantities ($x, y, v, a, j, P, T, w$). Keep Greek symbols upright/non-italicized ($\theta, \phi, \mu, \sigma, \tau$).
+* **Operators & Punctuation:** Use an en-dash or minus sign ($-$), never a hyphen (`-`), for minus/subtraction. Punctuate equations with commas or periods when they conclude or form clauses in a sentence. Define all symbols before or immediately after the equation.
+
+### 4. Figures and Tables Layout
+* **Column Positioning:** Position figures and tables strictly at the **top** or **bottom** of columns. Never position figures or tables in the middle of a column. Large figures/tables may span across both columns.
+* **Captions & Headers:** Table heads appear **above** tables (`TABLE I: Title`); Figure captions appear **below** figures (`Fig. 1. Description`).
+* **In-Text Reference:** In running text, always use `Fig. 1` (even at the start of a sentence).
+* **Axis Labels:** Axis labels must be 8 pt Times New Roman, written as full descriptive words, not bare mathematical letters (e.g., `Velocity (px/s)`, not just `v`). Units enclosed in parentheses, never ratios (`Velocity (px/s)`, not `Velocity/px/s`).
+
+### 5. References & Citation Standards
+* **In-Text Citations:** Numbered consecutively in brackets `[1]`, with sentence punctuation placed *after* the closing bracket (`...as shown in [1], [3].`). Refer simply as `[1]`, never `Ref. [1]`, unless starting a sentence.
+* **Author List:** List all authors up to 5 authors. Use `et al.` only for **6 or more** authors.
+* **Article Title Capitalization:** Sentence case (capitalize only the first word and proper nouns). Journal names and conferences use title case in italics.
+* **Status Labels:** Explicitly label unpublished work as `unpublished` and accepted work as `in press`.
+
+### 6. Lexical & Editorial Invariants (IEEE Style Guide)
+* **American English:** Use American spelling (`acknowledgment` without middle 'e', `modeling`, `behavior`).
+* **Grammatical Plurality:** The word `"data"` is strictly **plural** (*"The data show..."*, not *"The data shows..."*).
+* **Leading Zeros:** Always use a leading zero before decimals (`0.25`, not `.25`).
+* **Unit Formatting:** Primary units must be SI (MKS). Spell out units in text (*"a few henries"*). Use `cm3`, not `cc`.
+* **Prefixes:** The prefix `"non"` is joined directly without hyphens (*nonwords, nonparametric, nonlinear*).
+* **Word Choice:** Use `"alternatively"` (not `"alternately"`), `"inset"` for a graph within a graph (not `"insert"`). Avoid `"essentially"` as a vague filler for *"approximately"* or *"effectively"*. Distinguish homophones (*affect* vs *effect*, *discrete* vs *discreet*, *principal* vs *principle*, *imply* vs *infer*).
+* **Scientific Constants:** Vacuum permeability constant is $\mu_0$ (subscript zero, not letter 'o').
+* **Latin Abbreviations:** `"i.e."` (that is), `"e.g."` (for example), and `"et al."` (no period after `et`).
+* **Template Hygiene:** Completely excise all template instructional text, sample text, and placeholder annotations prior to document submission.
+
+
