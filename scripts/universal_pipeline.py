@@ -273,6 +273,35 @@ def get_v2_data(X_seq_scaled: np.ndarray, X_lat_scaled: np.ndarray, y: np.ndarra
     return [X_v2_seq, lat], y_time_distributed
 
 
+def compute_active_sequence_scores(
+    preds: np.ndarray,
+    X_seq_scaled: np.ndarray,
+    scaler_path: str = SCALER_PATH,
+) -> np.ndarray:
+    """Computes sequence-level risk scores by averaging only over active (non-padded) timesteps."""
+    scaler_data = np.load(scaler_path)
+    means = scaler_data["means"][:8]
+    stds = scaler_data["stds"][:8]
+    padding_val = -means / stds
+
+    scores = []
+    for i in range(len(preds)):
+        sample_seq = X_seq_scaled[i, :, :8]
+        is_active = ~np.all(np.isclose(sample_seq, padding_val, atol=1e-5), axis=-1)
+        active_len = int(np.sum(is_active))
+        if active_len > 0:
+            if preds.ndim == 3:
+                scores.append(float(np.mean(preds[i, :active_len, 0])))
+            else:
+                scores.append(float(preds[i, 0]))
+        else:
+            if preds.ndim == 3:
+                scores.append(float(np.mean(preds[i, :, 0])))
+            else:
+                scores.append(float(preds[i, 0]))
+    return np.array(scores)
+
+
 def train_with_tuning(
     model,
     X_train,

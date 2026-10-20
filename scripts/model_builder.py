@@ -89,7 +89,12 @@ def build_v0_baseline(learning_rate: float = LEARNING_RATE) -> Sequential:
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
         loss="binary_crossentropy",
-        metrics=["accuracy", tf.keras.metrics.Recall(name="recall")],
+        metrics=[
+            "accuracy",
+            tf.keras.metrics.Precision(name="precision"),
+            tf.keras.metrics.Recall(name="recall"),
+            tf.keras.metrics.AUC(name="auc"),
+        ],
     )
     return model
 
@@ -118,7 +123,12 @@ def build_v1_xai(learning_rate: float = LEARNING_RATE) -> Model:
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
         loss="binary_crossentropy",
-        metrics=["accuracy", tf.keras.metrics.Recall(name="recall")],
+        metrics=[
+            "accuracy",
+            tf.keras.metrics.Precision(name="precision"),
+            tf.keras.metrics.Recall(name="recall"),
+            tf.keras.metrics.AUC(name="auc"),
+        ],
     )
     return model
 
@@ -145,9 +155,14 @@ def build_v2_bilstm(learning_rate: float = LEARNING_RATE) -> Model:
 
     model = Model(inputs=[seq_in, lat_in], outputs=out, name="elkinematics_v2_bilstm")
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate, clipnorm=1.0),
         loss="binary_crossentropy",
-        metrics=["accuracy", tf.keras.metrics.Recall(name="recall")],
+        metrics=[
+            "accuracy",
+            tf.keras.metrics.Precision(name="precision"),
+            tf.keras.metrics.Recall(name="recall"),
+            tf.keras.metrics.AUC(name="auc"),
+        ],
     )
     return model
 
