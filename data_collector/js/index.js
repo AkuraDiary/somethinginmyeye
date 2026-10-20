@@ -346,12 +346,12 @@ const TIER_DEFS = {
     L1: {
         code: 'L1',
         label: { id: 'Level 1: Huruf Alfabet (Kiral & Acak)', en: 'Level 1: Alphabet Letters (Chiral & General)' },
-        share: 0.25
+        share: 0.20
     },
     L2A: {
         code: 'L2A',
         label: { id: 'Level 2A: Kata Reguler Frekuensi Tinggi', en: 'Level 2A: High-Frequency Regular Words' },
-        share: 0.25
+        share: 0.20
     },
     L2B: {
         code: 'L2B',
@@ -371,7 +371,7 @@ const TIER_DEFS = {
     L3: {
         code: 'L3',
         label: { id: 'Level 3: Kalimat Pendek Standar', en: 'Level 3: Short Standardized Sentences' },
-        share: 0.15
+        share: 0.10
     }
 };
 
@@ -488,7 +488,7 @@ function generateSessionPlan(total, tierFocus = 'all') {
     } else if (tierFocus === 'sentences') {
         targetTiers = ['L3'];
     } else {
-        targetTiers = ['L1', 'L2A', 'L2B', 'L2C', 'L3'];
+        targetTiers = ['L1', 'L2A', 'L2B', 'L2C', 'L2D', 'L3'];
     }
 
     const counts = {};
