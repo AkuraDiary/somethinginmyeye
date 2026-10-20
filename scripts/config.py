@@ -14,6 +14,13 @@ PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 DATASET_DIR = os.path.join(PROJECT_ROOT, "datasets")
 VAL_DATASET_DIR = os.path.join(PROJECT_ROOT, "val_datasets")
 HUAWEI_DATASET_DIR = os.path.join(PROJECT_ROOT, "huawei_datasets")
+
+# Partitioned Target Dataset Directories
+DHRC_TRAIN_DIR = os.path.join(PROJECT_ROOT, "dhrc_train_datasets")
+DHRC_VAL_DIR = os.path.join(PROJECT_ROOT, "dhrc_val_datasets")
+ELKINEMATICS_TRAIN_DIR = os.path.join(PROJECT_ROOT, "elkinematics_train_datasets")
+ELKINEMATICS_VAL_DIR = os.path.join(PROJECT_ROOT, "elkinematics_val_datasets")
+
 MODEL_DIR = os.path.join(PROJECT_ROOT, "models")
 SAMPLE_DIR = os.path.join(PROJECT_ROOT, "sample")
 ARCHIVE_DIR = os.path.join(PROJECT_ROOT, "archive")

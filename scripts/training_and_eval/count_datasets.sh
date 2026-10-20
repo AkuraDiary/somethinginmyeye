@@ -15,6 +15,10 @@ set -e
 DATASET_DIRS=(
     "datasets"
     "huawei_datasets"
+    # "dhrc_train_datasets"
+    # "dhrc_val_datasets"
+    # "elkinematics_train_datasets"
+    # "elkinematics_val_datasets"
 )
 
 # Determine project root and script location
