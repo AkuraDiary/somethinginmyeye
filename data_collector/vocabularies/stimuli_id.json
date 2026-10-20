@@ -73,6 +73,10 @@
     "somi", "poti", "duba", "gopu", "selu", "wabi", "jeno", "ropu", "bami", "lusi",
     "kinu", "tupin", "medas", "rokat", "simap", "helun", "tanik", "godep", "puran", "welat", "bupak", "nupan", "gilus"
   ],
+  "multisyllabic_and_affixed_words": [
+    "sepeda", "boneka", "kelinci", "serigala", "matahari", "kereta", "kemarin", "selatan", "sepatu", "bendera", "pesawat", "pelangi", "kelapa", "dahaga", "cemara", "merpati",
+    "membaca", "berlari", "menulis", "bermain", "melompat", "menyiram", "mencuci", "memasak", "membawa", "membeli", "berenang", "bernyanyi", "tertawa"
+  ],
   "short_sentences": [
     "Saya suka baca buku.",
     "Ibu masak nasi di dapur.",

@@ -54,6 +54,7 @@ const COLLECTOR_TRANSLATIONS = {
         optTierRegular: "Hanya Kata Reguler (Level 2A)",
         optTierAnagram: "Hanya Kata Anagram (Level 2B)",
         optTierPseudo: "Hanya Kata Tanpa Makna (Level 2C)",
+        optTierMultisyllabic: "Kata Multisilabel & Berimbuhan (Level 2D)",
         optTierSentences: "Hanya Kalimat (Level 3)",
 
         btnStartGuided: "Mulai Sesi Terpandu",
@@ -124,6 +125,7 @@ const COLLECTOR_TRANSLATIONS = {
         optTierRegular: "Regular Words Only (Level 2A)",
         optTierAnagram: "Anagram Words Only (Level 2B)",
         optTierPseudo: "Pseudowords Only (Level 2C)",
+        optTierMultisyllabic: "Multisyllabic & Affixed Words (Level 2D)",
         optTierSentences: "Sentences Only (Level 3)",
 
         btnStartGuided: "Start Guided Session",
@@ -311,6 +313,10 @@ const DEFAULT_STIMULUS_BANK = {
         'somi', 'poti', 'duba', 'gopu', 'selu', 'wabi', 'jeno', 'ropu', 'bami', 'lusi',
         'kinu', 'tupin', 'medas', 'rokat', 'simap'
     ],
+    multisyllabic_and_affixed_words: [
+        'sepeda', 'boneka', 'kelinci', 'serigala', 'matahari', 'kereta', 'kemarin', 'selatan', 'sepatu', 'bendera', 'pesawat', 'pelangi',
+        'membaca', 'berlari', 'menulis', 'bermain', 'melompat', 'menyiram', 'mencuci', 'memasak', 'membawa', 'membeli', 'berenang', 'tertawa'
+    ],
     short_sentences: [
         'Saya suka baca buku.',
         'Ibu masak nasi di dapur.',
@@ -355,6 +361,11 @@ const TIER_DEFS = {
     L2C: {
         code: 'L2C',
         label: { id: 'Level 2C: Kata Tanpa Makna (Pseudoword)', en: 'Level 2C: Pseudowords (Sublexical)' },
+        share: 0.15
+    },
+    L2D: {
+        code: 'L2D',
+        label: { id: 'Level 2D: Kata Multisilabel & Berimbuhan', en: 'Level 2D: Multisyllabic & Affixed Words' },
         share: 0.15
     },
     L3: {
@@ -421,6 +432,9 @@ function getPoolForTier(tierKey, bank) {
     if (tierKey === 'L2C') {
         return b.pseudowords || [];
     }
+    if (tierKey === 'L2D') {
+        return b.multisyllabic_and_affixed_words || [];
+    }
     if (tierKey === 'L3') {
         return b.short_sentences || [];
     }
@@ -469,6 +483,8 @@ function generateSessionPlan(total, tierFocus = 'all') {
         targetTiers = ['L2B'];
     } else if (tierFocus === 'pseudowords') {
         targetTiers = ['L2C'];
+    } else if (tierFocus === 'multisyllabic') {
+        targetTiers = ['L2D'];
     } else if (tierFocus === 'sentences') {
         targetTiers = ['L3'];
     } else {
