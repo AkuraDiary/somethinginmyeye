@@ -655,4 +655,24 @@ Across 107 studies in Murnani et al. (2025) and 21 AI studies in Fallah et al. (
 * **Latin Abbreviations:** `"i.e."` (that is), `"e.g."` (for example), and `"et al."` (no period after `et`).
 * **Template Hygiene:** Completely excise all template instructional text, sample text, and placeholder annotations prior to document submission.
 
+---
+
+## 31. Strict Physical Document Grounding Invariant (Zero-Hallucination Citation Policy)
+
+### 1. The Principle
+* **Problem:** Large language models frequently hallucinate academic citations, author names, years, or venues when generating scholarly prose, or carry over unverified references from legacy bibliographies. In academic peer review (especially IEEE), a single non-existent reference or misattributed claim severely damages paper credibility.
+* **The Invariant:** Every academic citation, author name, publication year, and empirical finding integrated into manuscripts or research artifacts must be grounded strictly and exclusively in physical PDF documents present on disk within `academic_resources/`.
+* **Zero-Hallucination Policy:** Agents must never invent references, pull unverified citations from general memory, or import external citations from older rejected manuscripts without verifying that the source PDF file is present in `academic_resources/`.
+
+### 2. Physical Verification Catalog (Mendeley Grounded)
+All citations for the current manuscript are cross-referenced with their physical PDF filenames:
+* *DSM-5:* `academic_resources/DSM-5.pdf` (American Psychiatric Association, 2013)
+* *SLD Neurobiology & Comorbidity:* `academic_resources/Specific_Learning_Disorders_Neurobiological_Founda.pdf` (Flores, 2025); `academic_resources/tp-09-S1-S46.pdf` (Chung et al., 2020)
+* *Developmental Dyslexia & Orthography:* `academic_resources/children-12-00572.pdf` (Traficante et al., 2025); `academic_resources/flang-4-1504770.pdf` (Martínez-Tomás et al., 2025); `academic_resources/fpsyg-13-1063021.pdf` (Germano & Capellini, 2023)
+* *Handwriting Kinematics & Robotics:* `academic_resources/1-s2.0-S1746809425010717-main.pdf` (Brescia et al., 2026); `academic_resources/journal.pdig.0001503.pdf` (Toffoli et al., 2026); `academic_resources/frai-8-1426455.pdf` (Babushkin et al., 2025); `academic_resources/Multi-Dimensional_Parameters_for_the_Clinical_Diagnosis_of_Dysgraphia_in_School-Aged_Children.pdf` (Sindhu & Kavitha, 2026)
+* *Computer Vision & Image Baselines:* `academic_resources/3573128.3609351.pdf` (Gemelli et al., 2023); `academic_resources/jdr20240010.pdf` (Aldehim et al., 2024); `academic_resources/peerj-cs-3296.pdf` (Al Abadleh et al., 2025); `academic_resources/jdr20250612.pdf` (Al Abadleh & Al-Shqeerat, 2025)
+* *Machine Learning Software Engineering & Prototyping:* `academic_resources/3461778.3462163.pdf` (Scurto et al., 2021); `academic_resources/1-s2.0-S0164121223003023-main.pdf` (Serban et al., 2024)
+* *Digital Screening & Gamified Assessment:* `academic_resources/fpsyg-17-1872307.pdf` (Micalizzi & Zaccaria, 2026); `academic_resources/s42979-025-03927-0.pdf` (Rangasrinivasan et al., 2025)
+
+
 
