@@ -189,7 +189,8 @@ class TerminalLabelValidator:
                 continue
             if self.mode_filter and info["mode"].lower() != self.mode_filter:
                 continue
-            if self.single_char_only and len(info["label"]) > 1:
+            clean_lbl_for_filter = info["label"].replace("_rev", "").replace("-rev", "")
+            if self.single_char_only and len(clean_lbl_for_filter) > 1:
                 continue
             if self.search_query and (self.search_query not in info["label"].lower() and self.search_query not in bn.lower()):
                 continue
@@ -287,6 +288,7 @@ class TerminalLabelValidator:
                         meta_dict = json.load(f)
                     meta_dict["label"] = new_label
                     meta_dict["base_filename"] = new_bn
+                    meta_dict["is_reversed"] = new_label.endswith("_rev") or "_rev_" in new_bn
                     with open(new_meta_f, "w", encoding="utf-8") as f:
                         json.dump(meta_dict, f, ensure_ascii=False, indent=2)
                 except Exception as err:
@@ -342,6 +344,9 @@ class TerminalLabelValidator:
             print(f"Mode (Class):   {sample['mode']}")
             print(f"Annotator:      {sample['annotator']}")
             print(f"Current Label:  \033[1;36m{sample['label']}\033[0m")
+            is_currently_rev = sample["label"].endswith("_rev") or "_rev_" in bn
+            rev_display = "\033[1;35m[MIRROR REVERSED (_rev)]\033[0m" if is_currently_rev else "[NORMAL / CANONICAL]"
+            print(f"Reversal State: {rev_display}")
             if details["meta_prompt"]:
                 print(f"Meta Prompt:    \033[1;33m{details['meta_prompt']}\033[0m ({details['meta_level']})")
             print(f"Stroke Data:    {details['num_points']} points | Latency: {details['latency_ms']:.1f} ms")
@@ -351,6 +356,7 @@ class TerminalLabelValidator:
             print("Commands:")
             print("  [Text]  : Type new label and press Enter to rename sample")
             print("  [Enter] : Confirm & keep current label, proceed to next")
+            print("  [r]     : Toggle reversal tag (_rev in filename for DHRC Head 2)")
             print("  [1]     : Skip this sample (do not mark as reviewed)")
             print("  [2]     : Go back to previous sample")
             print("  [3]     : Delete this sample (corrupt/unusable stroke)")
@@ -367,6 +373,26 @@ class TerminalLabelValidator:
                 self._save_review_state()
                 print("\nReview session saved. Exiting.")
                 return
+
+            elif user_input.lower() == "r":
+                if sample["label"].endswith("_rev"):
+                    target_lbl = sample["label"][:-4]
+                    print(f"[TOGGLE OFF] Reverting reversal tag: '{sample['label']}' -> '{target_lbl}'")
+                else:
+                    target_lbl = f"{sample['label']}_rev"
+                    print(f"[TOGGLE ON] Tagging as reversed: '{sample['label']}' -> '{target_lbl}'")
+
+                new_bn = self.rename_sample(sample, target_lbl)
+                if new_bn:
+                    print(f"[SUCCESS] Renamed to: \033[1;32m{new_bn}\033[0m")
+                    self.reviewed_set.discard(bn)
+                    self.reviewed_set.add(new_bn)
+                    sample["base_name"] = new_bn
+                    sample["label"] = target_lbl
+                    idx += 1
+                else:
+                    print("[ERROR] Reversal toggle rename failed.")
+                continue
 
             elif user_input == "1":
                 print(f"Skipped: {bn}")

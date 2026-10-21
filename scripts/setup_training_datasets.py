@@ -164,7 +164,9 @@ def prune_orphans(
 
     for entry in os.scandir(dest_dir):
         if entry.is_file() and entry.name.endswith(DATASET_EXTENSIONS):
-            if entry.name not in expected_filenames:
+            # Check canonical form to protect manually tagged reversal annotations (_rev)
+            canonical_name = entry.name.replace("_rev.", ".").replace("-rev.", ".")
+            if entry.name not in expected_filenames and canonical_name not in expected_filenames:
                 orphans_removed += 1
                 if verbose:
                     action_tag = "[PRUNE PREVIEW]" if dry_run else "[PRUNED ORPHAN]"
@@ -239,7 +241,8 @@ def reconcile_and_sync(
         if not (is_train or is_val):
             continue
 
-        is_letter = len(label) == 1 and label.isalpha()
+        clean_label = label.replace("_rev", "").replace("-rev", "")
+        is_letter = len(clean_label) == 1 and clean_label.isalpha()
         is_typical = "normal" in mode_str
 
         targets_for_sample: List[str] = []

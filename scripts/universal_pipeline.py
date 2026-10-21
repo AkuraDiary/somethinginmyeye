@@ -142,19 +142,60 @@ def extract_universal_features(df: pd.DataFrame, resample: bool = True) -> np.nd
     return features_df.values
 
 
+def categorize_stimulus(filepath: str) -> str:
+    """
+    Classifies a handwriting recording into 'letter', 'word', or 'sentence'.
+    - 'sentence': continuous sentence stimuli (e.g. 'Matahari pagi...', 'Saya suka...')
+    - 'letter': isolated Latin character (single character a-z, A-Z)
+    - 'word': multi-character vocabulary (words, pseudowords, anagrams, multisyllabic)
+    """
+    base = os.path.basename(filepath)
+    base_lower = base.lower()
+
+    # Check known continuous sentence patterns
+    for s_phrase in [
+        "matahari_pagi", "saya_suka", "ibu_masak", "budi_bermain",
+        "adik_minum", "kakak_mencuci", "ayah_membaca", "kucing_belang",
+        "baju_baru", "kakek_menyiram", "burung_kecil", "bebek_berenang",
+        "paman_membeli", "siti_makan", "ani_menulis", "beni_dan_edo",
+        "lampu_kamar", "dodi_membawa"
+    ]:
+        if s_phrase in base_lower:
+            return "sentence"
+
+    parts = base.split("_")
+    if len(parts) >= 3:
+        stim = parts[2]
+        clean_stim = stim.replace("-rev", "").replace("_rev", "")
+        if len(clean_stim) == 1 and clean_stim.isalpha():
+            return "letter"
+        if " " in stim or len(parts) > 7:
+            return "sentence"
+
+    return "word"
+
+
 def load_and_scale_universal(
     data_dir: str = DEFAULT_TRAIN_DIR,
     scaler_save_path: str = SCALER_PATH,
     resample: bool = True,
+    included_tiers: Optional[List[str]] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load training CSV sequences, calculate global z-score parameters, and scale data."""
     sequences: List[np.ndarray] = []
     latencies: List[float] = []
     labels: List[int] = []
 
+    valid_tiers = set(t.lower().strip() for t in included_tiers) if included_tiers is not None else None
+
     csv_files = glob.glob(os.path.join(data_dir, "*.csv"))
 
     for file in csv_files:
+        if valid_tiers is not None:
+            tier = categorize_stimulus(file)
+            if tier not in valid_tiers:
+                continue
+
         df = pd.read_csv(file)
         if len(df) == 0:
             continue
@@ -184,25 +225,16 @@ def load_and_scale_universal(
     y = np.array(labels)
 
     X_seq_clean = np.nan_to_num(X_seq, nan=0.0, posinf=0.0, neginf=0.0)
-    pad_mask = np.all(X_seq_clean == 0.0, axis=-1)
-
-    # Compute global scalers strictly on active (unpadded) timesteps to eliminate padding bias
-    active_mask = ~pad_mask
-    if np.any(active_mask):
-        feature_means = np.mean(X_seq_clean[active_mask], axis=0)
-        feature_stds = np.std(X_seq_clean[active_mask], axis=0)
-    else:
-        feature_means = np.mean(X_seq_clean, axis=(0, 1))
-        feature_stds = np.std(X_seq_clean, axis=(0, 1))
+    feature_means = np.mean(X_seq_clean, axis=(0, 1))
+    feature_stds = np.std(X_seq_clean, axis=(0, 1))
     feature_stds[feature_stds == 0] = 1.0
 
     X_seq_scaled = (X_seq_clean - feature_means) / feature_stds
-    X_seq_scaled[pad_mask] = 0.0
     X_lat_scaled = X_lat / 1000.0
 
     os.makedirs(os.path.dirname(scaler_save_path), exist_ok=True)
     np.savez(scaler_save_path, means=feature_means, stds=feature_stds)
-    print(f"Saved global feature scalers to: {scaler_save_path}")
+    print(f"Saved global feature scalers to: {scaler_save_path} (Samples: {len(labels)})")
 
     return X_seq_scaled, X_lat_scaled, y
 
@@ -211,6 +243,7 @@ def load_validation_with_train_scalers(
     data_dir: str = DEFAULT_VAL_DIR,
     scaler_path: str = SCALER_PATH,
     resample: bool = True,
+    included_tiers: Optional[List[str]] = None,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Load validation cohort using strictly precomputed training scalers to prevent leakage."""
     scaler_data = np.load(scaler_path)
@@ -221,9 +254,16 @@ def load_validation_with_train_scalers(
     latencies: List[float] = []
     labels: List[int] = []
 
+    valid_tiers = set(t.lower().strip() for t in included_tiers) if included_tiers is not None else None
+
     csv_files = glob.glob(os.path.join(data_dir, "*.csv"))
 
     for file in csv_files:
+        if valid_tiers is not None:
+            tier = categorize_stimulus(file)
+            if tier not in valid_tiers:
+                continue
+
         df = pd.read_csv(file)
         if len(df) == 0:
             continue
@@ -253,9 +293,7 @@ def load_validation_with_train_scalers(
     y = np.array(labels)
 
     X_seq_clean = np.nan_to_num(X_seq, nan=0.0, posinf=0.0, neginf=0.0)
-    pad_mask = np.all(X_seq_clean == 0.0, axis=-1)
     X_seq_scaled = (X_seq_clean - feature_means) / feature_stds
-    X_seq_scaled[pad_mask] = 0.0
     X_lat_scaled = X_lat / 1000.0
 
     return X_seq_scaled, X_lat_scaled, y
