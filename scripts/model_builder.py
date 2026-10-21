@@ -209,7 +209,7 @@ def build_dhrc_model(
         },
         metrics={
             "char_output": ["accuracy"],
-            "reversal_output": ["accuracy", tf.keras.metrics.AUC(name="auc")],
+            "reversal_output": ["accuracy"],
         },
     )
     return model

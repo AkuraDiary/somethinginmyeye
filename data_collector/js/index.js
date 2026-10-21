@@ -712,14 +712,8 @@ function sanitizeLabel(text) {
 }
 
 function getExportImageDataUrl() {
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = canvas.width;
-    exportCanvas.height = canvas.height;
-    const expCtx = exportCanvas.getContext('2d');
-    expCtx.fillStyle = '#ffffff';
-    expCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-    expCtx.drawImage(canvas, 0, 0);
-    return exportCanvas.toDataURL('image/png');
+    // Preserve transparent alpha channel without injecting opaque white background
+    return canvas.toDataURL('image/png');
 }
 
 async function postSample({ dataset, mode, label, annotator, metadata }) {
