@@ -260,6 +260,10 @@ if 'reversal_model' not in globals() or 'X_val' not in globals():
 
 VOCAB = DHRC_VOCABULARY if 'DHRC_VOCABULARY' in globals() else [chr(i) for i in range(ord('a'), ord('z')+1)] + [chr(i) for i in range(ord('A'), ord('Z')+1)]
 
+# Ensure validation arrays are cleanly flattened 1D arrays
+y_char_val = np.array(y_char_val).ravel()
+y_rev_val = np.array(y_rev_val).ravel()
+
 val_preds = reversal_model.predict(X_val, verbose=0)
 char_probs = val_preds[0]
 rev_probs = val_preds[1].ravel()
@@ -346,14 +350,18 @@ rev_preds_50 = (rev_probs >= 0.50).astype(int)
 rev_preds_opt = (rev_probs >= opt_thresh_rev).astype(int)
 
 sens_50 = recall_score(y_rev_val, rev_preds_50, zero_division=0)
-spec_50 = np.sum((y_rev_val == 0) & (rev_preds_50 == 0)) / np.sum(y_rev_val == 0)
+cm_50 = confusion_matrix(y_rev_val, rev_preds_50)
+tn_50, fp_50, fn_50, tp_50 = cm_50.ravel()
+spec_50 = tn_50 / (tn_50 + fp_50) if (tn_50 + fp_50) > 0 else 0.0
 prec_50 = precision_score(y_rev_val, rev_preds_50, zero_division=0)
 f1_50 = f1_score(y_rev_val, rev_preds_50, zero_division=0)
 bacc_50 = balanced_accuracy_score(y_rev_val, rev_preds_50)
 mcc_50 = matthews_corrcoef(y_rev_val, rev_preds_50)
 
 sens_opt = recall_score(y_rev_val, rev_preds_opt, zero_division=0)
-spec_opt = np.sum((y_rev_val == 0) & (rev_preds_opt == 0)) / np.sum(y_rev_val == 0)
+cm_opt = confusion_matrix(y_rev_val, rev_preds_opt)
+tn_opt, fp_opt, fn_opt, tp_opt = cm_opt.ravel()
+spec_opt = tn_opt / (tn_opt + fp_opt) if (tn_opt + fp_opt) > 0 else 0.0
 prec_opt = precision_score(y_rev_val, rev_preds_opt, zero_division=0)
 f1_opt = f1_score(y_rev_val, rev_preds_opt, zero_division=0)
 bacc_opt = balanced_accuracy_score(y_rev_val, rev_preds_opt)
