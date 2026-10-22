@@ -17,6 +17,9 @@ def compute_levenshtein_distance(s1: str, s2: str) -> int:
     Computes Damerau-Levenshtein (Optimal String Alignment) edit distance between two strings.
     Accounts for insertions, deletions, substitutions, and adjacent character transpositions
     (letter position migrations).
+
+    Despite the historical function name, this implements the OSA variant of
+    Damerau-Levenshtein; use `compute_osa_distance` as the explicit alias.
     """
     len1, len2 = len(s1), len(s2)
     if len1 == 0:
@@ -47,6 +50,9 @@ def compute_levenshtein_distance(s1: str, s2: str) -> int:
                 d[i][j] = min(d[i][j], d[i - 2][j - 2] + 1)  # adjacent transposition
 
     return d[len1][len2]
+
+
+compute_osa_distance = compute_levenshtein_distance
 
 
 MIRROR_GLYPH_TO_CANONICAL = {

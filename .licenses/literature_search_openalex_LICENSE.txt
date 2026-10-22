@@ -1,0 +1,1 @@
+Notified user on 2026-10-22 to check OpenAlex terms at https://developers.openalex.org/ and to check the license of each retrieved paper for restrictions.

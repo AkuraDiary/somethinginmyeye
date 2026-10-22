@@ -12,7 +12,7 @@ const SCREENING_TRANSLATIONS = {
         screenTitle: "Kanvas Tulisan Tangan",
         subPillScreen: "Antarmuka Skrining",
         navToCollector: "← Pengumpul Data",
-        screenSubtitle: "Tulis secara bebas pada kanvas atau ikuti acuan untuk transkripsi teks dan pemantauan dinamika gerak.",
+        screenSubtitle: "Tulis secara bebas pada kanvas atau ikuti acuan menjalankan screening.",
         labelMode: "Mode:",
         modeFreeWriting: "Tulisan Bebas",
         modePromptedWriting: "Tulisan Terpandu",
@@ -39,13 +39,25 @@ const SCREENING_TRANSLATIONS = {
         altUncertainStroke: "Tebakan Alternatif: [Coretan Tidak Pasti]",
         reversalNoticePrefix: "Observasi Karakter: Pembalikan cermin / rotasi terdeteksi pada",
         reversalClinicalFlag: "(ONNX Lokal: Pembalikan klinis terdeteksi)",
-        diagHeader: "Inferensi Karakter Individual (ONNX Dual-Head)",
+        diagHeader: "Inferensi Karakter Individual - Model DHRC",
         dashHeading: "Ringkasan Penilaian",
-        dashOverallStatus: "Status Keseluruhan:",
+        dashOverallStatus: "Indikasi Skrining:",
         dashRating: "Peringkat:",
         badgeTypical: "Tipikal",
         badgeAtypical: "Atipikal",
         ratingStandard: "Standar",
+        ratingTypical: "Dalam Batas Tipikal",
+        ratingElevated: "Indikasi Skrining Meningkat",
+        indicationTypical: "Dalam Batas Skrining Tipikal",
+        indicationMotor: "Indikasi Potensial: Variabilitas Kinematik Tinggi (Risiko Disgrafia Motorik)",
+        indicationOrtho: "Indikasi Potensial: Variansi Ejaan / Pembalikan (Risiko Disgrafia Disleksik)",
+        indicationMulti: "Indikasi Potensial: Risiko Skrining Multi-Domain (Motorik & Ortografis)",
+        screeningDisclaimer: "Hanya indikasi skrining otomatis. Hasil ini bukan diagnosis klinis dan tidak menggantikan asesmen formal oleh profesional berlisensi.",
+        toggleShowHeatmap: "Tampilkan Peta Panas Variabilitas Kinematik",
+        stimulusBadge: "STIMULUS TARGET",
+        stimulusCopy: "SALIN TARGET",
+        stimulusDictation: "DIKTE LISAN",
+        stimulusFree: "TULISAN BEBAS",
         riskDysgraphiaTitle: "Ketidakteraturan Gerak",
         riskDysgraphiaFootnote: "Berdasarkan trajektori gerakan",
         riskDyslexiaTitle: "Variansi Ejaan",
@@ -62,7 +74,7 @@ const SCREENING_TRANSLATIONS = {
         screenTitle: "Handwriting Canvas",
         subPillScreen: "Live Screening Interface",
         navToCollector: "← Data Collector",
-        screenSubtitle: "Write freely on the canvas or follow a prompt to transcribe text and monitor movement dynamics.",
+        screenSubtitle: "Write freely on the canvas or follow a prompt to use the screening system.",
         labelMode: "Mode:",
         modeFreeWriting: "Free Writing",
         modePromptedWriting: "Prompted Writing",
@@ -89,13 +101,25 @@ const SCREENING_TRANSLATIONS = {
         altUncertainStroke: "Alternative Guesses: [Uncertain Stroke]",
         reversalNoticePrefix: "Letter Observation: Mirror / rotational reversal detected at",
         reversalClinicalFlag: "(Local ONNX:  reversal flagged)",
-        diagHeader: "Individual Character Inference (ONNX Dual-Head)",
+        diagHeader: "Individual Character Inference - DHRC Model",
         dashHeading: "Assessment Summary",
-        dashOverallStatus: "Overall Status:",
+        dashOverallStatus: "Screening Indication:",
         dashRating: "Rating:",
         badgeTypical: "Typical",
         badgeAtypical: "Atypical",
         ratingStandard: "Standard",
+        ratingTypical: "Within Typical Limits",
+        ratingElevated: "Elevated Screening Indication",
+        indicationTypical: "Within Typical Screening Limits",
+        indicationMotor: "Potential Indicator: Elevated Kinematic Variance (Dysgraphia Risk)",
+        indicationOrtho: "Potential Indicator: Spelling / Reversal Variance (Dyslexia Risk)",
+        indicationMulti: "Potential Indicator: Multi-Domain Screening Risk (Motor & Orthographic)",
+        screeningDisclaimer: "Automated screening indication only. This result does not constitute a clinical diagnosis and does not replace formal assessment by a licensed professional.",
+        toggleShowHeatmap: "Show Kinematic Variability Heatmap",
+        stimulusBadge: "TARGET STIMULUS",
+        stimulusCopy: "COPY TARGET",
+        stimulusDictation: "ORAL DICTATION",
+        stimulusFree: "FREE WRITING",
         riskDysgraphiaTitle: "Movement Irregularity",
         riskDysgraphiaFootnote: "Based on movement trajectory",
         riskDyslexiaTitle: "Spelling Variance",
@@ -147,9 +171,16 @@ let currentStrokeCount = 0;
 
 // --- RESPONSIVE CANVAS ---
 function resizeCanvas() {
+    const workspace = document.querySelector('.screening-workspace-section');
     const container = document.querySelector('.container');
-    canvas.width = container.clientWidth - 40;
-    canvas.height = window.innerHeight * 0.58;
+    const targetWidth = workspace ? workspace.clientWidth : (container ? container.clientWidth - 40 : 1000);
+
+    canvas.width = Math.max(300, Math.floor(targetWidth));
+    // Generous canvas height so prompt card + canvas fills the visible tablet screen:
+    // When writing, the user only sees prompt and canvas; buttons/telemetry are below fold
+    const viewportH = window.innerHeight;
+    canvas.height = Math.max(540, Math.floor(viewportH * 0.74));
+
     clearCanvas();
 }
 
@@ -226,11 +257,11 @@ scrollTrack.addEventListener('pointercancel', () => {
 quickScrollBtn.addEventListener('click', () => {
     const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
     if (scrollContainer.scrollTop > maxScroll / 2) {
-        scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+        scrollToWritingPosition();
     } else {
         const card = document.getElementById('transcriptionCard');
         if (card && card.style.display !== 'none') {
-            card.scrollIntoView({ behavior: 'smooth' });
+            card.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else {
             scrollContainer.scrollTo({ top: maxScroll, behavior: 'smooth' });
         }
@@ -270,6 +301,13 @@ function getEvaluatorPrompt() {
     return val.length > 0 ? val : 'bebek';
 }
 
+function scrollToWritingPosition() {
+    const target = document.querySelector('.stimulus-card') || document.querySelector('.screening-workspace-section') || canvas;
+    if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+}
+
 function refreshPromptDisplayText() {
     const t = SCREENING_TRANSLATIONS[currentScreeningLang] || SCREENING_TRANSLATIONS.id;
     if (modeFreeFlow.checked) {
@@ -295,6 +333,7 @@ function refreshPromptDisplayText() {
 function updateModeUI() {
     refreshPromptDisplayText();
     clearCanvas();
+    scrollToWritingPosition();
 }
 
 modeFreeFlow.addEventListener('change', updateModeUI);
@@ -311,6 +350,7 @@ if (promptInput) {
         if (modePrompted.checked) {
             refreshPromptDisplayText();
             clearCanvas();
+            scrollToWritingPosition();
         }
     });
 }
@@ -399,16 +439,38 @@ function redrawAllUserStrokes() {
 }
 
 const togglePhraseBox = document.getElementById('togglePhraseBox');
+const toggleHeatmap = document.getElementById('toggleHeatmap');
+let lastHeatmapData = null;
 
-function renderBoundingBoxesOverlay() {
-    if (!lastSegmentationDiagnostics || lastSegmentationDiagnostics.length === 0) return;
-
+// Unified canvas overlay pipeline: strokes -> heatmap -> bounding boxes.
+// Bounding boxes use no fill so they never occlude strokes or heatmap marks.
+function renderCanvasOverlays() {
     redrawAllUserStrokes();
 
-    const showIndividualBoxes = toggleBoundingBoxes ? toggleBoundingBoxes.checked : true;
+    const showHeatmap = toggleHeatmap ? toggleHeatmap.checked : true;
+    if (showHeatmap && lastHeatmapData && lastHeatmapData.length > 0) {
+        lastHeatmapData.forEach((prob, index) => {
+            if (index < strokeData.length && prob > 0.80) {
+                const pt = strokeData[index];
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 9, 0, 2 * Math.PI);
+                ctx.fillStyle = "rgba(239, 68, 68, 0.28)";
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 3, 0, 2 * Math.PI);
+                ctx.fillStyle = "rgba(220, 38, 38, 0.85)";
+                ctx.fill();
+                ctx.restore();
+            }
+        });
+    }
+
+    if (!lastSegmentationDiagnostics || lastSegmentationDiagnostics.length === 0) return;
+
+    const showIndividualBoxes = toggleBoundingBoxes ? toggleBoundingBoxes.checked : false;
     const showPhraseBox = togglePhraseBox ? togglePhraseBox.checked : false;
 
-    // Optional: Draw whole phrase bounding box only if explicitly checked
     if (showPhraseBox && lastSegmentationDiagnostics.length > 1) {
         const allXs = lastSegmentationDiagnostics.map(d => [d.bbox.x, d.bbox.x + d.bbox.w]).flat();
         const allYs = lastSegmentationDiagnostics.map(d => [d.bbox.y, d.bbox.y + d.bbox.h]).flat();
@@ -430,91 +492,55 @@ function renderBoundingBoxesOverlay() {
 
     if (!showIndividualBoxes) return;
 
-    const CLUSTER_PALETTE = [
-        { border: "#2563eb", fill: "rgba(37, 99, 235, 0.12)", stroke: "#1d4ed8" }, // Blue
-        { border: "#059669", fill: "rgba(5, 150, 105, 0.12)", stroke: "#047857" }, // Emerald
-        { border: "#d97706", fill: "rgba(217, 119, 6, 0.12)", stroke: "#b45309" }, // Amber
-        { border: "#7c3aed", fill: "rgba(124, 58, 237, 0.12)", stroke: "#6d28d9" }, // Violet
-        { border: "#0891b2", fill: "rgba(8, 145, 178, 0.12)", stroke: "#0e7490" }, // Cyan
-        { border: "#db2777", fill: "rgba(219, 39, 119, 0.12)", stroke: "#be185d" }, // Pink
-    ];
-
     const padding = 8;
-    lastSegmentationDiagnostics.forEach((d, idx) => {
+    lastSegmentationDiagnostics.forEach((d) => {
         if (!d.bbox) return;
 
         const bx = Math.max(0, d.bbox.x - padding);
         const by = Math.max(0, d.bbox.y - padding);
         const bw = d.bbox.w + (padding * 2);
         const bh = d.bbox.h + (padding * 2);
-
         const isRev = d.isReversed;
-        const palette = CLUSTER_PALETTE[idx % CLUSTER_PALETTE.length];
-        const boxColor = isRev ? "rgba(220, 38, 38, 0.95)" : palette.border;
-        const boxFill = isRev ? "rgba(254, 226, 226, 0.22)" : palette.fill;
+        const color = isRev ? "#dc2626" : "#2563eb";
 
-        // Draw bounding box rectangle
         ctx.save();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = boxColor;
-        ctx.setLineDash([6, 3]);
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = color;
+        ctx.setLineDash([5, 4]);
         ctx.strokeRect(bx, by, bw, bh);
 
-        ctx.fillStyle = boxFill;
-        ctx.fillRect(bx, by, bw, bh);
-
-        // Header label badge on top of the bounding box
-        const labelText = isRev
-            ? `C#${d.clusterIndex}: ${d.resolvedGlyph}`
+        const label = isRev
+            ? `C#${d.clusterIndex}: ${d.resolvedGlyph} [REV ${d.reversalProbability}%]`
             : `C#${d.clusterIndex}: '${d.onnxCanonicalChar}' (${d.onnxCharConfidence}%)`;
-        ctx.font = "bold 12px -apple-system, BlinkMacSystemFont, sans-serif";
-        const textWidth = ctx.measureText(labelText).width;
-        const badgeW = textWidth + 14;
-        const badgeH = 20;
-        const badgeY = Math.max(2, by - badgeH - 2);
+        ctx.font = "bold 11px -apple-system, BlinkMacSystemFont, sans-serif";
+        const tw = ctx.measureText(label).width;
+        const badgeY = Math.max(2, by - 18);
 
         ctx.setLineDash([]);
-        ctx.fillStyle = boxColor;
-        ctx.fillRect(bx, badgeY, badgeW, badgeH);
-
+        ctx.fillStyle = color;
+        ctx.fillRect(bx, badgeY, tw + 10, 16);
         ctx.fillStyle = "#ffffff";
-        ctx.fillText(labelText, bx + 7, badgeY + 14);
-
-        // Sub-badge at bottom showing reversal score
-        const revText = isRev ? `REVERSED ${d.reversalProbability}%` : `NORMAL ${d.reversalProbability}%`;
-        ctx.font = "600 11px -apple-system, BlinkMacSystemFont, sans-serif";
-        const revWidth = ctx.measureText(revText).width;
-        const subBadgeW = revWidth + 10;
-        const subBadgeH = 17;
-        const subBadgeY = by + bh + 3;
-
-        ctx.fillStyle = isRev ? "#991b1b" : "#334155";
-        ctx.fillRect(bx, subBadgeY, subBadgeW, subBadgeH);
-
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(revText, bx + 5, subBadgeY + 12);
-
+        ctx.fillText(label, bx + 5, badgeY + 12);
         ctx.restore();
     });
 }
 
-if (toggleBoundingBoxes) {
-    toggleBoundingBoxes.addEventListener('change', () => {
-        if (lastSegmentationDiagnostics && lastSegmentationDiagnostics.length > 0) {
-            renderBoundingBoxesOverlay();
-        }
-    });
+// Backward-compatible alias
+function renderBoundingBoxesOverlay() {
+    renderCanvasOverlays();
 }
-if (togglePhraseBox) {
-    togglePhraseBox.addEventListener('change', () => {
-        if (lastSegmentationDiagnostics && lastSegmentationDiagnostics.length > 0) {
-            renderBoundingBoxesOverlay();
-        }
-    });
-}
+
+[toggleBoundingBoxes, togglePhraseBox, toggleHeatmap].forEach((el) => {
+    if (el) {
+        el.addEventListener('change', () => {
+            if (strokeData.length > 0) renderCanvasOverlays();
+        });
+    }
+});
 
 function clearCanvas() {
     lastSegmentationDiagnostics = null;
+    lastHeatmapData = null;
     redrawCanvasBase();
     strokeData = [];
     hasStartedWriting = false;
@@ -572,11 +598,22 @@ function normalizePressure(raw) {
     return Math.min(1.0, Math.max(0.0, p));
 }
 
-function recordPoint(e, isTouching) {
+function getCanvasPoint(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / (rect.width || 1);
+    const scaleY = canvas.height / (rect.height || 1);
+    return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
+}
+
+function recordPoint(e, isTouching, pt) {
+    const point = pt || getCanvasPoint(e);
     strokeData.push({
         time: e.timeStamp,
-        x: e.offsetX,
-        y: e.offsetY,
+        x: point.x,
+        y: point.y,
         pressure: e.pressure !== undefined ? e.pressure : 0.5,
         tiltX: e.tiltX || 0,
         tiltY: e.tiltY || 0,
@@ -602,8 +639,9 @@ canvas.addEventListener('pointerdown', (e) => {
     }
     isDrawing = true;
     currentStrokeCount++;
-    lastScreeningX = e.offsetX;
-    lastScreeningY = e.offsetY;
+    const pt = getCanvasPoint(e);
+    lastScreeningX = pt.x;
+    lastScreeningY = pt.y;
 
     const p = normalizePressure(e.pressure);
     const initialWidth = computeLineWidth(p);
@@ -615,26 +653,27 @@ canvas.addEventListener('pointerdown', (e) => {
     ctx.arc(lastScreeningX, lastScreeningY, Math.max(1.0, initialWidth / 2), 0, Math.PI * 2);
     ctx.fillStyle = "#000000";
     ctx.fill();
-    recordPoint(e, 1);
+    recordPoint(e, 1, pt);
 });
 
 canvas.addEventListener('pointermove', (e) => {
     if (isDrawing) {
+        const pt = getCanvasPoint(e);
         const p = normalizePressure(e.pressure);
         const currentWidth = computeLineWidth(p);
 
         ctx.beginPath();
         ctx.moveTo(lastScreeningX, lastScreeningY);
-        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.lineTo(pt.x, pt.y);
         ctx.lineWidth = currentWidth;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.strokeStyle = "#000000";
         ctx.stroke();
 
-        lastScreeningX = e.offsetX;
-        lastScreeningY = e.offsetY;
-        recordPoint(e, 1);
+        lastScreeningX = pt.x;
+        lastScreeningY = pt.y;
+        recordPoint(e, 1, pt);
     }
 });
 
@@ -672,7 +711,10 @@ canvas.addEventListener('pointerout', (e) => {
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('selectstart', (e) => e.preventDefault());
 
-document.getElementById('clearBtn').addEventListener('click', clearCanvas);
+document.getElementById('clearBtn').addEventListener('click', () => {
+    clearCanvas();
+    scrollToWritingPosition();
+});
 
 // --- LOW-LEVEL GOOGLE DIGITAL INK QUERY ---
 async function queryGoogleInk(strokes) {
@@ -1595,38 +1637,33 @@ analyzeBtn.addEventListener('click', async () => {
             return;
         }
 
-        // Draw highlight marks for high-variability segments
-        if (result.heatmap && result.heatmap.length > 0) {
-            result.heatmap.forEach((prob, index) => {
-                if (index < strokeData.length && prob > 0.80) {
-                    const point = strokeData[index];
-                    ctx.beginPath();
-                    ctx.arc(point.x, point.y, 8, 0, 2 * Math.PI);
-                    ctx.fillStyle = "rgba(231, 76, 60, 0.15)";
-                    ctx.fill();
-                }
-            });
-        }
+        // Retain heatmap in state and render through the unified overlay pipeline
+        lastHeatmapData = (result.heatmap && result.heatmap.length > 0) ? result.heatmap : null;
+        renderCanvasOverlays();
 
         dashboard.style.display = 'block';
 
-        diagBadge.innerText = result.dsm5_diagnosis || (currentScreeningLang === 'id' ? "Tipikal" : "Typical");
-        severityText.innerText = result.clinical_severity || (currentScreeningLang === 'id' ? "Standar" : "Standard");
+        // Softened screening phrasing: map backend indication to localized text
+        const isElevated = !!(result.is_dysgraphic || result.is_dyslexic);
+        let indicationKey = 'indicationTypical';
+        if (result.is_dysgraphic && result.is_dyslexic) indicationKey = 'indicationMulti';
+        else if (result.is_dysgraphic) indicationKey = 'indicationMotor';
+        else if (result.is_dyslexic) indicationKey = 'indicationOrtho';
+        diagBadge.innerText = t[indicationKey];
+        diagBadge.removeAttribute('data-i18n');
+        severityText.innerText = isElevated ? t.ratingElevated : t.ratingTypical;
+        severityText.removeAttribute('data-i18n');
 
-        if (result.is_dysgraphic || result.is_dyslexic) {
-            diagBadge.className = "status-badge badge-red";
-        } else {
-            diagBadge.className = "status-badge badge-green";
-        }
+        diagBadge.className = isElevated ? "status-badge badge-amber" : "status-badge badge-green";
 
         const dysgraphiaPct = (result.dysgraphia_risk_percentage || 0).toFixed(1);
         const dyslexiaPct = (result.dyslexia_risk_percentage || 0).toFixed(1);
 
         dysgraphiaRiskText.innerText = `${dysgraphiaPct}%`;
-        dysgraphiaRiskText.style.color = result.is_dysgraphic ? "#e74c3c" : "#27ae60";
+        dysgraphiaRiskText.style.color = result.is_dysgraphic ? "#d97706" : "#16a34a";
 
         dyslexiaRiskText.innerText = `${dyslexiaPct}%`;
-        dyslexiaRiskText.style.color = result.is_dyslexic ? "#e74c3c" : "#27ae60";
+        dyslexiaRiskText.style.color = result.is_dyslexic ? "#d97706" : "#16a34a";
 
         if (result.reversal_detected) {
             reversalAlertBox.style.display = 'block';
@@ -1645,6 +1682,24 @@ analyzeBtn.addEventListener('click', async () => {
         analyzeBtn.disabled = false;
     }
 });
+
+// --- DHRC MODEL ACCORDION ---
+(function initDiagnosticsAccordion() {
+    const header = document.getElementById('modelDiagnosticsHeader');
+    const card = document.getElementById('modelDiagnosticsCard');
+    if (!header || !card) return;
+    const toggle = () => {
+        const expanded = card.classList.toggle('expanded');
+        header.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    };
+    header.addEventListener('click', toggle);
+    header.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            toggle();
+        }
+    });
+})();
 
 // Apply language on initial load
 switchScreeningLanguage(currentScreeningLang);

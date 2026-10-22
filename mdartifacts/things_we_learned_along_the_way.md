@@ -676,3 +676,75 @@ All citations for the current manuscript are cross-referenced with their physica
 
 
 
+
+
+## 32. Multi-Attribute Risk Integrator: Evidence Status of Weights, Threshold, and Fuzzy Logic Alternative
+
+### Formulas under discussion
+```
+R_dysgraphia = K_score * 100%
+R_dyslexia   = min(1.0, 0.40 * E_ortho + 0.40 * F_rev + 0.20 * L_risk) * 100%
+```
+
+### Evidence status
+- No paper in `academic_resources/` supports the weights 0.40 / 0.40 / 0.20. They are heuristic design choices.
+- No citation exists for the 50% decision threshold or for the piecewise latency function (offsets of 1000 and 500, divisor 2000). These originate from engineering iterations.
+- The literature supports the individual inputs, not their aggregation: latency or pauses, reversals, spelling errors, and kinematic instability (Germano & Capellini; Martinez-Tomas et al.; Traficante et al.; Brescia et al.).
+- Section II must not describe the weights as "clinically calibrated". Use wording such as "expert-informed heuristic weights, not fitted to clinical outcomes".
+- Expected reviewer question: how were the weights chosen, and were they validated.
+
+### Weighted linear sum: suitability
+Advantages for a RAD prototype:
+- Transparent and consistent with the explainable AI theme.
+- Requires no clinical outcome labels, which are not available.
+- Trivial CPU cost.
+- Per-component contribution can be shown to educators.
+
+Weaknesses:
+- Arbitrary weights.
+- Assumes independent additive components.
+- Arbitrary hard cutoff at 50%.
+
+### Fuzzy logic alternative
+For:
+- Linguistic rules (IF latency is high AND reversal is present THEN dyslexia risk is high) resemble clinical reasoning.
+- Gradual class boundaries instead of a hard cutoff.
+- Can model interactions between components.
+
+Against, for the current project:
+- Membership functions and rule bases also require expert-set parameters, so the arbitrariness is relocated rather than removed.
+- Without clinician input or outcome labels the rules are equally ungrounded and more complex.
+- Harder to explain within 4 to 6 pages.
+- The rule base grows with each added feature.
+- No fuzzy-logic citation may be taken from memory. Only papers physically present in `academic_resources/` may be cited.
+
+### Decisions
+1. Keep the weighted sum.
+2. Present weights as initial heuristics and the integrator as a transparent rule-based layer, not a validated diagnostic model.
+3. Add a weight sensitivity analysis (vary each weight by 0.10 on tablet data, report the number of changed screening flags).
+4. List fuzzy inference, logistic regression, and learned fusion layers as future work once clinician-labeled data exists.
+5. Present the 50% cutoff as a screening flag, consistent with the non-diagnostic disclaimer invariant.
+
+### Literature search results for the integrator (arXiv and OpenAlex, 2026-10-22)
+Candidates found online. None are in `academic_resources/` yet. Per Section 31, download the PDF into `academic_resources/` and read it before citing.
+
+| Candidate | Source | Relevance to integrator |
+| :--- | :--- | :--- |
+| Mun & El-Yacoubi, "Profiling Handwriting-Process Deviations in Developmental Dysgraphia" (2026), arXiv 2609.15435 | arXiv | Reports a multi-domain deviation profile with bootstrap uncertainty and no single diagnostic label. Supports presenting separate risk indices as screening profiles. |
+| Robaa et al., "Multimodal Ensemble with Conditional Feature Fusion for Dysgraphia Diagnosis" (2024), arXiv 2408.13754 | arXiv | Precedent for fusing multiple data streams; relevant to the learned-fusion future work. |
+| Andrade-Arenas & Yactayo-Arias, "Expert system for diagnosing learning disorders in children" (2024), doi 10.11591/ijece.v14i3.pp2965-2975 | OpenAlex | Rule-based expert system for learning disorders, 21 simulated cases. Precedent for transparent rule-based screening. Abstract does not state fuzzy logic. |
+| Zolna et al., "The Dynamics of Handwriting Improves the Automated Diagnosis of Dysgraphia" (2019), arXiv 1906.07576 | arXiv | Online-handwriting RNN precedent. |
+
+Gap: no paper was found that applies fuzzy logic to handwriting-based dyslexia or dysgraphia screening, and none supports the 0.40/0.40/0.20 weights. The weights remain heuristic.
+
+### Verified findings from the four downloaded PDFs (read 2026-10-22)
+Correction: arXiv 2408.13754 is by Kunhoth, Al Maadeed, Saleh, and Akbari (Qatar University). The earlier attribution to "Robaa et al." was wrong and came from a different search result. Use the PDF's author list.
+
+| Paper (file) | Verified content | Use in integrator |
+| :--- | :--- | :--- |
+| Mun & El-Yacoubi, 2026 (`2609.15435v1.pdf`) | 12-axis deviation profile on 257 children. States that no classifier is trained, results are uncertainty-aware deviation scores rather than a diagnostic label, and "neither a binary label nor a single aggregate deviation score can substitute for the profile". Output is marked "Hypothesis-generating, not a diagnosis". | Supports reporting two separate indices (R_dysgraphia, R_dyslexia) as a screening profile and the non-diagnostic framing. Also a caution against reducing results to one scalar. Their domain scores are normative z-scores with bootstrap CIs; our weighted sum is not. |
+| Kunhoth et al., 2024 (`2408.13754v1.pdf`) | Compares early feature fusion, soft-voted late fusion, and a conditional fusion method that applies feature fusion only when the confidence difference falls below a threshold. Runs a sensitivity analysis over thresholds 0.10 to 0.30 and reports performance stable across the range (best 88.8% accuracy on pseudowords). | Precedent for (a) threshold-gated decision logic and (b) reporting a threshold sensitivity analysis. Supports adding our own weight and cutoff sensitivity check. |
+| Andrade-Arenas & Yactayo-Arias, 2024 (`34869-69960-1-PB.pdf`) | Rule-based expert system built on if/then rules applied cumulatively to symptom inputs. 21 simulated cases: accuracy 95%, precision 100%, sensitivity 93%, specificity 100%. Authors note the use of simulated cases as a limitation. | Precedent for transparent rule-based screening logic in learning-disorder tools. It is not a source for fuzzy logic or for weights. |
+| Zolna et al., 2019 (`1906.07576v1.pdf`) | Online-handwriting RNN on tablet data for dysgraphia; reports identifying more than 90% of children diagnosed by the BHK test. | Background for the kinematic stream only. Not relevant to the integrator weights. |
+
+Remaining gap: none of the four papers supplies weights or a cutoff for combining orthographic, reversal, and latency components. The 0.40 / 0.40 / 0.20 weights and the 50% threshold stay labeled as heuristics.

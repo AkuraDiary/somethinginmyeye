@@ -33,6 +33,7 @@
                 </div>
             </div>
 
+            <div class="screening-header-section">
             <p data-i18n="screenSubtitle">Write freely on the canvas or follow a prompt to transcribe text and monitor movement dynamics.</p>
 
             <!-- Mode Selection -->
@@ -81,9 +82,14 @@
                 </div>
             </div>
 
-            <div class="instruction prompt-display-free" id="promptDisplay">"Write freely on the canvas below"</div>
+            </div>
 
-            <canvas id="drawingCanvas"></canvas>
+            <div class="screening-workspace-section">
+                <div class="stimulus-card">
+                    <div class="instruction prompt-display-free" id="promptDisplay">"Write freely on the canvas below"</div>
+                </div>
+
+                <canvas id="drawingCanvas"></canvas>
 
             <!-- Movement Dynamics Summary -->
             <div class="telemetry-grid">
@@ -111,14 +117,21 @@
                 <button class="btn-secondary" id="analyzeBtn" data-i18n="btnRunAssessment">Run Assessment</button>
             </div>
 
-            <!-- Visualization & Transparency Controls -->
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px; margin-bottom: 5px; font-size: 13px; color: #475569;">
-                <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                    <input type="checkbox" id="toggleBoundingBoxes" style="cursor: pointer; width: 16px; height: 16px; accent-color: #3b82f6;">
+            </div>
+
+            <div class="screening-results-section">
+            <!-- Canvas Overlay Toggles -->
+            <div class="overlay-toggle-bar">
+                <label>
+                    <input type="checkbox" id="toggleHeatmap" checked>
+                    <span><strong data-i18n="toggleShowHeatmap">Show Kinematic Variability Heatmap</strong></span>
+                </label>
+                <label>
+                    <input type="checkbox" id="toggleBoundingBoxes">
                     <span><strong data-i18n="toggleShowBoxes">Show Segmented Character Bounding Boxes</strong></span>
                 </label>
-                <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; user-select: none;">
-                    <input type="checkbox" id="togglePhraseBox" style="cursor: pointer; width: 15px; height: 15px; accent-color: #64748b;">
+                <label>
+                    <input type="checkbox" id="togglePhraseBox">
                     <span data-i18n="toggleShowWholeWord">Show Whole Word Box</span>
                 </label>
             </div>
@@ -133,8 +146,11 @@
 
             <!-- Model Transparency & Diagnostics Drawer -->
             <div id="modelDiagnosticsCard" class="model-diagnostics-card" style="display: none;">
-                <div class="diagnostics-header">
-                    <span data-i18n="diagHeader">Individual Character Inference</span>
+                <div class="diagnostics-header diagnostics-accordion-header" id="modelDiagnosticsHeader" role="button" tabindex="0" aria-expanded="false" aria-controls="diagnosticsDetails">
+                    <span style="display:flex; align-items:center; gap:8px;">
+                        <span class="accordion-arrow" id="accordionArrow">&#9656;</span>
+                        <span data-i18n="diagHeader">Individual Character Inference - DHRC Model</span>
+                    </span>
                     <span id="diagnosticsSummaryTag" class="diag-tag diag-tag-normal">OK</span>
                 </div>
                 <div id="diagnosticsDetails" class="diagnostics-details"></div>
@@ -144,8 +160,8 @@
             <div class="dashboard" id="resultsDashboard">
                 <h2 class="dashboard-heading" data-i18n="dashHeading">Assessment Summary</h2>
                 <p><strong data-i18n="dashOverallStatus">Overall Status:</strong> <span id="diagnosisBadge"
-                        class="status-badge badge-green" data-i18n="badgeTypical">Typical</span></p>
-                <p><strong data-i18n="dashRating">Rating:</strong> <span id="severityText" data-i18n="ratingStandard">Standard</span></p>
+                        class="status-badge badge-green" data-i18n="indicationTypical">Within Typical Screening Limits</span></p>
+                <p><strong data-i18n="dashRating">Rating:</strong> <span id="severityText" data-i18n="ratingTypical">Within Typical Limits</span></p>
 
                 <div class="risk-grid">
                     <div class="risk-card">
@@ -170,6 +186,8 @@
 
                 <hr class="dashboard-divider">
                 <p class="dashboard-footer-note" data-i18n="dashFooterNote">Highlighted marks on the canvas indicate segments with higher movement variability.</p>
+                <p class="screening-disclaimer" data-i18n="screeningDisclaimer">Automated screening indication only. This result does not constitute a clinical diagnosis and does not replace formal assessment by a licensed professional.</p>
+            </div>
             </div>
         </div>
     </div>

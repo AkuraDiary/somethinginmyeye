@@ -32,7 +32,7 @@ input, select, textarea {
     overscroll-behavior-y: contain;
     overscroll-behavior: contain;
     touch-action: pan-y;
-    padding: 15px 44px 60px 15px;
+    padding: 8px 40px 60px 8px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     text-align: center;
@@ -43,12 +43,14 @@ input, select, textarea {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 1000px;
+    width: 100%;
+    max-width: 100%;
     margin: 0 auto 12px auto;
     padding: 6px 10px 12px 10px;
     border-bottom: 1px solid #e2e8f0;
     flex-wrap: wrap;
     gap: 10px;
+    box-sizing: border-box;
 }
 
 .screening-branding {
@@ -194,13 +196,14 @@ input, select, textarea {
 }
 
 .container { 
-    width: 95%; 
-    max-width: 1400px; 
-    margin: auto; 
+    width: 100%; 
+    max-width: 100%; 
+    margin: 0 auto; 
     background: white; 
-    padding: 20px; 
+    padding: 16px 20px; 
     border-radius: 12px; 
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08); 
+    box-sizing: border-box;
 }
 
 h1 { 
@@ -217,13 +220,14 @@ p {
 }
 
 canvas { 
-    border: 2px dashed #bdc3c7; 
-    border-radius: 8px; 
-    background-color: #fafafa; 
+    box-sizing: border-box;
+    border: 1px solid #cbd5e1; 
+    border-radius: 10px; 
+    background-color: #ffffff; 
     cursor: crosshair; 
     touch-action: none; 
-    margin-top: 10px; 
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+    margin: 10px auto; 
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.03);
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
@@ -378,9 +382,11 @@ button {
     /* grid-template-columns: repeat(4, 1fr); */
     gap: 10px;
     justify-content: center;
-    max-width: 1000px;
+    width: 100%;
+    max-width: 100%;
     margin: 15px auto 5px auto;
     font-size: 14px;
+    box-sizing: border-box;
 }
 
 .telemetry-card {
@@ -418,12 +424,14 @@ button {
 .transcription-card {
     display: none;
     margin: 20px auto 0 auto;
-    max-width: 1000px;
+    width: 100%;
+    max-width: 100%;
     background: #e8f4fd;
     border-left: 5px solid #2980b9;
     padding: 15px 20px;
     border-radius: 8px;
     text-align: left;
+    box-sizing: border-box;
 }
 
 .transcription-label {
@@ -461,13 +469,15 @@ button {
 /* Assessment Dashboard */
 .dashboard { 
     margin: 20px auto 0 auto; 
-    max-width: 1000px;
+    width: 100%;
+    max-width: 100%;
     padding: 20px; 
     border-radius: 8px; 
     display: none; 
     background-color: #f8f9fa; 
     border-left: 5px solid #27ae60; 
     text-align: left; 
+    box-sizing: border-box;
 }
 
 .dashboard-heading {
@@ -608,4 +618,156 @@ button {
 .diag-tag-normal {
     background: #dcfce7;
     color: #166534;
+}
+
+
+/* ------------------------------------------------------------------
+ * 3-Section Layout: Header (setup), Body (focused workspace), Footer (results)
+ * ------------------------------------------------------------------ */
+.screening-header-section {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.screening-header-section .mode-selection-container,
+.screening-header-section .prompt-selector-container {
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.screening-workspace-section {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.screening-results-section {
+    width: 100%;
+    max-width: 100%;
+    margin: 24px auto 0 auto;
+    padding-top: 16px;
+    border-top: 2px solid #e2e8f0;
+    box-sizing: border-box;
+}
+
+/* Focal Stimulus Prompt Card */
+.stimulus-card {
+    margin: 8px auto 14px auto;
+    padding: 18px 24px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    text-align: center;
+    box-sizing: border-box;
+}
+
+.stimulus-card .instruction {
+    margin: 0;
+    line-height: 1.2;
+}
+
+.stimulus-card .prompt-display-target {
+    font-size: 44px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #0f172a;
+}
+
+.stimulus-card .prompt-display-free {
+    font-size: 20px;
+    font-weight: 600;
+    color: #64748b;
+    font-style: italic;
+}
+
+/* Canvas fills the workspace */
+.screening-workspace-section #drawingCanvas {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin: 10px auto;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+}
+
+/* Softened screening indication colors */
+.badge-amber {
+    background-color: #d97706;
+}
+
+.screening-disclaimer {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #fffbeb;
+    border-left: 4px solid #d97706;
+    color: #78350f;
+    font-size: 13px;
+    border-radius: 4px;
+}
+
+/* Overlay toggle bar */
+.overlay-toggle-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 10px 0 5px 0;
+    font-size: 13px;
+    color: #475569;
+}
+
+.overlay-toggle-bar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.overlay-toggle-bar input[type="checkbox"] {
+    cursor: pointer;
+    width: 16px;
+    height: 16px;
+    accent-color: #3b82f6;
+}
+
+/* Collapsible DHRC Model accordion */
+.diagnostics-accordion-header {
+    cursor: pointer;
+    user-select: none;
+    margin-bottom: 0;
+}
+
+.diagnostics-accordion-header:hover {
+    background: #f1f5f9;
+}
+
+.accordion-arrow {
+    display: inline-block;
+    transition: transform 0.15s ease;
+}
+
+.model-diagnostics-card.expanded .accordion-arrow {
+    transform: rotate(90deg);
+}
+
+.model-diagnostics-card .diagnostics-details {
+    display: none;
+    margin-top: 10px;
+    text-align: left;
+}
+
+.model-diagnostics-card.expanded .diagnostics-details {
+    display: block;
+}
+
+.model-diagnostics-card.expanded .diagnostics-accordion-header {
+    margin-bottom: 10px;
 }

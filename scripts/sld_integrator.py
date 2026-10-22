@@ -131,20 +131,25 @@ def evaluate_sld_differential(
     is_dysgraphic = bool(dysgraphia_risk >= (CLASSIFICATION_THRESHOLD * 100.0))
     is_dyslexic = bool(dyslexia_risk >= (CLASSIFICATION_THRESHOLD * 100.0))
 
+    # Screening indications are probabilistic possibilities, not clinical verdicts.
     if is_dysgraphic and is_dyslexic:
-        dsm5_diagnosis = "Comorbid SLD (Dyslexia & Motor Dysgraphia)"
-        clinical_severity = "Severe Multi-Domain Deficit"
+        dsm5_diagnosis = "Potential Indicator: Multi-Domain Screening Risk (Motor & Orthographic)"
+        clinical_severity = "Elevated Screening Indication in Multiple Domains"
     elif is_dysgraphic:
-        dsm5_diagnosis = "Specific Learning Disorder: Motor Dysgraphia"
-        clinical_severity = "Fine-Motor Kinematic Deficit"
+        dsm5_diagnosis = "Potential Indicator: Elevated Kinematic Variance (Motor Dysgraphia Risk)"
+        clinical_severity = "Elevated Fine-Motor Kinematic Variance"
     elif is_dyslexic:
-        dsm5_diagnosis = "Specific Learning Disorder: Dyslexia"
-        clinical_severity = "Phonological & Orthographic Deficit"
+        dsm5_diagnosis = "Potential Indicator: Spelling / Reversal Variance (Dyslexic Dysgraphia Risk)"
+        clinical_severity = "Elevated Orthographic Variance"
     else:
-        dsm5_diagnosis = "Typical Development"
-        clinical_severity = "Within Normal Limits"
+        dsm5_diagnosis = "Within Typical Screening Limits"
+        clinical_severity = "Within Typical Limits"
 
     return {
+        "screening_disclaimer": (
+            "Automated screening indication only. This result does not constitute a clinical "
+            "diagnosis and does not replace formal assessment by a licensed professional."
+        ),
         "dsm5_diagnosis": dsm5_diagnosis,
         "clinical_severity": clinical_severity,
         "dysgraphia_risk_percentage": round(float(dysgraphia_risk), 1),
