@@ -133,6 +133,11 @@ def analyze_live():
 
     df = pd.DataFrame(stroke_data)
 
+    # Populate top-level latency fallback if missing in individual stroke points
+    if isinstance(payload, dict) and "latency" in payload:
+        if "latency" not in df.columns or (len(df) > 0 and float(df["latency"].iloc[0]) == 0.0):
+            df["latency"] = float(payload.get("latency", 0.0))
+
     try:
         sld_results = evaluate_sld_differential(
             df=df,

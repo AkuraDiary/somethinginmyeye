@@ -1,0 +1,32 @@
+==========================================================================
+            ELKINEMATICS END-TO-END SYSTEM BENCHMARK REPORT               
+==========================================================================
+Timestamp          : 2026-10-22 19:59:51
+Server Target      : http://127.0.0.1:8000/analyze
+Concurrency Setup  : 500 requests across 20 threads
+Standard Ingestion : temp_datasets/ (40%), val_datasets (40%), reversals (20%)
+==========================================================================
+
+--- FUNCTIONAL TEST SUITE ---
+[TEST] Modality: isolated_letter | Prompt: 'I' | Decoded: 'I' | Strokes: 19
+[PASSED] HTTP 200 | Indication: Within Typical Screening Limits | Dysgraphia Risk: 10.8% | Dyslexia Risk: 0.0%
+[TEST] Modality: word_level_continuous | Prompt: 'w' | Decoded: 'w' | Strokes: 81
+[PASSED] HTTP 200 | Indication: Within Typical Screening Limits | Dysgraphia Risk: 34.3% | Dyslexia Risk: 20.0%
+[TEST] Modality: orthographic_reversal_stress | Prompt: 'b' | Decoded: 'd' | Strokes: 32
+[PASSED] HTTP 200 | Indication: Potential Indicator: Spelling / Reversal Variance (Dyslexic Dysgraphia Risk) | Dysgraphia Risk: 10.4% | Dyslexia Risk: 80.0%
+
+--- NON-FUNCTIONAL PERFORMANCE & CONCURRENCY BENCHMARK ---
+Executing stress benchmark: 500 total requests across 20 concurrent worker threads against http://127.0.0.1:8000/analyze...
+---------------------------------------------------------------------------
+[RESULT] Completed 500/500 successful requests (0 errors)
+   -> Status Code Breakdown : {200: 500}
+   -> Total Wall-Clock Time : 50.84 seconds
+   -> System Throughput     : 9.83 requests/second
+   -> Mean Latency          : 1994.33 ms
+   -> Median Latency (p50)  : 1907.34 ms
+   -> 90th Percentile (p90) : 2641.73 ms
+   -> 95th Percentile (p95) : 2864.54 ms
+   -> 99th Percentile (p99) : 3394.72 ms
+   -> Min Latency           : 302.61 ms
+   -> Max Latency           : 4117.67 ms
+   -> Std Deviation         : 487.11 ms

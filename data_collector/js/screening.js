@@ -1095,6 +1095,7 @@ const asymmetricReversible = {
     'P': 'ꟼ',             // Reversed P
     'R': 'Я', 'r': 'ɿ',   // Cyrillic Ya / Reversed r
     'S': 'Ƨ', 's': 'ƨ',   // Latin tone 2
+    'K': 'Ʞ', 'k': 'ʞ',   // Latin Turned K (Option 1 with Lisu ꓘ fallback)
     'Z': 'S',
 
     // 3. Rotational & Vertical Inversions (Top/Bottom)
@@ -1369,6 +1370,8 @@ async function transcribeWithReflectionAnalysis(rawStrokes) {
                     if (canonicalChar === 'D') revSymbol = 'ᗡ';
                 } else if (canonicalChar.toLowerCase() === 'p' && revSymbol === 'q') {
                     if (canonicalChar === 'P') revSymbol = 'ꟼ';
+                } else if (canonicalChar.toLowerCase() === 'k') {
+                    revSymbol = (canonicalChar === 'K') ? 'Ʞ' : 'ʞ';
                 }
 
                 // Show only the resolved character itself (no bracket notation)
