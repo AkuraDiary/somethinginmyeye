@@ -105,7 +105,9 @@ DHRC_CHAR_TO_IDX = {ch: idx for idx, ch in enumerate(DHRC_VOCABULARY)}
 
 # Clinical Screening & Inference
 CLASSIFICATION_THRESHOLD = 0.5
-COGNITIVE_LATENCY_THRESHOLD_MS = 1500.0  # Threshold for working memory delay in ms
+# Threshold for working memory delay in ms (Germano & Capellini, 2022; Sumner et al., 2013)
+# Typical initiation: 1100-1500 ms; orthographic retrieval bottlenecks: > 1900 ms
+COGNITIVE_LATENCY_THRESHOLD_MS = 1500.0
 REVERSAL_PENALTY_WEIGHT = 0.40
 SPELLING_ERROR_WEIGHT = 0.40
 LATENCY_RISK_WEIGHT = 0.20

@@ -93,6 +93,8 @@ def evaluate_sld_differential(
     )
 
     # 3. Cognitive Latency Stream (Working Memory / Initiation Delay)
+    # Grounded in Sumner et al. (2013) and Germano & Capellini (2022):
+    # Typical elementary initiation latency: 1100-1500 ms; retrieval bottlenecks: > 1900 ms.
     raw_latency_ms = float(df["latency"].iloc[0]) if "latency" in df.columns and len(df) > 0 else 0.0
     if raw_latency_ms > COGNITIVE_LATENCY_THRESHOLD_MS:
         latency_risk = min((raw_latency_ms - 1000.0) / 2000.0, 1.0)
