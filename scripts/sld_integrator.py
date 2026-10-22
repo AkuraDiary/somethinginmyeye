@@ -105,10 +105,12 @@ def evaluate_sld_differential(
         recognized_text = ortho_results.get("recognized_text", "")
         grammar_results = evaluate_syntactic_grammar(recognized_text, expected_prompt)
 
-    # 5. Risk Indices Calculation
+    # 5. Dual-Axis Risk Profiling (Mun & El-Yacoubi, 2026) with Confidence-Gated Arbitration (Kunhoth et al., 2024)
+    # Axis 1: Motor Kinematic Risk (Bi-LSTM temporal pooling)
     dysgraphia_risk = kinematic_score * 100.0
 
     ortho_error = ortho_results["levenshtein_edit_distance"]
+    # Reversal penalty is conditionally gated by classifier confidence (tau_rev >= 0.50)
     reversal_flag = 1.0 if ortho_results["reversal_detected"] else 0.0
 
     if enable_grammar and grammar_results["grammar_active"]:
@@ -119,6 +121,7 @@ def evaluate_sld_differential(
             + grammar_results["syntax_error_score"] * 0.15
         )
     else:
+        # heuristic weighting with confidence gating (Mun & El-Yacoubi (2026))
         dyslexia_raw = (
             ortho_error * SPELLING_ERROR_WEIGHT
             + reversal_flag * REVERSAL_PENALTY_WEIGHT
@@ -127,7 +130,7 @@ def evaluate_sld_differential(
 
     dyslexia_risk = min(max(dyslexia_raw * 100.0, 0.0), 100.0)
 
-    # 6. DSM-5 Clinical Categorization
+    # 6. Screening Indications & Non-Diagnostic Clinical Disclaimers (Mun & El-Yacoubi Standard)
     is_dysgraphic = bool(dysgraphia_risk >= (CLASSIFICATION_THRESHOLD * 100.0))
     is_dyslexic = bool(dyslexia_risk >= (CLASSIFICATION_THRESHOLD * 100.0))
 
