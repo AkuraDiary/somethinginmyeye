@@ -73,7 +73,7 @@ def evaluate_sld_differential(
     Returns:
       - dysgraphia_risk_percentage: 0.0 to 100.0%
       - dyslexia_risk_percentage: 0.0 to 100.0%
-      - dsm5_diagnosis: Clinically categorized diagnostic string
+      - diagnosis:  categorized diagnostic string
       - stream_breakdown: Granular features from kinematic and orthographic streams
     """
     if enable_grammar is None:
@@ -171,10 +171,26 @@ def evaluate_sld_differential(
         "recognized_text": ortho_results["recognized_text"],
         "expected_prompt": ortho_results["expected_prompt"],
         "heatmap": heatmap_array,
+        "dyslexia_flags": {
+            "orthographic_error": round(float(ortho_error), 4),
+            "raw_edit_distance": int(ortho_results.get("raw_edit_distance", 0)),
+            "reversal_flag": float(reversal_flag),
+            "reversal_detected": bool(ortho_results["reversal_detected"]),
+            "latency_risk": round(float(latency_risk), 4),
+            "latency_exceeds_threshold": bool(raw_latency_ms > COGNITIVE_LATENCY_THRESHOLD_MS),
+            "is_dyslexic": is_dyslexic,
+            "weights": {
+                "spelling": SPELLING_ERROR_WEIGHT,
+                "reversal": REVERSAL_PENALTY_WEIGHT,
+                "latency": LATENCY_RISK_WEIGHT,
+            },
+        },
         "stream_breakdown": {
             "kinematic_score": round(float(kinematic_score), 4),
             "orthographic_error_score": round(float(ortho_results["orthographic_error_score"]), 4),
             "levenshtein_normalized": round(float(ortho_error), 4),
+            "raw_edit_distance": int(ortho_results.get("raw_edit_distance", 0)),
+            "reversal_flag": float(reversal_flag),
             "latency_risk_score": round(float(latency_risk), 4),
             "grammar_analysis": grammar_results,
         },

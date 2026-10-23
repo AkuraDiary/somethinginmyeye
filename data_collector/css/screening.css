@@ -548,6 +548,55 @@ button {
     color: #7f8c8d;
 }
 
+.risk-flags-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.flag-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    line-height: 1.4;
+    cursor: default;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.flag-chip-label {
+    opacity: 0.85;
+}
+
+.flag-chip-value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+}
+
+.flag-chip.flag-active {
+    background: #fef3c7;
+    color: #b45309;
+    border-color: #fde68a;
+}
+
+.flag-chip.flag-danger {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+}
+
 .reversal-alert-box {
     display: none;
     margin-top: 15px;

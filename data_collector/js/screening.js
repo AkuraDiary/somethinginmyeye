@@ -64,6 +64,14 @@ const SCREENING_TRANSLATIONS = {
         riskDysgraphiaFootnote: "Berdasarkan trajektori gerakan",
         riskDyslexiaTitle: "Variansi Ejaan",
         riskDyslexiaFootnote: "Dibandingkan teks target",
+        flagOrthoLabel: "Orto:",
+        flagRevLabel: "Reversal:",
+        flagLatLabel: "Jeda:",
+        flagKinematicLabel: "Kinematik:",
+        flagOrthoTitle: "Skor galat ejaan / jarak Levenshtein ternormalisasi (Bobot: 40%)",
+        flagRevTitle: "Flag pembalikan karakter cermin / rotasi terdeteksi (Bobot: 40%)",
+        flagLatTitle: "Flag penalti keterlambatan jeda inisiasi (Bobot: 20%)",
+        flagKinematicTitle: "Skor varians motorik kinematis Bi-LSTM",
         reversalObservation: "Observasi Huruf:",
         dashFooterNote: "Tanda sorotan pada kanvas menunjukkan segmen dengan variabilitas gerakan lebih tinggi.",
         freePromptDisplay: '"Tulis secara bebas pada kanvas di bawah"',
@@ -128,6 +136,14 @@ const SCREENING_TRANSLATIONS = {
         riskDysgraphiaFootnote: "Based on movement trajectory",
         riskDyslexiaTitle: "Spelling Variance",
         riskDyslexiaFootnote: "Compared to target text",
+        flagOrthoLabel: "Ortho:",
+        flagRevLabel: "Rev:",
+        flagLatLabel: "Delay:",
+        flagKinematicLabel: "Kinematic:",
+        flagOrthoTitle: "Normalized spelling edit distance error score (Weight: 40%)",
+        flagRevTitle: "Mirror / rotational reversal detection flag (Weight: 40%)",
+        flagLatTitle: "Initiation latency delay penalty flag (Weight: 20%)",
+        flagKinematicTitle: "Bi-LSTM motor kinematic variance score",
         reversalObservation: "Letter Observation:",
         dashFooterNote: "Highlighted marks on the canvas indicate segments with higher movement variability.",
         freePromptDisplay: '"Write freely on the canvas below"',
@@ -157,6 +173,18 @@ function switchScreeningLanguage(lang) {
     if (btnId && btnEn) {
         btnId.classList.toggle('active', lang === 'id');
         btnEn.classList.toggle('active', lang === 'en');
+    }
+
+    const t = SCREENING_TRANSLATIONS[lang];
+    if (t) {
+        const flagOrthoChip = document.getElementById('flagOrthoChip');
+        const flagRevChip = document.getElementById('flagRevChip');
+        const flagLatChip = document.getElementById('flagLatChip');
+        const flagKinematicChip = document.getElementById('flagKinematicChip');
+        if (flagOrthoChip && !flagOrthoChip.title.includes('Edit Distance:')) flagOrthoChip.title = t.flagOrthoTitle;
+        if (flagRevChip && !flagRevChip.classList.contains('flag-danger')) flagRevChip.title = t.flagRevTitle;
+        if (flagLatChip && !flagLatChip.classList.contains('flag-active')) flagLatChip.title = t.flagLatTitle;
+        if (flagKinematicChip) flagKinematicChip.title = t.flagKinematicTitle;
     }
 
     refreshPromptDisplayText();
@@ -624,6 +652,20 @@ function clearCanvas() {
         reversalNotice.style.display = 'none';
         reversalNotice.innerText = '';
     }
+
+    // Reset risk flag chips
+    const flagOrthoVal = document.getElementById('flagOrthoValue');
+    const flagRevVal = document.getElementById('flagRevValue');
+    const flagLatVal = document.getElementById('flagLatValue');
+    const flagKinematicVal = document.getElementById('flagKinematicValue');
+    if (flagOrthoVal) flagOrthoVal.innerText = '0.00';
+    if (flagRevVal) flagRevVal.innerText = '0.0';
+    if (flagLatVal) flagLatVal.innerText = '0.00';
+    if (flagKinematicVal) flagKinematicVal.innerText = '0.00';
+    ['flagOrthoChip', 'flagRevChip', 'flagLatChip', 'flagKinematicChip'].forEach((id) => {
+        const chip = document.getElementById(id);
+        if (chip) chip.classList.remove('flag-active', 'flag-danger');
+    });
     document.getElementById('telemetryLatency').innerText = "0 ms";
     document.getElementById('telemetryNIV').innerText = "0";
     document.getElementById('telemetryStrokes').innerText = "0";
@@ -1753,6 +1795,57 @@ analyzeBtn.addEventListener('click', async () => {
 
         dyslexiaRiskText.innerText = `${dyslexiaPct}%`;
         dyslexiaRiskText.style.color = result.is_dyslexic ? "#d97706" : "#16a34a";
+
+        // Update Dyslexia and Kinematic Risk Flags in Dashboard
+        const flagOrthoVal = document.getElementById('flagOrthoValue');
+        const flagRevVal = document.getElementById('flagRevValue');
+        const flagLatVal = document.getElementById('flagLatValue');
+        const flagKinematicVal = document.getElementById('flagKinematicValue');
+        const flagOrthoChip = document.getElementById('flagOrthoChip');
+        const flagRevChip = document.getElementById('flagRevChip');
+        const flagLatChip = document.getElementById('flagLatChip');
+        const flagKinematicChip = document.getElementById('flagKinematicChip');
+
+        const orthoScore = result.dyslexia_flags?.orthographic_error
+            ?? result.stream_breakdown?.levenshtein_normalized
+            ?? 0.0;
+        const rawEditDist = result.dyslexia_flags?.raw_edit_distance
+            ?? result.stream_breakdown?.raw_edit_distance
+            ?? null;
+        const revFlag = result.dyslexia_flags?.reversal_flag
+            ?? (result.reversal_detected ? 1.0 : 0.0);
+        const latRisk = result.dyslexia_flags?.latency_risk
+            ?? result.stream_breakdown?.latency_risk_score
+            ?? 0.0;
+        const kinScore = result.stream_breakdown?.kinematic_score
+            ?? result.probability
+            ?? 0.0;
+
+        if (flagOrthoVal) flagOrthoVal.innerText = Number(orthoScore).toFixed(2);
+        if (flagRevVal) flagRevVal.innerText = Number(revFlag).toFixed(1);
+        if (flagLatVal) flagLatVal.innerText = Number(latRisk).toFixed(2);
+        if (flagKinematicVal) flagKinematicVal.innerText = Number(kinScore).toFixed(2);
+
+        if (flagOrthoChip) {
+            flagOrthoChip.classList.toggle('flag-active', orthoScore > 0.0);
+            const distInfo = rawEditDist !== null ? ` (Edit Distance: ${rawEditDist})` : '';
+            flagOrthoChip.title = `${t.flagOrthoTitle || 'Normalized Edit Distance'}${distInfo}`;
+        }
+        if (flagRevChip) {
+            flagRevChip.classList.toggle('flag-danger', revFlag > 0.0);
+            flagRevChip.title = result.reversal_detected
+                ? (result.reversal_description || t.flagRevTitle)
+                : (t.flagRevTitle || 'Reversal Flag');
+        }
+        if (flagLatChip) {
+            const hasLatDelay = Boolean(result.latency_exceeds_threshold || latRisk > 0.0);
+            flagLatChip.classList.toggle('flag-active', hasLatDelay);
+            flagLatChip.title = `${t.flagLatTitle || 'Latency Delay'} (${Math.round(result.cognitive_latency_ms || 0)} ms)`;
+        }
+        if (flagKinematicChip) {
+            flagKinematicChip.classList.toggle('flag-active', kinScore >= 0.50);
+            flagKinematicChip.title = `${t.flagKinematicTitle || 'Kinematic Score'} (${(kinScore * 100).toFixed(1)}%)`;
+        }
 
         if (result.reversal_detected) {
             reversalAlertBox.style.display = 'block';

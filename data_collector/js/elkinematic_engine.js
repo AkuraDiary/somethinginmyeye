@@ -321,8 +321,28 @@
             engine_type: 'Client ONNX Runtime Web (WASM)',
             kinematic_score: globalScore,
             dysgraphia_risk_percentage: Number(dysgraphiaRiskPercentage.toFixed(1)),
+            dyslexia_risk_percentage: 0.0,
+            is_dysgraphic: Boolean(dysgraphiaRiskPercentage >= 50.0),
+            is_dyslexic: false,
             probability: globalScore,
-            heatmap: heatmap
+            heatmap: heatmap,
+            stream_breakdown: {
+                kinematic_score: Number(globalScore.toFixed(4)),
+                orthographic_error_score: 0.0,
+                levenshtein_normalized: 0.0,
+                raw_edit_distance: 0,
+                reversal_flag: 0.0,
+                latency_risk_score: 0.0
+            },
+            dyslexia_flags: {
+                orthographic_error: 0.0,
+                raw_edit_distance: 0,
+                reversal_flag: 0.0,
+                reversal_detected: false,
+                latency_risk: 0.0,
+                latency_exceeds_threshold: false,
+                is_dyslexic: false
+            }
         };
     }
 

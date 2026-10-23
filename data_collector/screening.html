@@ -184,15 +184,35 @@
                 <p><strong data-i18n="dashEngine">Inference Engine:</strong> <span id="engineBadge" class="status-badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">Server (.keras)</span></p>
 
                 <div class="risk-grid">
-                    <div class="risk-card">
+                    <div class="risk-card" id="dysgraphiaRiskCard">
                         <div class="risk-title" data-i18n="riskDysgraphiaTitle">Movement Irregularity</div>
                         <div id="dysgraphiaRiskText" class="risk-percentage">0%</div>
                         <small class="risk-footnote" data-i18n="riskDysgraphiaFootnote">Based on movement trajectory</small>
+                        <div class="risk-flags-container" id="dysgraphiaFlagsContainer">
+                            <span class="flag-chip" id="flagKinematicChip" title="Bi-LSTM Motor Kinematic Score">
+                                <span class="flag-chip-label" data-i18n="flagKinematicLabel">Kinematic:</span>
+                                <span class="flag-chip-value" id="flagKinematicValue">0.00</span>
+                            </span>
+                        </div>
                     </div>
-                    <div class="risk-card">
+                    <div class="risk-card" id="dyslexiaRiskCard">
                         <div class="risk-title" data-i18n="riskDyslexiaTitle">Spelling Variance</div>
                         <div id="dyslexiaRiskText" class="risk-percentage">0%</div>
                         <small class="risk-footnote" data-i18n="riskDyslexiaFootnote">Compared to target text</small>
+                        <div class="risk-flags-container" id="dyslexiaFlagsContainer">
+                            <span class="flag-chip" id="flagOrthoChip" title="Normalized Edit Distance (Weight: 40%)">
+                                <span class="flag-chip-label" data-i18n="flagOrthoLabel">Ortho:</span>
+                                <span class="flag-chip-value" id="flagOrthoValue">0.00</span>
+                            </span>
+                            <span class="flag-chip" id="flagRevChip" title="Reversal Detected Flag (Weight: 40%)">
+                                <span class="flag-chip-label" data-i18n="flagRevLabel">Rev:</span>
+                                <span class="flag-chip-value" id="flagRevValue">0.0</span>
+                            </span>
+                            <span class="flag-chip" id="flagLatChip" title="Latency Delay Penalty (Weight: 20%)">
+                                <span class="flag-chip-label" data-i18n="flagLatLabel">Delay:</span>
+                                <span class="flag-chip-value" id="flagLatValue">0.00</span>
+                            </span>
+                        </div>
                     </div>
                 </div>
 

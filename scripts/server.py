@@ -171,7 +171,7 @@ def analyze_live():
     payload = request.json or {}
     if isinstance(payload, list):
         stroke_data = payload
-        expected_prompt = "bebek"
+        expected_prompt = ""
         decoded_text = None
         enable_grammar = False
         requested_backend = CURRENT_BACKEND

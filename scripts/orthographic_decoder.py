@@ -170,7 +170,7 @@ def evaluate_orthographic_accuracy(
       2. Damerau-Levenshtein string edit distance (omissions, substitutions, and adjacent transpositions/migrations).
       3. Normalized orthographic error index (0.0 = perfect match, 1.0 = severe spelling/reversal error).
     """
-    target = expected_prompt.lower().strip()
+    target = expected_prompt.strip()
     geometry = detect_stroke_reversal_features(df)
 
     reversal_detected = False
@@ -206,15 +206,17 @@ def evaluate_orthographic_accuracy(
             reversal_detected = True
             reversal_description = "Character reversal detected at " + ", ".join(mirror_positions) + "."
 
-        recognized = raw_decoded.lower()
+        recognized = raw_decoded
         edit_dist = compute_levenshtein_distance(recognized, target)
         normalized_edit_dist = min(edit_dist / max(len(target), 1), 1.0)
     else:
         if reversal_detected:
             normalized_edit_dist = 0.8
+            edit_dist = 1
             recognized = target[::-1] if len(target) > 1 else ("d" if target == "b" else "b")
         else:
             normalized_edit_dist = 0.0
+            edit_dist = 0
             recognized = target
 
     reversal_penalty = 0.4 if reversal_detected else 0.0
@@ -225,6 +227,7 @@ def evaluate_orthographic_accuracy(
         "recognized_text": recognized,
         "reversal_detected": reversal_detected,
         "reversal_description": reversal_description,
+        "raw_edit_distance": int(edit_dist),
         "levenshtein_edit_distance": normalized_edit_dist,
         "orthographic_error_score": float(orthographic_error_score),
     }
