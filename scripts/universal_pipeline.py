@@ -397,8 +397,11 @@ def unified_predict(
     version: str,
     scaler_path: str = SCALER_PATH,
     resample: bool = True,
+    backend: Optional[str] = None,
 ) -> Tuple[float, List[float]]:
-    """Universal inference predicting dysgraphia probability and generating XAI heatmaps."""
+    """Universal inference predicting dysgraphia probability and generating XAI heatmaps.
+    Supports both Keras functional models and ONNX Runtime InferenceSessions with identical outputs.
+    """
     stroke_data = extract_universal_features(df, resample=resample)
     latency_val = float(df["latency"].iloc[0]) / 1000.0 if "latency" in df.columns and len(df) > 0 else 0.0
     stroke_data = np.nan_to_num(stroke_data, nan=0.0, posinf=0.0, neginf=0.0)
@@ -415,24 +418,43 @@ def unified_predict(
 
     stroke_scaled = (stroke_data - feature_means) / feature_stds
     stroke_scaled = np.expand_dims(stroke_scaled, axis=0)
-    latency_tensor = np.expand_dims(np.array([latency_val]), axis=0)
+    latency_tensor = np.expand_dims(np.array([latency_val], dtype=np.float32), axis=0)
 
-    if version == "v0":
-        model_input = stroke_scaled[:, :, [5, 8, 2]]
-        prediction = model.predict(model_input, verbose=0)
-        global_score = float(prediction[0][0])
-        heatmap_array: List[float] = []
-    elif version == "v1":
-        model_input = stroke_scaled[:, :, [5, 8, 2]]
-        prediction = model.predict([model_input, latency_tensor], verbose=0)
-        heatmap_array = prediction[0].flatten().tolist()
-        global_score = sum(heatmap_array) / len(heatmap_array)
-    elif version == "v2":
-        model_input = stroke_scaled[:, :, :8]
-        prediction = model.predict([model_input, latency_tensor], verbose=0)
-        heatmap_array = prediction[0].flatten().tolist()
-        global_score = sum(heatmap_array) / len(heatmap_array)
+    is_onnx = (backend == "onnx") or hasattr(model, "run") or (isinstance(model, str) and model.endswith(".onnx"))
+
+    if is_onnx:
+        if isinstance(model, str):
+            import onnxruntime as ort
+            model = ort.InferenceSession(model)
+
+        if version == "v2":
+            model_input = stroke_scaled[:, :, :8].astype(np.float32)
+            ort_inputs = {
+                "kinematics_input": model_input,
+                "latency_input": latency_tensor,
+            }
+            ort_outputs = model.run(None, ort_inputs)
+            heatmap_array = ort_outputs[0][0].flatten().tolist()
+            global_score = sum(heatmap_array) / len(heatmap_array)
+        else:
+            raise ValueError(f"ONNX backend currently configured for version v2 (got {version})")
     else:
-        raise ValueError(f"Unsupported model version: {version}")
+        if version == "v0":
+            model_input = stroke_scaled[:, :, [5, 8, 2]]
+            prediction = model.predict(model_input, verbose=0)
+            global_score = float(prediction[0][0])
+            heatmap_array: List[float] = []
+        elif version == "v1":
+            model_input = stroke_scaled[:, :, [5, 8, 2]]
+            prediction = model.predict([model_input, latency_tensor], verbose=0)
+            heatmap_array = prediction[0].flatten().tolist()
+            global_score = sum(heatmap_array) / len(heatmap_array)
+        elif version == "v2":
+            model_input = stroke_scaled[:, :, :8]
+            prediction = model.predict([model_input, latency_tensor], verbose=0)
+            heatmap_array = prediction[0].flatten().tolist()
+            global_score = sum(heatmap_array) / len(heatmap_array)
+        else:
+            raise ValueError(f"Unsupported model version: {version}")
 
     return global_score, heatmap_array

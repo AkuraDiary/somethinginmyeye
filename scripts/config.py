@@ -37,7 +37,14 @@ MODEL_PATHS = {
 }
 
 SCALER_PATH = os.path.join(MODEL_DIR, "feature_scalers.npz")
+SCALER_JSON_PATH = os.path.join(MODEL_DIR, "feature_scalers.json")
 TFLITE_PATH = os.path.join(MODEL_DIR, "elkinematicliteV2.tflite")
+ELKINEMATIC_ONNX_PATH = os.path.join(MODEL_DIR, "elkinematicV2.onnx")
+WEB_ELKINEMATIC_ONNX_PATH = os.path.join(PROJECT_ROOT, "data_collector", "models", "elkinematicV2.onnx")
+WEB_SCALER_JSON_PATH = os.path.join(PROJECT_ROOT, "data_collector", "models", "feature_scalers.json")
+
+# Inference Backend Configuration ('keras' or 'onnx')
+DEFAULT_INFERENCE_BACKEND = os.getenv("ELKINEMATICS_BACKEND", "keras").lower()
 
 # Feature Dimensions & Sequences
 MAX_TIMESTEPS = 500

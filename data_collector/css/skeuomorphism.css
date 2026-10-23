@@ -151,7 +151,8 @@ html, body {
    -------------------------------------------------------------------------- */
 .lang-switch,
 .tab-bar,
-.mode-selection-container {
+.mode-selection-container,
+.engine-selection-container {
     background: linear-gradient(180deg, #dfd2be 0%, #ede3d2 100%) !important;
     border: 2px solid #c7b69f !important;
     border-radius: 14px !important;

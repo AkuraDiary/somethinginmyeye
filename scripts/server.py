@@ -28,7 +28,14 @@ from flask import Flask, jsonify, request
 import pandas as pd
 import tensorflow as tf
 
-from config import DATASET_DIR, MODEL_PATHS, PROJECT_ROOT, SCALER_PATH
+from config import (
+    DATASET_DIR,
+    DEFAULT_INFERENCE_BACKEND,
+    ELKINEMATIC_ONNX_PATH,
+    MODEL_PATHS,
+    PROJECT_ROOT,
+    SCALER_PATH,
+)
 from sld_integrator import evaluate_sld_differential
 from universal_pipeline import unified_predict
 
@@ -41,14 +48,31 @@ tf.get_logger().setLevel("ERROR")
 STATIC_DIR = os.path.join(PROJECT_ROOT, "data_collector")
 app = Flask(__name__, static_folder=STATIC_DIR, static_url_path="")
 
-# Initialize Active Production Model (V2 Bi-LSTM)
-print("Loading AI Model V2 (Bi-LSTM)...")
+# Initialize Keras Model (V2 Bi-LSTM)
+print("Loading Keras AI Model V2 (Bi-LSTM)...")
 try:
     model = tf.keras.models.load_model(MODEL_PATHS["v2"])
-    print(f"Loaded Model V2 from {MODEL_PATHS['v2']}")
+    print(f"Loaded Keras Model V2 from {MODEL_PATHS['v2']}")
 except Exception as e:
-    print(f"Warning: Model V2 failed to load from {MODEL_PATHS['v2']}: {e}")
+    print(f"Warning: Keras Model V2 failed to load from {MODEL_PATHS['v2']}: {e}")
     model = None
+
+# Initialize ONNX Runtime Session (V2 Bi-LSTM)
+print("Loading ONNX Model V2 (Bi-LSTM)...")
+try:
+    import onnxruntime as ort
+    if os.path.exists(ELKINEMATIC_ONNX_PATH):
+        onnx_session = ort.InferenceSession(ELKINEMATIC_ONNX_PATH)
+        print(f"Loaded ONNX Model V2 from {ELKINEMATIC_ONNX_PATH}")
+    else:
+        print(f"Warning: ONNX model file not found at {ELKINEMATIC_ONNX_PATH}")
+        onnx_session = None
+except Exception as e:
+    print(f"Warning: ONNX Model V2 failed to load: {e}")
+    onnx_session = None
+
+CURRENT_BACKEND = DEFAULT_INFERENCE_BACKEND
+print(f"Default Active Inference Backend: {CURRENT_BACKEND}")
 
 os.makedirs(DATASET_DIR, exist_ok=True)
 
@@ -108,11 +132,41 @@ def save_data():
     return jsonify({"message": "Successfully saved sample! Thank you for your contribution."})
 
 
+@app.route("/backend", methods=["GET", "POST"])
+def manage_backend():
+    """Toggles or queries active inference backend ('keras' or 'onnx')."""
+    global CURRENT_BACKEND
+    if request.method == "POST":
+        data = request.json or {}
+        new_backend = str(data.get("backend", "")).lower().strip()
+        if new_backend in ("keras", "onnx"):
+            if new_backend == "keras" and model is None:
+                return jsonify({"error": "Keras model not loaded on server."}), 400
+            if new_backend == "onnx" and onnx_session is None:
+                return jsonify({"error": "ONNX model not loaded on server."}), 400
+            CURRENT_BACKEND = new_backend
+            print(f"Active inference backend toggled to: {CURRENT_BACKEND}")
+            return jsonify({
+                "message": f"Successfully switched backend to {CURRENT_BACKEND}",
+                "backend": CURRENT_BACKEND,
+                "keras_loaded": model is not None,
+                "onnx_loaded": onnx_session is not None,
+            })
+        return jsonify({"error": f"Invalid backend: '{new_backend}'. Choose 'keras' or 'onnx'."}), 400
+
+    return jsonify({
+        "backend": CURRENT_BACKEND,
+        "keras_loaded": model is not None,
+        "onnx_loaded": onnx_session is not None,
+        "available_backends": ["keras", "onnx"],
+    })
+
+
 @app.route("/analyze", methods=["POST"])
 def analyze_live():
     """Performs real-time explainable dual-stream SLD differential inference."""
-    if model is None:
-        return jsonify({"error": "Model not loaded on server."}), 500
+    if model is None and onnx_session is None:
+        return jsonify({"error": "No inference model loaded on server."}), 500
 
     payload = request.json or {}
     if isinstance(payload, list):
@@ -120,16 +174,34 @@ def analyze_live():
         expected_prompt = "bebek"
         decoded_text = None
         enable_grammar = False
+        requested_backend = CURRENT_BACKEND
     elif isinstance(payload, dict):
         stroke_data = payload.get("strokes", [])
         expected_prompt = payload.get("prompt", "bebek")
         decoded_text = payload.get("decoded_text", None)
         enable_grammar = payload.get("enable_grammar", False)
+        requested_backend = str(payload.get("backend", CURRENT_BACKEND)).lower().strip()
     else:
         return jsonify({"error": "Invalid request payload format."}), 400
 
     if not stroke_data:
         return jsonify({"error": "Empty stroke data provided."}), 400
+
+    if requested_backend not in ("keras", "onnx"):
+        requested_backend = CURRENT_BACKEND
+
+    active_model = onnx_session if requested_backend == "onnx" else model
+    active_backend = requested_backend
+    if active_model is None:
+        # Graceful fallback to whichever engine is loaded
+        if requested_backend == "onnx" and model is not None:
+            active_model = model
+            active_backend = "keras"
+        elif requested_backend == "keras" and onnx_session is not None:
+            active_model = onnx_session
+            active_backend = "onnx"
+        else:
+            return jsonify({"error": f"Model for backend '{requested_backend}' is unavailable."}), 500
 
     df = pd.DataFrame(stroke_data)
 
@@ -141,11 +213,12 @@ def analyze_live():
     try:
         sld_results = evaluate_sld_differential(
             df=df,
-            model=model,
+            model=active_model,
             expected_prompt=expected_prompt,
             decoded_text=decoded_text,
             enable_grammar=enable_grammar,
             scaler_path=SCALER_PATH,
+            backend=active_backend,
         )
     except Exception as e:
         print(f"Inference error: {e}")
@@ -153,6 +226,8 @@ def analyze_live():
 
     # Maintain backward compatibility fields for legacy clients
     sld_results["probability"] = float(sld_results["dysgraphia_risk_percentage"]) / 100.0
+    sld_results["backend_used"] = active_backend
+    sld_results["engine_type"] = "ONNX Runtime" if active_backend == "onnx" else "Keras 3 (TensorFlow)"
 
     # Purge memory after inference to maintain low resource profile
     gc.collect()

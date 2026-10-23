@@ -294,6 +294,21 @@ button {
     max-width: 650px;
 }
 
+.engine-selection-container {
+    margin: 8px auto 14px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    background: #f1f5f9;
+    padding: 8px 12px;
+    border-radius: 8px;
+    max-width: 650px;
+    font-size: 13px;
+    color: #334155;
+    border: 1px solid #e2e8f0;
+}
+
 .mode-label {
     cursor: pointer;
 }
@@ -632,7 +647,8 @@ button {
 }
 
 .screening-header-section .mode-selection-container,
-.screening-header-section .prompt-selector-container {
+.screening-header-section .prompt-selector-container,
+.screening-header-section .engine-selection-container {
     margin-top: 8px;
     margin-bottom: 8px;
 }

@@ -65,9 +65,11 @@ def evaluate_sld_differential(
     decoded_text: Optional[str] = None,
     enable_grammar: Optional[bool] = None,
     scaler_path: str = SCALER_PATH,
+    backend: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Computes differential risk scores across Motor Dysgraphia and Dyslexia.
+    Supports both Keras functional models and ONNX Runtime InferenceSessions.
     Returns:
       - dysgraphia_risk_percentage: 0.0 to 100.0%
       - dyslexia_risk_percentage: 0.0 to 100.0%
@@ -77,12 +79,13 @@ def evaluate_sld_differential(
     if enable_grammar is None:
         enable_grammar = ENABLE_GRAMMAR_ANALYSIS
 
-    # 1. Kinematic Motoric Stream (Bi-LSTM)
+    # 1. Kinematic Motoric Stream (Bi-LSTM via Keras or ONNX)
     kinematic_score, heatmap_array = unified_predict(
         df=df,
         model=model,
         version="v2",
         scaler_path=scaler_path,
+        backend=backend,
     )
 
     # 2. Orthographic Stream (Reversals & Spelling)

@@ -14,6 +14,8 @@ const SCREENING_TRANSLATIONS = {
         navToCollector: "← Pengumpul Data",
         screenSubtitle: "Tulis secara bebas pada kanvas atau ikuti acuan menjalankan screening.",
         labelMode: "Mode:",
+        labelEngine: "Mesin Inferensi:",
+        dashEngine: "Mesin Digunakan:",
         modeFreeWriting: "Tulisan Bebas",
         modePromptedWriting: "Tulisan Terpandu",
         labelEvaluatorRef: "Acuan Evaluator:",
@@ -76,6 +78,8 @@ const SCREENING_TRANSLATIONS = {
         navToCollector: "← Data Collector",
         screenSubtitle: "Write freely on the canvas or follow a prompt to use the screening system.",
         labelMode: "Mode:",
+        labelEngine: "Inference Engine:",
+        dashEngine: "Engine Used:",
         modeFreeWriting: "Free Writing",
         modePromptedWriting: "Prompted Writing",
         labelEvaluatorRef: "Evaluator Reference:",
@@ -294,6 +298,50 @@ const visDictation = document.getElementById('visDictation');
 const promptDisplay = document.getElementById('promptDisplay');
 const transcribeBtn = document.getElementById('transcribeBtn');
 const analyzeBtn = document.getElementById('analyzeBtn');
+
+// --- INFERENCE ENGINE SELECTION (KERAS SERVER / ONNX SERVER / CLIENT ONNX DIRECT) ---
+const engineKeras = document.getElementById('engineKeras');
+const engineServerOnnx = document.getElementById('engineServerOnnx');
+const engineClientOnnx = document.getElementById('engineClientOnnx');
+
+function getActiveEngineMode() {
+    if (engineClientOnnx && engineClientOnnx.checked) return 'client_onnx';
+    if (engineServerOnnx && engineServerOnnx.checked) return 'server_onnx';
+    return 'server_keras';
+}
+
+function handleEngineChange() {
+    const mode = getActiveEngineMode();
+    if (typeof ElkinematicEngine !== 'undefined') {
+        ElkinematicEngine.setBackendPreference(mode);
+        if (mode === 'client_onnx') {
+            ElkinematicEngine.init();
+        } else if (mode === 'server_onnx') {
+            ElkinematicEngine.setServerBackend('onnx');
+        } else if (mode === 'server_keras') {
+            ElkinematicEngine.setServerBackend('keras');
+        }
+    }
+}
+
+if (engineKeras) engineKeras.addEventListener('change', handleEngineChange);
+if (engineServerOnnx) engineServerOnnx.addEventListener('change', handleEngineChange);
+if (engineClientOnnx) engineClientOnnx.addEventListener('change', handleEngineChange);
+
+// Sync initial backend preference with server or engine
+if (typeof ElkinematicEngine !== 'undefined') {
+    ElkinematicEngine.fetchServerBackend().then(info => {
+        if (info && info.backend) {
+            if (info.backend === 'onnx' && engineServerOnnx && !engineClientOnnx?.checked) {
+                engineServerOnnx.checked = true;
+                ElkinematicEngine.setBackendPreference('server_onnx');
+            } else if (info.backend === 'keras' && engineKeras && !engineClientOnnx?.checked) {
+                engineKeras.checked = true;
+                ElkinematicEngine.setBackendPreference('server_keras');
+            }
+        }
+    }).catch(() => {});
+}
 
 function getEvaluatorPrompt() {
     if (!promptInput) return 'bebek';
@@ -1627,13 +1675,28 @@ analyzeBtn.addEventListener('click', async () => {
             decoded_text: decoded
         };
 
-        const response = await fetch('/analyze', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        const engineMode = getActiveEngineMode();
+        let result;
 
-        const result = await response.json();
+        if (typeof ElkinematicEngine !== 'undefined') {
+            result = await ElkinematicEngine.evaluate({
+                strokes: strokesWithLatency,
+                prompt: targetPrompt,
+                decoded_text: decoded,
+                latency: latencyMs,
+                mode: engineMode
+            });
+        } else {
+            const response = await fetch('/analyze', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ...payload,
+                    backend: engineMode === 'server_onnx' ? 'onnx' : 'keras'
+                })
+            });
+            result = await response.json();
+        }
 
         if (result.error) {
             alert(result.error);
@@ -1645,6 +1708,29 @@ analyzeBtn.addEventListener('click', async () => {
         renderCanvasOverlays();
 
         dashboard.style.display = 'block';
+
+        // Update active engine badge
+        const engineBadge = document.getElementById('engineBadge');
+        if (engineBadge) {
+            let engineLabel = 'Server (.keras)';
+            if (result.backend_used === 'client_onnx' || engineMode === 'client_onnx') {
+                engineLabel = 'Client (ONNX Web)';
+                engineBadge.style.background = '#dcfce7';
+                engineBadge.style.color = '#15803d';
+                engineBadge.style.borderColor = '#bbf7d0';
+            } else if (result.backend_used === 'onnx' || engineMode === 'server_onnx') {
+                engineLabel = 'Server (.onnx)';
+                engineBadge.style.background = '#fef3c7';
+                engineBadge.style.color = '#b45309';
+                engineBadge.style.borderColor = '#fde68a';
+            } else {
+                engineLabel = 'Server (.keras)';
+                engineBadge.style.background = '#e0f2fe';
+                engineBadge.style.color = '#0369a1';
+                engineBadge.style.borderColor = '#bae6fd';
+            }
+            engineBadge.innerText = engineLabel;
+        }
 
         // Softened screening phrasing: map backend indication to localized text
         const isElevated = !!(result.is_dysgraphic || result.is_dyslexic);

@@ -51,6 +51,23 @@
                 </label>
             </div>
 
+            <!-- Inference Engine Selection (Keras Server / ONNX Server / Client ONNX Direct) -->
+            <div class="engine-selection-container" id="engineSelectionContainer">
+                <label><strong data-i18n="labelEngine">Inference Engine:</strong></label>
+                <label class="mode-label" title="Server-side inference via TensorFlow/Keras 3">
+                    <input type="radio" name="inferenceBackend" value="server_keras" checked id="engineKeras">
+                    <span>Server (.keras)</span>
+                </label>
+                <label class="mode-label" title="Server-side inference via ONNX Runtime">
+                    <input type="radio" name="inferenceBackend" value="server_onnx" id="engineServerOnnx">
+                    <span>Server (.onnx)</span>
+                </label>
+                <label class="mode-label" title="Direct in-browser inference via ONNX Runtime Web (WASM)">
+                    <input type="radio" name="inferenceBackend" value="client_onnx" id="engineClientOnnx">
+                    <span>Client (ONNX Web)</span>
+                </label>
+            </div>
+
             <!-- Evaluator Reference & Display Mode (Visible in Prompted Mode) -->
             <div id="promptSelectorContainer" class="prompt-selector-container">
                 <div class="prompt-input-group">
@@ -164,6 +181,7 @@
                 <p><strong data-i18n="dashOverallStatus">Overall Status:</strong> <span id="diagnosisBadge"
                         class="status-badge badge-green" data-i18n="indicationTypical">Within Typical Screening Limits</span></p>
                 <p><strong data-i18n="dashRating">Rating:</strong> <span id="severityText" data-i18n="ratingTypical">Within Typical Limits</span></p>
+                <p><strong data-i18n="dashEngine">Inference Engine:</strong> <span id="engineBadge" class="status-badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">Server (.keras)</span></p>
 
                 <div class="risk-grid">
                     <div class="risk-card">
@@ -195,6 +213,7 @@
     </div>
     <!-- ONNX Runtime Web for Local Browser Inference -->
     <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.20.1/dist/ort.min.js"></script>
+    <script src="js/elkinematic_engine.js"></script>
     <script src="js/screening.js"></script>
 </body>
 
