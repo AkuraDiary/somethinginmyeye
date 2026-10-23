@@ -1,0 +1,775 @@
+/* ==========================================================================
+   ELKINEMATICS SCHOOL-THEMED & KID-FRIENDLY SKEUOMORPHIC STYLESHEET
+   Inspired by Classic Tactile Craftsmanship, Classroom Desks & Stationery
+   Chunky 3D Clicky Physics, Rounded Workbook Cards, and Warm Wooden Textures
+   Strict Zero-Emoji Policy Enforced
+   ========================================================================== */
+
+:root {
+    /* Classroom & Wooden Activity Desk Palette */
+    --sk-desk-base: #f7efe2;
+    --sk-desk-tint: #ebdcc6;
+    --sk-wood-edge: #d8c3a5;
+    --sk-card-paper: #fffefb;
+    --sk-card-border: #e2d5c3;
+    --sk-card-depth: #cebda7;
+
+    /* Kid-Friendly Tactile Toy Button Palettes */
+    /* Playground Royal Blue (Primary / Action) */
+    --sk-btn-blue-top: #60a5fa;
+    --sk-btn-blue-mid: #3b82f6;
+    --sk-btn-blue-bottom: #2563eb;
+    --sk-btn-blue-edge: #1d4ed8;
+
+    /* Sticky Note Apple Green (Save / Success) */
+    --sk-btn-green-top: #4ade80;
+    --sk-btn-green-mid: #22c55e;
+    --sk-btn-green-bottom: #16a34a;
+    --sk-btn-green-edge: #15803d;
+
+    /* Pencil Eraser Pink (Clear / Reset) */
+    --sk-btn-pink-top: #fb7185;
+    --sk-btn-pink-mid: #f43f5e;
+    --sk-btn-pink-bottom: #e11d48;
+    --sk-btn-pink-edge: #be123c;
+
+    /* Sunshine Amber (Timer / Highlights) */
+    --sk-btn-amber-top: #fcd34d;
+    --sk-btn-amber-mid: #fbbf24;
+    --sk-btn-amber-bottom: #f59e0b;
+    --sk-btn-amber-edge: #d97706;
+
+    /* Chalkboard Purple / Slate (Secondary / Utility) */
+    --sk-btn-slate-top: #ffffff;
+    --sk-btn-slate-mid: #f1f5f9;
+    --sk-btn-slate-bottom: #e2e8f0;
+    --sk-btn-slate-edge: #94a3b8;
+
+    /* Tactile 3D Depths & Card Elevation */
+    --sk-workbook-shadow: 0 2px 0 var(--sk-wood-edge), 0 8px 0 var(--sk-card-depth), 0 14px 28px rgba(120, 85, 45, 0.12);
+    --sk-recessed-groove: inset 0 3px 6px rgba(80, 55, 30, 0.22), inset 0 1px 2px rgba(0, 0, 0, 0.12), 0 1px 0 rgba(255, 255, 255, 0.95);
+    --sk-whiteboard-groove: inset 0 4px 10px rgba(80, 60, 40, 0.18), inset 0 1px 3px rgba(0, 0, 0, 0.1), 0 2px 0 rgba(255, 255, 255, 0.95);
+}
+
+/* --------------------------------------------------------------------------
+   1. Warm Classroom Desk Background (Montessori Birch Activity Table)
+   -------------------------------------------------------------------------- */
+html, body {
+    background-color: var(--sk-desk-base) !important;
+    background-image: 
+        radial-gradient(ellipse 130% 90% at 50% -20%, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 65%),
+        linear-gradient(180deg, #fbf7ee 0%, #f4ebd9 45%, #e9dcbe 100%) !important;
+    background-attachment: fixed !important;
+    color: #292524 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Quicksand", "Comic Neue", Helvetica, Arial, sans-serif !important;
+}
+
+.app-scroll-container {
+    background: transparent !important;
+}
+
+/* --------------------------------------------------------------------------
+   2. Friendly Rounded Workbook Plates (Cards & Containers)
+   -------------------------------------------------------------------------- */
+.container,
+.session-card,
+.panduan,
+.prompt-area-box {
+    background: linear-gradient(180deg, #ffffff 0%, var(--sk-card-paper) 60%, #f6f0e4 100%) !important;
+    border: 2px solid var(--sk-card-border) !important;
+    border-radius: 20px !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        inset 0 -2px 0 rgba(180, 150, 110, 0.15),
+        var(--sk-workbook-shadow) !important;
+    position: relative !important;
+}
+
+/* --------------------------------------------------------------------------
+   3. Classroom Header Bar & Approachable Title Typography
+   -------------------------------------------------------------------------- */
+.screening-header-bar,
+.top-header-bar {
+    background: linear-gradient(180deg, #ffffff 0%, #fefcf8 50%, #f5ece0 100%) !important;
+    border: 2px solid #dfd1bf !important;
+    border-bottom: 4px solid var(--sk-wood-edge) !important;
+    border-radius: 16px !important;
+    padding: 10px 18px !important;
+    margin-bottom: 16px !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        0 4px 10px rgba(120, 85, 45, 0.08) !important;
+}
+
+.screening-branding h1,
+.header-branding h2 {
+    color: #292524 !important;
+    font-weight: 800 !important;
+    letter-spacing: -0.3px !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Friendly Ribbon Pills */
+.sub-pill {
+    background: linear-gradient(180deg, #fef08a 0%, #fde047 100%) !important;
+    color: #713f12 !important;
+    border: 1px solid #eab308 !important;
+    border-radius: 999px !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 4px rgba(113, 63, 18, 0.15) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+    font-weight: 800 !important;
+}
+
+/* Navigation Link Button */
+.nav-link-btn {
+    background: linear-gradient(180deg, #ffffff 0%, #fdf6ec 50%, #f5e6d3 100%) !important;
+    border: 2px solid #d5c3ad !important;
+    border-bottom: 3px solid #b8a38c !important;
+    color: #78350f !important;
+    font-weight: 800 !important;
+    border-radius: 12px !important;
+    padding: 7px 14px !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        0 2px 4px rgba(120, 85, 45, 0.1) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+    transition: transform 0.1s ease, box-shadow 0.1s ease !important;
+}
+
+.nav-link-btn:hover {
+    background: linear-gradient(180deg, #ffffff 0%, #fffbf5 50%, #faeee0 100%) !important;
+    transform: translateY(-1px);
+}
+
+.nav-link-btn:active {
+    transform: translateY(2px) !important;
+    box-shadow: inset 0 2px 4px rgba(120, 85, 45, 0.25) !important;
+}
+
+/* --------------------------------------------------------------------------
+   4. Tactile Wooden Pencil-Box Segmented Controls & Language Switches
+   -------------------------------------------------------------------------- */
+.lang-switch,
+.tab-bar,
+.mode-selection-container {
+    background: linear-gradient(180deg, #dfd2be 0%, #ede3d2 100%) !important;
+    border: 2px solid #c7b69f !important;
+    border-radius: 14px !important;
+    padding: 4px !important;
+    box-shadow: var(--sk-recessed-groove) !important;
+}
+
+/* Segmented Buttons */
+.lang-btn {
+    border: 1px solid transparent !important;
+    border-radius: 10px !important;
+    font-weight: 800 !important;
+    color: #786959 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+    padding: 6px 14px !important;
+    transition: all 0.12s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.lang-btn.active {
+    background: linear-gradient(180deg, #ffffff 0%, #fefcf8 50%, #f4ebe0 100%) !important;
+    border: 1px solid #cbb9a3 !important;
+    border-bottom: 3px solid #b39f88 !important;
+    color: #292524 !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        0 2px 5px rgba(120, 85, 45, 0.18) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Activity Tabs (index.html) */
+.tab-btn {
+    background: linear-gradient(180deg, #f7efe2 0%, #ebdec8 100%) !important;
+    border: 2px solid #cebfa9 !important;
+    border-bottom: 3px solid #b7a68e !important;
+    color: #574c3e !important;
+    border-radius: 12px !important;
+    font-weight: 800 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 2px 4px rgba(120, 85, 45, 0.08) !important;
+    transition: all 0.12s ease !important;
+}
+
+.tab-btn.tab-active {
+    background: linear-gradient(180deg, var(--sk-btn-blue-top) 0%, var(--sk-btn-blue-mid) 48%, var(--sk-btn-blue-bottom) 100%) !important;
+    border: 2px solid var(--sk-btn-blue-edge) !important;
+    border-bottom: 4px solid #1e3a8a !important;
+    color: #ffffff !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 4px 8px rgba(37, 99, 235, 0.3) !important;
+    text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* --------------------------------------------------------------------------
+   5. Classroom Stimulus Card & Flashcard Plaque
+   -------------------------------------------------------------------------- */
+.stimulus-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fffdf8 50%, #fdf8ee 100%) !important;
+    border: 3px solid #ded0be !important;
+    border-bottom: 5px solid var(--sk-wood-edge) !important;
+    border-radius: 18px !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        inset 0 0 0 1px rgba(255, 255, 255, 0.9),
+        0 4px 14px rgba(120, 85, 45, 0.1) !important;
+    padding: 20px 24px !important;
+}
+
+.prompt-display-target,
+.prompt-header {
+    color: #1e3a8a !important;
+    font-weight: 900 !important;
+    letter-spacing: 1.5px !important;
+    text-shadow: 
+        0 1px 0 rgba(255, 255, 255, 0.95),
+        0 2px 6px rgba(30, 58, 138, 0.18) !important;
+}
+
+.prompt-display-free {
+    color: #78716c !important;
+    font-weight: 700 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+/* --------------------------------------------------------------------------
+   6. Drawing Tablet Canvas Well (Classroom Whiteboard Frame)
+   -------------------------------------------------------------------------- */
+#drawingCanvas,
+#drawCanvas,
+canvas {
+    background: #ffffff !important;
+    border: 5px solid #dcd0bd !important;
+    border-bottom: 7px solid #c2b19a !important;
+    border-radius: 16px !important;
+    box-shadow: var(--sk-whiteboard-groove) !important;
+}
+
+/* --------------------------------------------------------------------------
+   7. Chunky Kid-Friendly Tactile Buttons (Fisher-Price / Toy Click Physics)
+   -------------------------------------------------------------------------- */
+button {
+    font-family: inherit !important;
+    border-radius: 14px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.3px !important;
+    cursor: pointer !important;
+    transition: transform 0.1s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.1s ease, filter 0.1s ease !important;
+    position: relative !important;
+    overflow: hidden !important;
+    user-select: none !important;
+}
+
+/* Specular Candy Glass Flare */
+button::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 46% !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+    border-radius: 12px 12px 0 0 !important;
+    pointer-events: none !important;
+}
+
+/* Chunky Physical Button Press: Sinks Down 3px onto Desk */
+button:active:not(:disabled) {
+    transform: translateY(3px) !important;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    filter: brightness(0.96) !important;
+}
+
+/* Playground Blue Action Button (Transcribe / Start) */
+.btn-transcribe,
+.btn-primary,
+.btn-start-session,
+#startSessionBtn {
+    background: linear-gradient(180deg, var(--sk-btn-blue-top) 0%, var(--sk-btn-blue-mid) 48%, var(--sk-btn-blue-bottom) 100%) !important;
+    border: 2px solid var(--sk-btn-blue-edge) !important;
+    border-bottom: 4px solid #1e40af !important;
+    color: #ffffff !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 4px 0 #1e40af,
+        0 8px 14px rgba(30, 64, 175, 0.25) !important;
+    text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.4) !important;
+}
+
+.btn-transcribe:hover:not(:disabled),
+.btn-primary:hover:not(:disabled),
+.btn-start-session:hover:not(:disabled) {
+    filter: brightness(1.06) !important;
+}
+
+/* Sticky Note Apple Green Button (Save / Next) */
+.btn-save,
+#downloadBtn,
+#saveAndNextBtn {
+    background: linear-gradient(180deg, var(--sk-btn-green-top) 0%, var(--sk-btn-green-mid) 48%, var(--sk-btn-green-bottom) 100%) !important;
+    border: 2px solid var(--sk-btn-green-edge) !important;
+    border-bottom: 4px solid #0f5132 !important;
+    color: #ffffff !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 4px 0 #0f5132,
+        0 8px 14px rgba(15, 81, 50, 0.25) !important;
+    text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.35) !important;
+}
+
+.btn-save:hover:not(:disabled),
+#downloadBtn:hover:not(:disabled),
+#saveAndNextBtn:hover:not(:disabled) {
+    filter: brightness(1.06) !important;
+}
+
+/* Pencil Eraser Pink Button (Clear / Reset) */
+.btn-clear,
+#clearBtn,
+#guidedClearBtn {
+    background: linear-gradient(180deg, var(--sk-btn-pink-top) 0%, var(--sk-btn-pink-mid) 48%, var(--sk-btn-pink-bottom) 100%) !important;
+    border: 2px solid var(--sk-btn-pink-edge) !important;
+    border-bottom: 4px solid #881337 !important;
+    color: #ffffff !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.6),
+        0 4px 0 #881337,
+        0 8px 14px rgba(136, 19, 55, 0.25) !important;
+    text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.4) !important;
+}
+
+.btn-clear:hover:not(:disabled),
+#clearBtn:hover:not(:disabled),
+#guidedClearBtn:hover:not(:disabled) {
+    filter: brightness(1.06) !important;
+}
+
+/* Sunshine Amber Button (Timer / Audio) */
+.btn-timer,
+#startTimerBtn,
+.btn-audio {
+    background: linear-gradient(180deg, var(--sk-btn-amber-top) 0%, var(--sk-btn-amber-mid) 48%, var(--sk-btn-amber-bottom) 100%) !important;
+    border: 2px solid var(--sk-btn-amber-edge) !important;
+    border-bottom: 4px solid #b45309 !important;
+    color: #451a03 !important;
+    box-shadow: 
+        inset 0 1px 0 rgba(255, 255, 255, 0.8),
+        0 4px 0 #b45309,
+        0 8px 14px rgba(180, 83, 9, 0.25) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+.btn-timer:hover:not(:disabled),
+.btn-audio:hover:not(:disabled) {
+    filter: brightness(1.05) !important;
+}
+
+/* Tactile Slate / Wooden Button (Secondary / Quick Navigation) */
+.btn-secondary,
+.quick-nav-btn {
+    background: linear-gradient(180deg, var(--sk-btn-slate-top) 0%, var(--sk-btn-slate-mid) 48%, var(--sk-btn-slate-bottom) 100%) !important;
+    border: 2px solid #cbd5e1 !important;
+    border-bottom: 4px solid var(--sk-btn-slate-edge) !important;
+    color: #334155 !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        0 4px 0 var(--sk-btn-slate-edge),
+        0 8px 14px rgba(148, 163, 184, 0.25) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+.btn-secondary:hover:not(:disabled),
+.quick-nav-btn:hover:not(:disabled) {
+    filter: brightness(1.03) !important;
+}
+
+/* Disabled Button State */
+button:disabled,
+.btn-primary:disabled,
+.btn-timer:disabled {
+    background: linear-gradient(180deg, #ede7dc 0%, #ded6c8 100%) !important;
+    border: 2px solid #cebaa2 !important;
+    border-bottom: 2px solid #cebaa2 !important;
+    color: #a89a88 !important;
+    box-shadow: none !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+    cursor: not-allowed !important;
+    filter: none !important;
+    transform: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   8. Form Controls & Recessed Slots
+   -------------------------------------------------------------------------- */
+input[type="text"],
+select,
+.prompt-text-input {
+    background: #ffffff !important;
+    border: 2px solid #cfc2ae !important;
+    border-top: 2px solid #baa891 !important;
+    border-radius: 10px !important;
+    box-shadow: var(--sk-recessed-groove) !important;
+    color: #292524 !important;
+    font-weight: 700 !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+input[type="text"]:focus,
+select:focus,
+.prompt-text-input:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 
+        inset 0 1px 2px rgba(80, 55, 30, 0.15),
+        0 0 0 3px rgba(59, 130, 246, 0.35),
+        0 1px 0 rgba(255, 255, 255, 0.95) !important;
+    outline: none !important;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+    accent-color: #2563eb !important;
+    cursor: pointer !important;
+}
+
+/* --------------------------------------------------------------------------
+   9. Movement Telemetry & Reward Counter Meters
+   -------------------------------------------------------------------------- */
+.telemetry-card,
+.risk-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fffdfa 50%, #f7f1e6 100%) !important;
+    border: 2px solid #ddd1bf !important;
+    border-bottom: 4px solid var(--sk-wood-edge) !important;
+    border-radius: 14px !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        0 2px 6px rgba(120, 85, 45, 0.08) !important;
+}
+
+.telemetry-label,
+.risk-title {
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+    color: #786b59 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+.telemetry-value,
+.risk-percentage {
+    color: #292524 !important;
+    font-weight: 900 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+/* Friendly Status Indicators */
+.telemetry-value-smooth {
+    color: #15803d !important;
+    text-shadow: 0 0 8px rgba(34, 197, 94, 0.3), 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+.telemetry-value-variable {
+    color: #b45309 !important;
+    text-shadow: 0 0 8px rgba(245, 158, 11, 0.3), 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+.telemetry-value-hesitant {
+    color: #be123c !important;
+    text-shadow: 0 0 8px rgba(244, 63, 94, 0.3), 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+/* --------------------------------------------------------------------------
+   10. Transcription Card Deck
+   -------------------------------------------------------------------------- */
+.transcription-card {
+    background: linear-gradient(180deg, #eff6ff 0%, #dbeafe 100%) !important;
+    border: 2px solid #bfdbfe !important;
+    border-left: 8px solid #2563eb !important;
+    border-radius: 16px !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        0 4px 12px rgba(37, 99, 235, 0.1) !important;
+}
+
+.transcription-label {
+    color: #1d4ed8 !important;
+    font-weight: 900 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+}
+
+.decoded-text-display {
+    color: #1e3a8a !important;
+    font-weight: 900 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+/* --------------------------------------------------------------------------
+   11. Assessment Summary Certificate Card & Badges
+   -------------------------------------------------------------------------- */
+.dashboard {
+    background: linear-gradient(180deg, #ffffff 0%, #fffefc 50%, #f6fbf6 100%) !important;
+    border: 2px solid #bbf7d0 !important;
+    border-left: 8px solid #16a34a !important;
+    border-radius: 18px !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        var(--sk-workbook-shadow) !important;
+}
+
+.dashboard-heading {
+    color: #14532d !important;
+    font-weight: 900 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Sticker Badges */
+.status-badge {
+    border-radius: 999px !important;
+    padding: 7px 18px !important;
+    font-weight: 900 !important;
+    letter-spacing: 0.3px !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.status-badge::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 48% !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.08) 100%) !important;
+    border-radius: 999px 999px 0 0 !important;
+}
+
+.badge-green {
+    background: linear-gradient(180deg, #4ade80 0%, #22c55e 50%, #16a34a 100%) !important;
+    border: 2px solid #14532d !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 3px 6px rgba(20, 83, 45, 0.3) !important;
+    text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.35) !important;
+}
+
+.badge-amber {
+    background: linear-gradient(180deg, #fcd34d 0%, #f59e0b 50%, #d97706 100%) !important;
+    border: 2px solid #78350f !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 3px 6px rgba(120, 53, 15, 0.3) !important;
+    text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.35) !important;
+}
+
+.badge-red {
+    background: linear-gradient(180deg, #fb7185 0%, #f43f5e 50%, #e11d48 100%) !important;
+    border: 2px solid #881337 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 3px 6px rgba(136, 19, 55, 0.3) !important;
+    text-shadow: 0 -1px 1px rgba(0, 0, 0, 0.35) !important;
+}
+
+/* --------------------------------------------------------------------------
+   12. HUD Telemetry Pills & Candy Ruler Progress Track
+   -------------------------------------------------------------------------- */
+.hud-pill {
+    border-radius: 999px !important;
+    padding: 6px 16px !important;
+    font-weight: 800 !important;
+    border: 2px solid #dcd1bf !important;
+    background: linear-gradient(180deg, #ffffff 0%, #f8f3ea 100%) !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        0 2px 4px rgba(120, 85, 45, 0.1) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.9) !important;
+}
+
+.hud-pill-level {
+    background: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%) !important;
+    border-color: #6ee7b7 !important;
+    color: #065f46 !important;
+}
+
+.hud-pill-latency {
+    background: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%) !important;
+    border-color: #fdba74 !important;
+    color: #9a3412 !important;
+}
+
+.hud-pill-pressure {
+    background: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+    border-color: #7dd3fc !important;
+    color: #0369a1 !important;
+}
+
+/* Wooden Classroom Ruler Progress Track */
+.progress-track {
+    background: linear-gradient(180deg, #dfd2bd 0%, #eee3d1 100%) !important;
+    border: 2px solid #c7b69d !important;
+    border-radius: 999px !important;
+    box-shadow: var(--sk-recessed-groove) !important;
+    height: 14px !important;
+    overflow: hidden !important;
+}
+
+.progress-fill {
+    background: linear-gradient(180deg, #4ade80 0%, #22c55e 48%, #16a34a 52%, #15803d 100%) !important;
+    border-radius: 999px !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7), 0 2px 4px rgba(22, 163, 74, 0.3) !important;
+    position: relative !important;
+}
+
+.progress-fill::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 50% !important;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+}
+
+/* --------------------------------------------------------------------------
+   13. Grooved Dividers & Mechanical Accents
+   -------------------------------------------------------------------------- */
+hr,
+.dashboard-divider {
+    border: none !important;
+    height: 2px !important;
+    background: transparent !important;
+    border-top: 2px solid #dcd1bf !important;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.95) !important;
+    margin: 20px 0 !important;
+}
+
+/* --------------------------------------------------------------------------
+   14. Tactile Wooden Slider Scrollbar Track & Thumb
+   -------------------------------------------------------------------------- */
+.tablet-scrollbar-track {
+    background: linear-gradient(90deg, rgba(120, 85, 45, 0.08) 0%, rgba(255, 255, 255, 0.3) 50%, rgba(120, 85, 45, 0.06) 100%) !important;
+    border-left: 2px solid #d5c7b3 !important;
+    box-shadow: inset 2px 0 4px rgba(80, 55, 30, 0.1) !important;
+}
+
+.tablet-scrollbar-thumb {
+    background: linear-gradient(90deg, #d8c4a9 0%, #f4ebd9 45%, #ffffff 55%, #c8b397 100%) !important;
+    border: 2px solid #b39d80 !important;
+    border-radius: 14px !important;
+    box-shadow: 
+        inset 0 1px 0 #ffffff,
+        0 3px 8px rgba(120, 85, 45, 0.3) !important;
+}
+
+.tablet-scrollbar-thumb:active,
+.tablet-scrollbar-thumb.dragging {
+    background: linear-gradient(90deg, #c2ae92 0%, #e2d3be 50%, #ae9b81 100%) !important;
+    box-shadow: inset 0 2px 5px rgba(80, 55, 30, 0.35) !important;
+}
+
+/* --------------------------------------------------------------------------
+   15. Diagnostic Inspection Bay (Accordion)
+   -------------------------------------------------------------------------- */
+.model-diagnostics-card {
+    background: linear-gradient(180deg, #ffffff 0%, #fdfbf7 100%) !important;
+    border: 2px solid #dfd3c1 !important;
+    border-radius: 14px !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 3px 8px rgba(120, 85, 45, 0.08) !important;
+}
+
+.diagnostics-accordion-header {
+    padding: 10px 14px !important;
+    border-radius: 10px !important;
+    transition: background 0.12s ease !important;
+}
+
+.diagnostics-accordion-header:hover {
+    background: rgba(120, 85, 45, 0.05) !important;
+}
+
+.diagnostics-cluster-row {
+    background: #ffffff !important;
+    border: 2px solid #e7ded0 !important;
+    border-radius: 10px !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 2px 4px rgba(120, 85, 45, 0.05) !important;
+}
+
+.diag-tag {
+    border-radius: 999px !important;
+    font-weight: 800 !important;
+    padding: 3px 8px !important;
+}
+
+.diag-tag-normal {
+    background: linear-gradient(180deg, #dcfce7 0%, #bbf7d0 100%) !important;
+    border: 1px solid #86efac !important;
+    color: #166534 !important;
+}
+
+.diag-tag-reversed {
+    background: linear-gradient(180deg, #fee2e2 0%, #fecaca 100%) !important;
+    border: 1px solid #fca5a5 !important;
+    color: #991b1b !important;
+}
+
+/* --------------------------------------------------------------------------
+   16. Research Guide Box & Callouts
+   -------------------------------------------------------------------------- */
+.panduan {
+    border-left: 8px solid #2563eb !important;
+}
+
+.panduan-tag {
+    background: linear-gradient(180deg, #ffffff 0%, #f4ede2 100%) !important;
+    border: 1px solid #d5c7b3 !important;
+    border-radius: 8px !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(120, 85, 45, 0.06) !important;
+    font-weight: 800 !important;
+}
+
+.reversal-alert-box {
+    background: linear-gradient(180deg, #fdf2f8 0%, #fce7f3 100%) !important;
+    border: 2px solid #f472b6 !important;
+    border-left: 8px solid #db2777 !important;
+    border-radius: 14px !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 4px 10px rgba(219, 39, 119, 0.12) !important;
+}
+
+.screening-disclaimer {
+    background: linear-gradient(180deg, #fffbeb 0%, #fef3c7 100%) !important;
+    border: 2px solid #fcd34d !important;
+    border-left: 8px solid #d97706 !important;
+    border-radius: 12px !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 2px 6px rgba(217, 119, 6, 0.08) !important;
+}
+
+/* --------------------------------------------------------------------------
+   17. Examiner Oral Dictation HUD & Summary Cards (index.html)
+   -------------------------------------------------------------------------- */
+.examiner-oral-card {
+    background: linear-gradient(180deg, #fffdf8 0%, #fef3c7 100%) !important;
+    border: 2px solid #fde68a !important;
+    border-left: 8px solid #d97706 !important;
+    border-radius: 16px !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 4px 10px rgba(217, 119, 6, 0.12) !important;
+}
+
+.examiner-badge {
+    background: linear-gradient(180deg, #fef3c7 0%, #fde68a 100%) !important;
+    border: 1px solid #f59e0b !important;
+    color: #92400e !important;
+    border-radius: 999px !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 2px 4px rgba(120, 85, 45, 0.08) !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8) !important;
+    font-weight: 800 !important;
+}
+
+.examiner-target-text {
+    color: #292524 !important;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.95), 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+}
+
+.summary-card {
+    background: linear-gradient(180deg, #ffffff 0%, #f0fdf4 100%) !important;
+    border: 2px solid #86efac !important;
+    border-left: 8px solid #16a34a !important;
+    border-radius: 16px !important;
+    box-shadow: inset 0 1px 0 #ffffff, 0 4px 12px rgba(22, 163, 74, 0.12) !important;
+}
