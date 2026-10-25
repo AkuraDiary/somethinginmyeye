@@ -18,6 +18,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from config import (
     CLASSIFICATION_THRESHOLD,
     COGNITIVE_LATENCY_THRESHOLD_MS,
+    COGNITIVE_LATENCY_THRESHOLD_MS_MIN,
+    COGNITIVE_LATENCY_THRESHOLD_MS_MAX,
     ENABLE_GRAMMAR_ANALYSIS,
     KINEMATIC_DYSGRAPHIA_WEIGHT,
     LATENCY_RISK_WEIGHT,
@@ -100,9 +102,9 @@ def evaluate_sld_differential(
     # Typical elementary initiation latency: 1100-1500 ms; retrieval bottlenecks: > 1900 ms.
     raw_latency_ms = float(df["latency"].iloc[0]) if "latency" in df.columns and len(df) > 0 else 0.0
     if raw_latency_ms > COGNITIVE_LATENCY_THRESHOLD_MS:
-        latency_risk = min((raw_latency_ms - 1000.0) / 2000.0, 1.0)
+        latency_risk = min((raw_latency_ms - COGNITIVE_LATENCY_THRESHOLD_MS_MIN) / COGNITIVE_LATENCY_THRESHOLD_MS_MAX, 1.0)
     else:
-        latency_risk = max((raw_latency_ms - 500.0) / 2000.0, 0.0)
+        latency_risk = max((raw_latency_ms - COGNITIVE_LATENCY_THRESHOLD_MS_MIN) / COGNITIVE_LATENCY_THRESHOLD_MS_MAX, 0.0)
 
     # 4. Syntactic Grammar Module (Optional Modular Switch)
     grammar_results: Dict[str, Any] = {"grammar_active": False, "syntax_error_score": 0.0}

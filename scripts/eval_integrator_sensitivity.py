@@ -12,7 +12,7 @@ import pandas as pd
 from typing import Dict, List, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from config import CLASSIFICATION_THRESHOLD, COGNITIVE_LATENCY_THRESHOLD_MS
+from config import CLASSIFICATION_THRESHOLD, COGNITIVE_LATENCY_THRESHOLD_MS, COGNITIVE_LATENCY_THRESHOLD_MS_MIN, COGNITIVE_LATENCY_THRESHOLD_MS_MAX
 
 def compute_risk(ortho_err: float, rev_flag: float, lat_penalty: float, 
                  w_spell: float, w_rev: float, w_lat: float) -> float:
